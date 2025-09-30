@@ -4,7 +4,7 @@
  */
 
 // ==================== AUTHENTICATION & USER MANAGEMENT ====================
-
+<!-- 
 /**
  * POST /api/auth/register
  * Register a new user (bounty hunter or company admin)
@@ -44,10 +44,10 @@
 /**
  * GET /api/auth/me
  * Get current authenticated user
- */
+ */ -->
 
 // ==================== USER PROFILE ====================
-
+<!-- 
 /**
  * GET /api/users/[userId]
  * Get user profile by ID
@@ -80,7 +80,7 @@
  * PATCH /api/users/[userId]/wallet
  * Update wallet address
  * Body: { walletAddress, signature }
- */
+ */ -->
 
 // ==================== COMPANY MANAGEMENT ====================
 

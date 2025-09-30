@@ -39,6 +39,24 @@ export const verifyOtpSchema = z.object({
   otp: z.string().length(6),
 });
 
+// ==================== USER SCHEMAS ====================
+
+export const updateUserProfileSchema = z.object({
+  fullName: z.string().max(100).optional(),
+  bio: z.string().max(500).optional(),
+  avatarUrl: z.string().url().optional(),
+  country: z.string().max(50).optional(),
+  githubUrl: z.string().url().optional(),
+  twitterUrl: z.string().url().optional(),
+  linkedinUrl: z.string().url().url().optional(),
+  portfolioUrl: z.string().url().optional(),
+});
+
+export const updateWalletSchema = z.object({
+  walletAddress: z.string(),
+  signature: z.string(),
+});
+
 // ==================== TYPE DEFINITIONS ====================
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -48,6 +66,8 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ResendOtpInput = z.infer<typeof resendOtpSchema>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
+export type UpdateUserProfileInput = z.infer<typeof updateUserProfileSchema>;
+export type UpdateWalletInput = z.infer<typeof updateWalletSchema>;
 
 export interface DbUser {
   id: string;
