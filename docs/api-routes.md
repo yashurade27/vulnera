@@ -470,7 +470,7 @@
  * Query: { userId?, entityType?, action?, startDate?, endDate?, limit?, offset? }
  */ -->
 
-// ==================== ANALYTICS & STATISTICS ====================
+<!-- // ==================== ANALYTICS & STATISTICS ====================
 
 /**
  * GET /api/stats/platform
@@ -492,7 +492,7 @@
 /**
  * GET /api/stats/trending
  * Get trending bounties and top performers
- */
+ */ -->
 
 // ==================== SEARCH & DISCOVERY ====================
 
