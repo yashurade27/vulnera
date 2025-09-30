@@ -401,6 +401,22 @@ export const deleteFileSchema = z.object({
   fileId: z.string(),
 });
 
+// ==================== WEBHOOK SCHEMAS ====================
+
+export const solanaWebhookSchema = z.object({
+  signature: z.string().length(88), // Solana signatures are 88 characters base58
+  status: z.enum(['confirmed', 'failed', 'pending']),
+  blockTime: z.number().optional(),
+});
+
+export const paymentConfirmedWebhookSchema = z.object({
+  paymentId: z.string(),
+  txSignature: z.string().length(88),
+  confirmed: z.boolean(),
+  confirmations: z.number().int().min(0).optional(),
+  blockTime: z.number().optional(),
+});
+
 // ==================== TYPE DEFINITIONS ====================
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -453,6 +469,8 @@ export type SearchCompaniesQuery = z.infer<typeof searchCompaniesQuerySchema>;
 export type UploadImageInput = z.infer<typeof uploadImageSchema>;
 export type UploadAttachmentInput = z.infer<typeof uploadAttachmentSchema>;
 export type DeleteFileInput = z.infer<typeof deleteFileSchema>;
+export type SolanaWebhookInput = z.infer<typeof solanaWebhookSchema>;
+export type PaymentConfirmedWebhookInput = z.infer<typeof paymentConfirmedWebhookSchema>;
 
 export interface DbUser {
   id: string;
