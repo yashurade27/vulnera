@@ -57,6 +57,65 @@ export const updateWalletSchema = z.object({
   signature: z.string(),
 });
 
+// ==================== COMPANY SCHEMAS ====================
+
+export const createCompanySchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().max(1000).optional(),
+  website: z.string().url().optional(),
+  walletAddress: z.string(),
+  industry: z.string().max(50).optional(),
+  companySize: z.string().max(20).optional(),
+  location: z.string().max(100).optional(),
+});
+
+export const updateCompanySchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().max(1000).optional(),
+  website: z.string().url().optional(),
+  logoUrl: z.string().url().optional(),
+  industry: z.string().max(50).optional(),
+  companySize: z.string().max(20).optional(),
+  location: z.string().max(100).optional(),
+});
+
+export const getCompaniesQuerySchema = z.object({
+  search: z.string().optional(),
+  verified: z.enum(['true', 'false']).optional(),
+  active: z.enum(['true', 'false']).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+});
+
+export const getCompanyBountiesQuerySchema = z.object({
+  status: z.enum(['ACTIVE', 'CLOSED', 'EXPIRED']).optional(),
+  type: z.enum(['UI', 'FUNCTIONALITY', 'PERFORMANCE', 'SECURITY']).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+});
+
+export const inviteMemberSchema = z.object({
+  userId: z.string(),
+  role: z.enum(['COMPANY_ADMIN']).default('COMPANY_ADMIN'),
+  canCreateBounty: z.boolean().default(false),
+  canReviewBounty: z.boolean().default(false),
+  canApprovePayment: z.boolean().default(false),
+  canManageMembers: z.boolean().default(false),
+});
+
+export const updateMemberSchema = z.object({
+  role: z.enum(['COMPANY_ADMIN']).optional(),
+  canCreateBounty: z.boolean().optional(),
+  canReviewBounty: z.boolean().optional(),
+  canApprovePayment: z.boolean().optional(),
+  canManageMembers: z.boolean().optional(),
+});
+
+export const getMembersQuerySchema = z.object({
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+});
+
 // ==================== TYPE DEFINITIONS ====================
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -68,6 +127,13 @@ export type ResendOtpInput = z.infer<typeof resendOtpSchema>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
 export type UpdateUserProfileInput = z.infer<typeof updateUserProfileSchema>;
 export type UpdateWalletInput = z.infer<typeof updateWalletSchema>;
+export type CreateCompanyInput = z.infer<typeof createCompanySchema>;
+export type UpdateCompanyInput = z.infer<typeof updateCompanySchema>;
+export type GetCompaniesQuery = z.infer<typeof getCompaniesQuerySchema>;
+export type GetCompanyBountiesQuery = z.infer<typeof getCompanyBountiesQuerySchema>;
+export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
+export type UpdateMemberInput = z.infer<typeof updateMemberSchema>;
+export type GetMembersQuery = z.infer<typeof getMembersQuerySchema>;
 
 export interface DbUser {
   id: string;
