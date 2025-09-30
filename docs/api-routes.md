@@ -535,7 +535,7 @@
  * Delete uploaded file
  */ -->
 
-// ==================== WEBHOOKS ====================
+<!-- // ==================== WEBHOOKS ====================
 
 /**
  * POST /api/webhooks/solana
@@ -560,7 +560,7 @@
  * GET /api/config
  * Get public configuration
  * Returns: { platformFee, minBountyAmount, maxResponseDays }
- */
+ */ -->
 
 // ==================== TOTAL ROUTES SUMMARY ====================
 /**
