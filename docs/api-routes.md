@@ -358,7 +358,7 @@
  * GET /api/reports/submission/[submissionId]
  * Get reports related to a submission
  */ -->
-
+<!-- 
 // ==================== NOTIFICATIONS ====================
 
 /**
@@ -385,7 +385,7 @@
 /**
  * DELETE /api/notifications/[notificationId]
  * Delete notification
- */
+ */ -->
 
 // ==================== BLOCKCHAIN INTEGRATION ====================
 

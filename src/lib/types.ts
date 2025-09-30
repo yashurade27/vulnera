@@ -331,6 +331,16 @@ export const getReportsQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// ==================== NOTIFICATION SCHEMAS ====================
+
+export const getNotificationsQuerySchema = z.object({
+  isRead: z.enum(['true', 'false']).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+  sortBy: z.enum(['createdAt', 'readAt']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
 // ==================== TYPE DEFINITIONS ====================
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -375,6 +385,7 @@ export type CreateReportInput = z.infer<typeof createReportSchema>;
 export type UpdateReportInput = z.infer<typeof updateReportSchema>;
 export type ResolveReportInput = z.infer<typeof resolveReportSchema>;
 export type GetReportsQuery = z.infer<typeof getReportsQuerySchema>;
+export type GetNotificationsQuery = z.infer<typeof getNotificationsQuerySchema>;
 
 export interface DbUser {
   id: string;
