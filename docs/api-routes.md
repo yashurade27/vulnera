@@ -386,7 +386,7 @@
  * DELETE /api/notifications/[notificationId]
  * Delete notification
  */ -->
-
+<!-- 
 // ==================== BLOCKCHAIN INTEGRATION ====================
 
 /**
@@ -426,8 +426,8 @@
  * Verify transaction on Solana
  * Body: { signature }
  * Returns: { confirmed, blockTime, status }
- */
-
+ */ -->
+<!-- 
 // ==================== ADMIN ROUTES ====================
 
 /**
@@ -468,7 +468,7 @@
  * GET /api/admin/audit-logs
  * Get audit logs
  * Query: { userId?, entityType?, action?, startDate?, endDate?, limit?, offset? }
- */
+ */ -->
 
 // ==================== ANALYTICS & STATISTICS ====================
 

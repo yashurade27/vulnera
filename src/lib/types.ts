@@ -341,6 +341,21 @@ export const getNotificationsQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// ==================== AUDIT LOG SCHEMAS ====================
+
+export const getAuditLogsQuerySchema = z.object({
+  userId: z.string().optional(),
+  action: z.string().optional(),
+  entityType: z.string().optional(),
+  entityId: z.string().optional(),
+  startDate: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
+  endDate: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+  sortBy: z.enum(['createdAt']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
 // ==================== TYPE DEFINITIONS ====================
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -386,6 +401,7 @@ export type UpdateReportInput = z.infer<typeof updateReportSchema>;
 export type ResolveReportInput = z.infer<typeof resolveReportSchema>;
 export type GetReportsQuery = z.infer<typeof getReportsQuerySchema>;
 export type GetNotificationsQuery = z.infer<typeof getNotificationsQuerySchema>;
+export type GetAuditLogsQuery = z.infer<typeof getAuditLogsQuerySchema>;
 
 export interface DbUser {
   id: string;
