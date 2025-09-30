@@ -200,7 +200,7 @@
  * GET /api/bounties/[bountyId]/stats
  * Get bounty statistics
  */ -->
-
+<!-- 
 // ==================== SUBMISSION MANAGEMENT ====================
 
 /**
@@ -260,7 +260,7 @@
  * POST /api/submissions/[submissionId]/ai-analyze
  * Trigger AI analysis for spam/duplicate detection
  * Returns: { aiSpamScore, aiDuplicateScore, aiAnalysisResult }
- */
+ */ -->
 
 // ==================== COMMENTS ====================
 

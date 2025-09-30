@@ -52,3 +52,6 @@ test-ledger
 **/*.rs.bk
 
 /generated/prisma
+
+# scripts
+scripts/

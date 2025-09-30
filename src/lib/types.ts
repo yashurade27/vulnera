@@ -179,6 +179,59 @@ export const getBountiesQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// ==================== SUBMISSION SCHEMAS ====================
+
+export const createSubmissionSchema = z.object({
+  bountyId: z.string(),
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(5000),
+  bountyType: z.enum(['UI', 'FUNCTIONALITY', 'PERFORMANCE', 'SECURITY']),
+  vulnerabilityType: z.string().min(1).max(100),
+  stepsToReproduce: z.string().min(1).max(5000),
+  impact: z.string().min(1).max(2000),
+  proofOfConcept: z.string().max(5000).optional(),
+  attachments: z.array(z.string().url()).default([]),
+});
+
+export const updateSubmissionSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  description: z.string().min(1).max(5000).optional(),
+  stepsToReproduce: z.string().min(1).max(5000).optional(),
+  impact: z.string().min(1).max(2000).optional(),
+  proofOfConcept: z.string().max(5000).optional(),
+  attachments: z.array(z.string().url()).optional(),
+});
+
+export const reviewSubmissionSchema = z.object({
+  status: z.enum(['APPROVED', 'REJECTED', 'DUPLICATE', 'SPAM', 'NEEDS_MORE_INFO']),
+  reviewNotes: z.string().max(1000).optional(),
+  rejectionReason: z.string().max(500).optional(),
+  rewardAmount: z.string().regex(/^\d+(\.\d{1,9})?$/).transform(val => parseFloat(val)).optional(),
+});
+
+export const approveSubmissionSchema = z.object({
+  rewardAmount: z.string().regex(/^\d+(\.\d{1,9})?$/).transform(val => parseFloat(val)),
+});
+
+export const rejectSubmissionSchema = z.object({
+  rejectionReason: z.string().min(1).max(500),
+});
+
+export const requestInfoSchema = z.object({
+  message: z.string().min(1).max(1000),
+});
+
+export const getSubmissionsQuerySchema = z.object({
+  bountyId: z.string().optional(),
+  userId: z.string().optional(),
+  companyId: z.string().optional(),
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'DUPLICATE', 'SPAM', 'NEEDS_MORE_INFO']).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'submittedAt']).default('submittedAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
 // ==================== TYPE DEFINITIONS ====================
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -203,6 +256,13 @@ export type FundBountyInput = z.infer<typeof fundBountySchema>;
 export type CloseBountyInput = z.infer<typeof closeBountySchema>;
 export type GetBountySubmissionsQuery = z.infer<typeof getBountySubmissionsQuerySchema>;
 export type GetBountiesQuery = z.infer<typeof getBountiesQuerySchema>;
+export type CreateSubmissionInput = z.infer<typeof createSubmissionSchema>;
+export type UpdateSubmissionInput = z.infer<typeof updateSubmissionSchema>;
+export type ReviewSubmissionInput = z.infer<typeof reviewSubmissionSchema>;
+export type ApproveSubmissionInput = z.infer<typeof approveSubmissionSchema>;
+export type RejectSubmissionInput = z.infer<typeof rejectSubmissionSchema>;
+export type RequestInfoInput = z.infer<typeof requestInfoSchema>;
+export type GetSubmissionsQuery = z.infer<typeof getSubmissionsQuerySchema>;
 
 export interface DbUser {
   id: string;
