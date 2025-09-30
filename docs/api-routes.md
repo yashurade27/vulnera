@@ -513,7 +513,7 @@
  * Search companies
  * Query: { q?, industry?, verified? }
  */ -->
-
+<!-- 
 // ==================== FILE UPLOADS ====================
 //uploadthing
 /**
@@ -533,7 +533,7 @@
 /**
  * DELETE /api/upload/[fileId]
  * Delete uploaded file
- */
+ */ -->
 
 // ==================== WEBHOOKS ====================
 

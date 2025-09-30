@@ -387,6 +387,20 @@ export const searchCompaniesQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// ==================== UPLOAD SCHEMAS ====================
+
+export const uploadImageSchema = z.object({
+  // File validation is done in the route handler
+});
+
+export const uploadAttachmentSchema = z.object({
+  // File validation is done in the route handler
+});
+
+export const deleteFileSchema = z.object({
+  fileId: z.string(),
+});
+
 // ==================== TYPE DEFINITIONS ====================
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -436,6 +450,9 @@ export type GetAuditLogsQuery = z.infer<typeof getAuditLogsQuerySchema>;
 export type GlobalSearchQuery = z.infer<typeof globalSearchQuerySchema>;
 export type SearchBountiesQuery = z.infer<typeof searchBountiesQuerySchema>;
 export type SearchCompaniesQuery = z.infer<typeof searchCompaniesQuerySchema>;
+export type UploadImageInput = z.infer<typeof uploadImageSchema>;
+export type UploadAttachmentInput = z.infer<typeof uploadAttachmentSchema>;
+export type DeleteFileInput = z.infer<typeof deleteFileSchema>;
 
 export interface DbUser {
   id: string;
