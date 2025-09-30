@@ -46,7 +46,12 @@ export async function POST(request: NextRequest) {
     });
 
     // Send reset email
-    const emailSent = await sendPasswordResetEmail(email, resetToken);
+    let emailSent = true;
+    if (process.env.NODE_ENV === 'production') {
+      emailSent = await sendPasswordResetEmail(email, resetToken);
+    } else {
+      console.log(`DEV MODE: Reset token for ${email} is ${resetToken}`);
+    }
     if (!emailSent) {
       return NextResponse.json(
         { error: 'Failed to send reset email' },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyOtpSchema } from '@/lib/types';
+import { sendWelcomeEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,8 +64,13 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // Send welcome email (don't block on this)
+    sendWelcomeEmail(email, user.username).catch(error => {
+      console.error('Failed to send welcome email:', error);
+    });
+
     return NextResponse.json(
-      { message: 'Email verified successfully' },
+      { message: 'Email verified successfully. Welcome to Vulnera!' },
       { status: 200 }
     );
 
