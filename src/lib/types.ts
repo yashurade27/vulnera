@@ -296,6 +296,41 @@ export const getCompanyPaymentsQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// ==================== REPORT SCHEMAS ====================
+
+export const createReportSchema = z.object({
+  type: z.enum(['LATE_RESPONSE', 'UNFAIR_REJECTION', 'SPAM_SUBMISSION', 'INAPPROPRIATE_CONTENT', 'OTHER']),
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(2000),
+  evidence: z.array(z.string().url()).default([]),
+  submissionId: z.string().optional(),
+  reportedUserId: z.string().optional(),
+  reportedCompanyId: z.string().optional(),
+}).refine((data) => data.submissionId || data.reportedUserId || data.reportedCompanyId, {
+  message: "At least one of submissionId, reportedUserId, or reportedCompanyId must be provided",
+});
+
+export const updateReportSchema = z.object({
+  status: z.enum(['OPEN', 'UNDER_INVESTIGATION', 'RESOLVED', 'DISMISSED']).optional(),
+  resolution: z.string().max(2000).optional(),
+  actionTaken: z.string().max(500).optional(),
+});
+
+export const resolveReportSchema = z.object({
+  resolution: z.string().min(1).max(2000),
+  actionTaken: z.string().max(500).optional(),
+});
+
+export const getReportsQuerySchema = z.object({
+  status: z.enum(['OPEN', 'UNDER_INVESTIGATION', 'RESOLVED', 'DISMISSED']).optional(),
+  type: z.enum(['LATE_RESPONSE', 'UNFAIR_REJECTION', 'SPAM_SUBMISSION', 'INAPPROPRIATE_CONTENT', 'OTHER']).optional(),
+  reporterId: z.string().optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'status']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
 // ==================== TYPE DEFINITIONS ====================
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -336,6 +371,10 @@ export type VerifyPaymentInput = z.infer<typeof verifyPaymentSchema>;
 export type GetPaymentsQuery = z.infer<typeof getPaymentsQuerySchema>;
 export type GetUserPaymentsQuery = z.infer<typeof getUserPaymentsQuerySchema>;
 export type GetCompanyPaymentsQuery = z.infer<typeof getCompanyPaymentsQuerySchema>;
+export type CreateReportInput = z.infer<typeof createReportSchema>;
+export type UpdateReportInput = z.infer<typeof updateReportSchema>;
+export type ResolveReportInput = z.infer<typeof resolveReportSchema>;
+export type GetReportsQuery = z.infer<typeof getReportsQuerySchema>;
 
 export interface DbUser {
   id: string;

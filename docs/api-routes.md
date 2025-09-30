@@ -321,7 +321,7 @@
  * GET /api/payments/company/[companyId]
  * Get company's payment history
  */ -->
-
+<!-- 
 // ==================== REPORTS & ACCOUNTABILITY ====================
 
 /**
@@ -357,7 +357,7 @@
 /**
  * GET /api/reports/submission/[submissionId]
  * Get reports related to a submission
- */
+ */ -->
 
 // ==================== NOTIFICATIONS ====================
 
