@@ -1,0 +1,482 @@
+// This is your Prisma schema file for the Vulnera Bug Bounty Platform
+// Learn more about Prisma: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  BOUNTY_HUNTER
+  COMPANY_ADMIN
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum BountyStatus {
+  ACTIVE
+  CLOSED
+  EXPIRED
+}
+
+enum BountyType {
+  UI
+  FUNCTIONALITY
+  PERFORMANCE
+  SECURITY
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DUPLICATE
+  SPAM
+  NEEDS_MORE_INFO
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum ReportType {
+  LATE_RESPONSE
+  UNFAIR_REJECTION
+  SPAM_SUBMISSION
+  INAPPROPRIATE_CONTENT
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  UNDER_INVESTIGATION
+  RESOLVED
+  DISMISSED
+}
+
+// ==================== USER MANAGEMENT ====================
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  username      String     @unique
+  passwordHash  String
+  role          UserRole   @default(BOUNTY_HUNTER)
+  status        UserStatus @default(ACTIVE)
+  
+  // Solana wallet details
+  walletAddress String?    @unique
+  
+  // Profile information
+  fullName      String?
+  bio           String?    @db.Text
+  avatarUrl     String?
+  country       String?
+  
+  // Stats for bounty hunters
+  totalEarnings Decimal    @default(0) @db.Decimal(20, 9)
+  totalBounties Int        @default(0)
+  reputation    Float      @default(100)
+  rank          Int?
+  
+  // Social links
+  githubUrl     String?
+  twitterUrl    String?
+  linkedinUrl   String?
+  portfolioUrl  String?
+  
+  // Timestamps
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  lastLoginAt   DateTime?
+  
+  // Relations
+  companies         CompanyMember[]
+  submissions       Submission[]
+  comments          Comment[]
+  payments          Payment[]
+  reportsCreated    Report[]        @relation("ReporterReports")
+  reportsAgainst    Report[]        @relation("ReportedUserReports")
+  notifications     Notification[]
+  
+  @@index([email])
+  @@index([walletAddress])
+  @@index([role, status])
+}
+
+model Company {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String?  @db.Text
+  website         String?
+  logoUrl         String?
+  
+  // Blockchain details
+  walletAddress   String   @unique
+  smartContractAddress String? @unique
+  
+  // Company info
+  industry        String?
+  companySize     String?
+  location        String?
+  
+  // Platform stats
+  totalBountiesFunded   Decimal @default(0) @db.Decimal(20, 9)
+  totalBountiesPaid     Decimal @default(0) @db.Decimal(20, 9)
+  activeBounties        Int     @default(0)
+  resolvedVulnerabilities Int   @default(0)
+  
+  // Status
+  isVerified      Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  members         CompanyMember[]
+  bounties        Bounty[]
+  submissions     Submission[]
+  payments        Payment[]
+  reportsAgainst  Report[]        @relation("ReportedCompanyReports")
+  
+  @@index([slug])
+  @@index([walletAddress])
+  @@index([isVerified, isActive])
+}
+
+model CompanyMember {
+  id          String   @id @default(cuid())
+  userId      String
+  companyId   String
+  role        UserRole @default(COMPANY_ADMIN)
+  
+  // Permissions
+  canCreateBounty    Boolean @default(false)
+  canReviewBounty    Boolean @default(false)
+  canApprovePayment  Boolean @default(false)
+  canManageMembers   Boolean @default(false)
+  
+  // Status
+  isActive    Boolean  @default(true)
+  invitedAt   DateTime @default(now())
+  joinedAt    DateTime?
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, companyId])
+  @@index([companyId, isActive])
+}
+
+// ==================== BOUNTY MANAGEMENT ====================
+
+model Bounty {
+  id              String         @id @default(cuid())
+  companyId       String
+  title           String
+  description     String         @db.Text
+  
+  // Bounty details
+  bountyType      BountyType
+  targetUrl       String?
+  rewardAmount    Decimal        @db.Decimal(20, 9)
+  maxSubmissions  Int?
+  
+  // Status
+  status          BountyStatus   @default(ACTIVE)
+  
+  // Smart contract details
+  escrowAddress   String?        @unique
+  txSignature     String?
+  
+  // Scope
+  inScope         String[]
+  outOfScope      String[]
+  
+  // Requirements
+  requirements    String         @db.Text
+  guidelines      String?        @db.Text
+  
+  // Time management
+  startsAt        DateTime?
+  endsAt          DateTime?
+  responseDeadline Int           @default(21) // days
+  
+  // Stats
+  totalSubmissions Int           @default(0)
+  validSubmissions Int           @default(0)
+  paidOut         Decimal        @default(0) @db.Decimal(20, 9)
+  
+  // Timestamps
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  publishedAt     DateTime?
+  closedAt        DateTime?
+  
+  // Relations
+  company         Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  submissions     Submission[]
+  
+  @@index([companyId, status])
+  @@index([status, bountyType])
+  @@index([startsAt, endsAt])
+}
+
+// ==================== SUBMISSION MANAGEMENT ====================
+
+model Submission {
+  id              String           @id @default(cuid())
+  bountyId        String
+  userId          String
+  companyId       String
+  
+  // Submission details
+  title           String
+  description     String           @db.Text
+  bountyType      BountyType
+  vulnerabilityType String
+  
+  // Technical details
+  stepsToReproduce  String         @db.Text
+  impact            String         @db.Text
+  proofOfConcept    String?        @db.Text
+  attachments       String[]       // URLs to files
+  
+  // AI Analysis
+  aiSpamScore       Float?
+  aiDuplicateScore  Float?
+  aiAnalysisResult  Json?
+  isAiFiltered      Boolean        @default(false)
+  
+  // Status tracking
+  status            SubmissionStatus @default(PENDING)
+  
+  // Review details
+  reviewedAt        DateTime?
+  reviewedBy        String?
+  reviewNotes       String?        @db.Text
+  rejectionReason   String?        @db.Text
+  
+  // Time tracking
+  submittedAt       DateTime       @default(now())
+  responseDeadline  DateTime       // Auto-calculated: submittedAt + bounty.responseDeadline
+  
+  // Payment
+  rewardAmount      Decimal?       @db.Decimal(20, 9)
+  paymentId         String?        @unique
+  
+  // Timestamps
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  
+  // Relations
+  bounty            Bounty         @relation(fields: [bountyId], references: [id], onDelete: Cascade)
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company           Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  comments          Comment[]
+  payment           Payment?       @relation(fields: [paymentId], references: [id])
+  reports           Report[]
+  
+  @@index([bountyId, status])
+  @@index([userId, status])
+  @@index([companyId, status])
+  @@index([status, responseDeadline])
+  @@index([submittedAt])
+}
+
+model Comment {
+  id              String     @id @default(cuid())
+  submissionId    String
+  userId          String
+  content         String     @db.Text
+  isInternal      Boolean    @default(false) // Only visible to company members
+  
+  // Timestamps
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  
+  // Relations
+  submission      Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([submissionId, createdAt])
+  @@index([userId])
+}
+
+// ==================== PAYMENT MANAGEMENT ====================
+
+model Payment {
+  id              String        @id @default(cuid())
+  submissionId    String?       @unique
+  userId          String
+  companyId       String
+  
+  // Payment details
+  amount          Decimal       @db.Decimal(20, 9)
+  platformFee     Decimal       @default(0) @db.Decimal(20, 9)
+  netAmount       Decimal       @db.Decimal(20, 9)
+  
+  // Blockchain details
+  txSignature     String        @unique
+  fromWallet      String
+  toWallet        String
+  blockchainConfirmed Boolean   @default(false)
+  confirmations   Int           @default(0)
+  
+  // Status
+  status          PaymentStatus @default(PENDING)
+  failureReason   String?
+  
+  // Timestamps
+  initiatedAt     DateTime      @default(now())
+  completedAt     DateTime?
+  
+  // Relations
+  submission      Submission?
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, status])
+  @@index([companyId, status])
+  @@index([txSignature])
+  @@index([status, initiatedAt])
+}
+
+// ==================== REPORTING & ACCOUNTABILITY ====================
+
+model Report {
+  id              String       @id @default(cuid())
+  reporterId      String
+  submissionId    String?
+  reportedUserId  String?
+  reportedCompanyId String?
+  
+  // Report details
+  type            ReportType
+  title           String
+  description     String       @db.Text
+  evidence        String[]     // URLs to evidence
+  
+  // Status
+  status          ReportStatus @default(OPEN)
+  
+  // Resolution
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  resolution      String?      @db.Text
+  actionTaken     String?
+  
+  // Timestamps
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  // Relations
+  reporter        User         @relation("ReporterReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  submission      Submission?  @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  reportedUser    User?        @relation("ReportedUserReports", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  reportedCompany Company?     @relation("ReportedCompanyReports", fields: [reportedCompanyId], references: [id], onDelete: SetNull)
+  
+  @@index([reporterId, status])
+  @@index([status, createdAt])
+  @@index([submissionId])
+}
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  message     String   @db.Text
+  type        String   // SUBMISSION, PAYMENT, BOUNTY, REPORT, etc.
+  actionUrl   String?
+  
+  // Status
+  isRead      Boolean  @default(false)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, isRead, createdAt])
+}
+
+// ==================== ANALYTICS & AUDIT ====================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  entityType  String   // USER, COMPANY, BOUNTY, SUBMISSION, PAYMENT
+  entityId    String
+  oldValue    Json?
+  newValue    Json?
+  ipAddress   String?
+  userAgent   String?
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model PlatformStats {
+  id                    String   @id @default(cuid())
+  date                  DateTime @unique @db.Date
+  
+  // User stats
+  totalUsers            Int      @default(0)
+  newUsers              Int      @default(0)
+  activeUsers           Int      @default(0)
+  
+  // Company stats
+  totalCompanies        Int      @default(0)
+  newCompanies          Int      @default(0)
+  activeCompanies       Int      @default(0)
+  
+  // Bounty stats
+  totalBounties         Int      @default(0)
+  activeBounties        Int      @default(0)
+  newBounties           Int      @default(0)
+  
+  // Submission stats
+  totalSubmissions      Int      @default(0)
+  newSubmissions        Int      @default(0)
+  approvedSubmissions   Int      @default(0)
+  rejectedSubmissions   Int      @default(0)
+  
+  // Financial stats
+  totalVolume           Decimal  @default(0) @db.Decimal(20, 9)
+  platformFees          Decimal  @default(0) @db.Decimal(20, 9)
+  paymentsMade          Int      @default(0)
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([date])
+}
