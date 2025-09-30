@@ -1,0 +1,16 @@
+# Rust build artifacts
+target/
+
+# Node dependencies
+node_modules/
+
+# Anchor build artifacts
+.anchor/
+test-ledger/
+
+# TypeScript/JavaScript build artifacts
+dist/
+build/
+
+# OS-specific
+.DS_Store
