@@ -494,7 +494,7 @@
  * Get trending bounties and top performers
  */ -->
 
-// ==================== SEARCH & DISCOVERY ====================
+<!-- // ==================== SEARCH & DISCOVERY ====================
 
 /**
  * GET /api/search
@@ -512,7 +512,7 @@
  * GET /api/search/companies
  * Search companies
  * Query: { q?, industry?, verified? }
- */
+ */ -->
 
 // ==================== FILE UPLOADS ====================
 //uploadthing

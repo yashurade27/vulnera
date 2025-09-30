@@ -356,6 +356,37 @@ export const getAuditLogsQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// ==================== SEARCH SCHEMAS ====================
+
+export const globalSearchQuerySchema = z.object({
+  q: z.string().min(1).max(100),
+  type: z.enum(['bounties', 'companies', 'users']).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+});
+
+export const searchBountiesQuerySchema = z.object({
+  q: z.string().optional(),
+  type: z.enum(['UI', 'FUNCTIONALITY', 'PERFORMANCE', 'SECURITY']).optional(),
+  minReward: z.string().regex(/^\d+(\.\d{1,9})?$/).transform(val => parseFloat(val)).optional(),
+  maxReward: z.string().regex(/^\d+(\.\d{1,9})?$/).transform(val => parseFloat(val)).optional(),
+  companyId: z.string().optional(),
+  status: z.enum(['ACTIVE', 'CLOSED', 'EXPIRED']).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+  sortBy: z.enum(['createdAt', 'rewardAmount', 'endsAt']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
+export const searchCompaniesQuerySchema = z.object({
+  q: z.string().optional(),
+  industry: z.string().optional(),
+  verified: z.enum(['true', 'false']).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+  sortBy: z.enum(['createdAt', 'name', 'totalBountiesFunded']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
 // ==================== TYPE DEFINITIONS ====================
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -402,6 +433,9 @@ export type ResolveReportInput = z.infer<typeof resolveReportSchema>;
 export type GetReportsQuery = z.infer<typeof getReportsQuerySchema>;
 export type GetNotificationsQuery = z.infer<typeof getNotificationsQuerySchema>;
 export type GetAuditLogsQuery = z.infer<typeof getAuditLogsQuerySchema>;
+export type GlobalSearchQuery = z.infer<typeof globalSearchQuerySchema>;
+export type SearchBountiesQuery = z.infer<typeof searchBountiesQuerySchema>;
+export type SearchCompaniesQuery = z.infer<typeof searchCompaniesQuerySchema>;
 
 export interface DbUser {
   id: string;
