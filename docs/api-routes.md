@@ -262,7 +262,7 @@
  * Returns: { aiSpamScore, aiDuplicateScore, aiAnalysisResult }
  */ -->
 
-// ==================== COMMENTS ====================
+<!-- // ==================== COMMENTS ====================
 
 /**
  * POST /api/submissions/[submissionId]/comments
@@ -285,9 +285,9 @@
 /**
  * DELETE /api/comments/[commentId]
  * Delete comment
- */
+ */ -->
 
-// ==================== PAYMENT MANAGEMENT ====================
+<!-- // ==================== PAYMENT MANAGEMENT ====================
 
 /**
  * POST /api/payments
@@ -320,7 +320,7 @@
 /**
  * GET /api/payments/company/[companyId]
  * Get company's payment history
- */
+ */ -->
 
 // ==================== REPORTS & ACCOUNTABILITY ====================
 

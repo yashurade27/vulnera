@@ -247,6 +247,55 @@ export const updateCommentSchema = z.object({
   content: z.string().min(1).max(2000),
 });
 
+// ==================== PAYMENT SCHEMAS ====================
+
+export const createPaymentSchema = z.object({
+  submissionId: z.string(),
+  amount: z.string().regex(/^\d+(\.\d{1,9})?$/).transform(val => parseFloat(val)),
+  platformFee: z.string().regex(/^\d+(\.\d{1,9})?$/).transform(val => parseFloat(val)).optional(),
+  txSignature: z.string(),
+  fromWallet: z.string(),
+  toWallet: z.string(),
+});
+
+export const updatePaymentSchema = z.object({
+  status: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
+  failureReason: z.string().max(500).optional(),
+  confirmations: z.number().int().min(0).optional(),
+  completedAt: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
+});
+
+export const verifyPaymentSchema = z.object({
+  txSignature: z.string(),
+  confirmations: z.number().int().min(0),
+});
+
+export const getPaymentsQuerySchema = z.object({
+  userId: z.string().optional(),
+  companyId: z.string().optional(),
+  status: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+  sortBy: z.enum(['initiatedAt', 'completedAt', 'amount']).default('initiatedAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
+export const getUserPaymentsQuerySchema = z.object({
+  status: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+  sortBy: z.enum(['initiatedAt', 'completedAt', 'amount']).default('initiatedAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
+export const getCompanyPaymentsQuerySchema = z.object({
+  status: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+  sortBy: z.enum(['initiatedAt', 'completedAt', 'amount']).default('initiatedAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
 // ==================== TYPE DEFINITIONS ====================
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -281,6 +330,12 @@ export type GetSubmissionsQuery = z.infer<typeof getSubmissionsQuerySchema>;
 export type GetCommentsQuery = z.infer<typeof getCommentsQuerySchema>;
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
 export type UpdateCommentInput = z.infer<typeof updateCommentSchema>;
+export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;
+export type UpdatePaymentInput = z.infer<typeof updatePaymentSchema>;
+export type VerifyPaymentInput = z.infer<typeof verifyPaymentSchema>;
+export type GetPaymentsQuery = z.infer<typeof getPaymentsQuerySchema>;
+export type GetUserPaymentsQuery = z.infer<typeof getUserPaymentsQuerySchema>;
+export type GetCompanyPaymentsQuery = z.infer<typeof getCompanyPaymentsQuerySchema>;
 
 export interface DbUser {
   id: string;
