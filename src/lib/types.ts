@@ -232,6 +232,21 @@ export const getSubmissionsQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// ==================== COMMENT SCHEMAS ====================
+
+export const getCommentsQuerySchema = z.object({
+  includeInternal: z.enum(['true', 'false']).optional(),
+});
+
+export const createCommentSchema = z.object({
+  content: z.string().min(1).max(2000),
+  isInternal: z.boolean().default(false),
+});
+
+export const updateCommentSchema = z.object({
+  content: z.string().min(1).max(2000),
+});
+
 // ==================== TYPE DEFINITIONS ====================
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -263,6 +278,9 @@ export type ApproveSubmissionInput = z.infer<typeof approveSubmissionSchema>;
 export type RejectSubmissionInput = z.infer<typeof rejectSubmissionSchema>;
 export type RequestInfoInput = z.infer<typeof requestInfoSchema>;
 export type GetSubmissionsQuery = z.infer<typeof getSubmissionsQuerySchema>;
+export type GetCommentsQuery = z.infer<typeof getCommentsQuerySchema>;
+export type CreateCommentInput = z.infer<typeof createCommentSchema>;
+export type UpdateCommentInput = z.infer<typeof updateCommentSchema>;
 
 export interface DbUser {
   id: string;
