@@ -116,6 +116,69 @@ export const getMembersQuerySchema = z.object({
   offset: z.string().regex(/^\d+$/).transform(Number).optional(),
 });
 
+// ==================== BOUNTY SCHEMAS ====================
+
+export const createBountySchema = z.object({
+  companyId: z.string(),
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(5000),
+  bountyType: z.enum(['UI', 'FUNCTIONALITY', 'PERFORMANCE', 'SECURITY']),
+  targetUrl: z.string().url().optional(),
+  rewardAmount: z.string().regex(/^\d+(\.\d{1,9})?$/).transform(val => parseFloat(val)),
+  maxSubmissions: z.number().int().positive().optional(),
+  inScope: z.array(z.string()).default([]),
+  outOfScope: z.array(z.string()).default([]),
+  requirements: z.string().min(1).max(2000),
+  guidelines: z.string().max(2000).optional(),
+  startsAt: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
+  endsAt: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
+  responseDeadline: z.number().int().min(1).max(365).default(21), // days
+});
+
+export const updateBountySchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  description: z.string().min(1).max(5000).optional(),
+  bountyType: z.enum(['UI', 'FUNCTIONALITY', 'PERFORMANCE', 'SECURITY']).optional(),
+  targetUrl: z.string().url().optional(),
+  rewardAmount: z.string().regex(/^\d+(\.\d{1,9})?$/).transform(val => parseFloat(val)).optional(),
+  maxSubmissions: z.number().int().positive().optional(),
+  inScope: z.array(z.string()).optional(),
+  outOfScope: z.array(z.string()).optional(),
+  requirements: z.string().min(1).max(2000).optional(),
+  guidelines: z.string().max(2000).optional(),
+  startsAt: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
+  endsAt: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
+  responseDeadline: z.number().int().min(1).max(365).optional(),
+});
+
+export const fundBountySchema = z.object({
+  txSignature: z.string(),
+  escrowAddress: z.string(),
+});
+
+export const closeBountySchema = z.object({
+  txSignature: z.string(),
+});
+
+export const getBountySubmissionsQuerySchema = z.object({
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'DUPLICATE', 'SPAM', 'NEEDS_MORE_INFO']).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+});
+
+export const getBountiesQuerySchema = z.object({
+  status: z.enum(['ACTIVE', 'CLOSED', 'EXPIRED']).optional(),
+  type: z.enum(['UI', 'FUNCTIONALITY', 'PERFORMANCE', 'SECURITY']).optional(),
+  companyId: z.string().optional(),
+  search: z.string().optional(),
+  minReward: z.string().regex(/^\d+(\.\d{1,9})?$/).transform(val => parseFloat(val)).optional(),
+  maxReward: z.string().regex(/^\d+(\.\d{1,9})?$/).transform(val => parseFloat(val)).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+  sortBy: z.enum(['createdAt', 'rewardAmount', 'endsAt']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
 // ==================== TYPE DEFINITIONS ====================
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -134,6 +197,12 @@ export type GetCompanyBountiesQuery = z.infer<typeof getCompanyBountiesQuerySche
 export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 export type UpdateMemberInput = z.infer<typeof updateMemberSchema>;
 export type GetMembersQuery = z.infer<typeof getMembersQuerySchema>;
+export type CreateBountyInput = z.infer<typeof createBountySchema>;
+export type UpdateBountyInput = z.infer<typeof updateBountySchema>;
+export type FundBountyInput = z.infer<typeof fundBountySchema>;
+export type CloseBountyInput = z.infer<typeof closeBountySchema>;
+export type GetBountySubmissionsQuery = z.infer<typeof getBountySubmissionsQuerySchema>;
+export type GetBountiesQuery = z.infer<typeof getBountiesQuerySchema>;
 
 export interface DbUser {
   id: string;

@@ -1,144 +1,211 @@
 import * as anchor from '@coral-xyz/anchor'
 import { Program } from '@coral-xyz/anchor'
-import { CompanyVault } from '../target/types/company_vault'
+import { VulneraBounty } from '../target/types/vulnera_bounty'
 import { assert } from 'chai'
 
-describe('company_vault', () => {
+describe('vulnera_bounty', () => {
   // Configure the client to use the local cluster.
   const provider = anchor.AnchorProvider.env()
   anchor.setProvider(provider)
 
-  const program = anchor.workspace.CompanyVault as Program<CompanyVault>
+  const program = anchor.workspace.VulneraBounty as Program<VulneraBounty>
   const owner = provider.wallet.publicKey
-  const recipient = anchor.web3.Keypair.generate()
+  let hunter: anchor.web3.PublicKey
+  let platformWallet: anchor.web3.PublicKey
 
-  const [vaultPda, bump] = anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from('company-vault'), owner.toBuffer()],
+  before(async () => {
+    // Create test accounts
+    hunter = anchor.web3.Keypair.generate().publicKey
+    platformWallet = anchor.web3.Keypair.generate().publicKey
+  })
+
+  const [vaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from('bounty-escrow'), owner.toBuffer()],
     program.programId,
   )
 
-  it('Is initialized!', async () => {
-    const tx = await program.methods
-      .initialize()
-      .accounts({
-        owner: owner,
-      })
-      .rpc()
+  it('Initializes a bounty escrow', async () => {
+    const escrowAmount = new anchor.BN(anchor.web3.LAMPORTS_PER_SOL) // 1 SOL
 
-    const vaultAccount = await program.account.companyVault.fetch(vaultPda)
-    assert.ok(vaultAccount.owner.equals(owner))
-    assert.ok(vaultAccount.balance.toNumber() === 0)
-  })
-
-  it('Can deposit funds', async () => {
-    const depositAmount = new anchor.BN(anchor.web3.LAMPORTS_PER_SOL) // 1 SOL
     await program.methods
-      .deposit(depositAmount)
+      .initialize(escrowAmount)
       .accounts({
-        owner: owner,
+        vault: vaultPda,
+        owner,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .rpc()
 
-    const vaultAccount = await program.account.companyVault.fetch(vaultPda)
-    assert.ok(vaultAccount.balance.eq(depositAmount))
+    const vaultAccount = await program.account.bountyEscrow.fetch(vaultPda)
+    assert.ok(vaultAccount.owner.equals(owner))
+    assert.ok(vaultAccount.escrowAmount.eq(escrowAmount))
   })
 
-  it('Fails to withdraw before lockup period', async () => {
-    const withdrawAmount = new anchor.BN(anchor.web3.LAMPORTS_PER_SOL / 2)
+  it('Processes a payment', async () => {
+    const rewardPerSubmission = new anchor.BN(0.1 * anchor.web3.LAMPORTS_PER_SOL) // 0.1 SOL
+    const maxSubmissions = 5
+    const currentPaidSubmissions = 0
+    const bountyId = 'test-bounty'
+    const submissionId = 'test-submission'
+
+    const hunterBalanceBefore = await provider.connection.getBalance(hunter)
+    const platformBalanceBefore = await provider.connection.getBalance(platformWallet)
+
+    await program.methods
+      .processPayment(
+        bountyId,
+        submissionId,
+        null, // custom_amount
+        rewardPerSubmission,
+        maxSubmissions,
+        currentPaidSubmissions
+      )
+      .accounts({
+        vault: vaultPda,
+        owner,
+        hunterWallet: hunter,
+        platformWallet,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc()
+
+    const vaultAccount = await program.account.bountyEscrow.fetch(vaultPda)
+    const expectedPlatformFee = rewardPerSubmission.mul(new anchor.BN(200)).div(new anchor.BN(10000)) // 2%
+    const expectedHunterAmount = rewardPerSubmission.sub(expectedPlatformFee)
+
+    assert.ok(vaultAccount.escrowAmount.eq(new anchor.BN(anchor.web3.LAMPORTS_PER_SOL).sub(rewardPerSubmission)))
+
+    const hunterBalanceAfter = await provider.connection.getBalance(hunter)
+    const platformBalanceAfter = await provider.connection.getBalance(platformWallet)
+
+    assert.ok(hunterBalanceAfter === hunterBalanceBefore + expectedHunterAmount.toNumber())
+    assert.ok(platformBalanceAfter === platformBalanceBefore + expectedPlatformFee.toNumber())
+  })
+
+  it('Closes the bounty', async () => {
+    const bountyId = 'test-bounty'
+    const ownerBalanceBefore = await provider.connection.getBalance(owner)
+
+    await program.methods
+      .closeBounty(bountyId)
+      .accounts({
+        vault: vaultPda,
+        owner,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc()
+
+    const ownerBalanceAfter = await provider.connection.getBalance(owner)
+    // Remaining should be 1 SOL - 0.1 SOL = 0.9 SOL
+    assert.ok(ownerBalanceAfter > ownerBalanceBefore + 0.8 * anchor.web3.LAMPORTS_PER_SOL)
+  })
+
+  it('Fails to initialize with insufficient escrow amount', async () => {
+    const invalidAmount = new anchor.BN(50000) // Less than MIN_ESCROW_AMOUNT
+
     try {
       await program.methods
-        .withdraw(withdrawAmount)
+        .initialize(invalidAmount)
         .accounts({
-          recipient: recipient.publicKey,
+          vault: vaultPda, // This might fail because PDA already exists, but for test
+          owner,
+          systemProgram: anchor.web3.SystemProgram.programId,
         })
         .rpc()
-      assert.fail('Withdrawal should have failed.')
-    } catch (err) {
-      assert.include(err.toString(), 'LockupPeriodNotExpired')
+      assert.fail('Should have thrown an error')
+    } catch (error) {
+      assert.include(error.toString(), 'InvalidEscrowAmount')
     }
   })
 
-  it('Can withdraw funds after lockup period', async () => {
-    // We need to simulate time passing. In a real testnet/mainnet scenario, you'd just wait.
-    // For local testing, we can forward the clock.
-    // This requires a bit more advanced setup with `solana-test-validator`.
-    // For this example, we'll assume 15 days have passed.
-
-    // To properly test this, you'd run:
-    // `solana-test-validator --warp-slot <slot_in_15_days>`
-    // For now, we will skip the clock-forwarding part in this script and test the success case logic.
-
-    console.log(
-      'Skipping time-warp for withdrawal test. Manual testing on a devnet is recommended for time-sensitive logic.',
-    )
-    // In a real testing environment, you would fast-forward the slot.
-    // For example:
-    // const clock = await provider.connection.getClock();
-    // const slots_in_15_days = (15 * 24 * 60 * 60) / 0.4; // approx. 0.4s per slot
-    // await provider.connection.warpToSlot(clock.slot + slots_in_15_days);
-
-    // Because we can't easily warp time here, let's just create a new vault and set a past timestamp manually for testing purposes.
-    const pastTimestamp = Math.floor(Date.now() / 1000) - 16 * 24 * 60 * 60 // 16 days ago
-
+  it('Fails to process payment when max submissions reached', async () => {
+    // First, need to initialize again or use a new PDA
     const newOwner = anchor.web3.Keypair.generate()
-    // Airdrop some SOL to the new owner
-    await provider.connection.requestAirdrop(newOwner.publicKey, 2 * anchor.web3.LAMPORTS_PER_SOL)
-
-    const [newVaultPda, _] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('company-vault'), newOwner.publicKey.toBuffer()],
-      program.programId,
+    const [newVaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from('bounty-escrow'), newOwner.publicKey.toBuffer()],
+      program.programId
     )
 
     await program.methods
-      .initialize()
+      .initialize(new anchor.BN(anchor.web3.LAMPORTS_PER_SOL))
       .accounts({
+        vault: newVaultPda,
         owner: newOwner.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([newOwner])
       .rpc()
 
-    const depositAmount = new anchor.BN(anchor.web3.LAMPORTS_PER_SOL)
-    await program.methods
-      .deposit(depositAmount)
-      .accounts({
-        owner: newOwner.publicKey,
-      })
-      .signers([newOwner])
-      .rpc()
-
-    // Manually set the deposit timestamp to the past
-    let vaultState = await program.account.companyVault.fetch(newVaultPda)
-    vaultState.depositTimestamp = new anchor.BN(pastTimestamp)
-
-    // This part is tricky as you can't just set state like this.
-    // The proper way is through validator clock manipulation.
-    // The test below will fail without it, but demonstrates the client-side logic.
-
-    console.log('The following withdrawal test is expected to fail without validator time-warping.')
+    const rewardPerSubmission = new anchor.BN(0.1 * anchor.web3.LAMPORTS_PER_SOL)
+    const maxSubmissions = 1
+    const currentPaidSubmissions = 1 // Already at max
 
     try {
-      const initialBalance = await provider.connection.getBalance(recipient.publicKey)
-      const withdrawAmount = new anchor.BN(anchor.web3.LAMPORTS_PER_SOL / 2)
+      await program.methods
+        .processPayment(
+          'test',
+          'test',
+          null,
+          rewardPerSubmission,
+          maxSubmissions,
+          currentPaidSubmissions
+        )
+        .accounts({
+          vault: newVaultPda,
+          owner: newOwner.publicKey,
+          hunterWallet: hunter,
+          platformWallet,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([newOwner])
+        .rpc()
+      assert.fail('Should have thrown an error')
+    } catch (error) {
+      assert.include(error.toString(), 'MaxSubmissionsReached')
+    }
+  })
 
-      // This call would need the validator's clock to be in the future.
-      // We will comment it out as it will fail in a standard `anchor test`.
-      /*
-        await program.methods
-          .withdraw(withdrawAmount)
-          .accounts({
-            recipient: recipient.publicKey,
-          })
-          .signers([newOwner])
-          .rpc();
-        
-        const vaultAccount = await program.account.companyVault.fetch(newVaultPda);
-        const finalBalance = (await provider.connection.getBalance(recipient.publicKey));
+  it('Fails to process payment with insufficient funds', async () => {
+    const newOwner = anchor.web3.Keypair.generate()
+    const [newVaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from('bounty-escrow'), newOwner.publicKey.toBuffer()],
+      program.programId
+    )
 
-        assert.ok(vaultAccount.balance.eq(depositAmount.sub(withdrawAmount)));
-        assert.ok(finalBalance === initialBalance + withdrawAmount.toNumber());
-        */
-    } catch (e) {
-      console.log('Withdrawal failed as expected without time warp.', e.toString())
+    await program.methods
+      .initialize(new anchor.BN(0.05 * anchor.web3.LAMPORTS_PER_SOL)) // Less than reward
+      .accounts({
+        vault: newVaultPda,
+        owner: newOwner.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([newOwner])
+      .rpc()
+
+    const rewardPerSubmission = new anchor.BN(0.1 * anchor.web3.LAMPORTS_PER_SOL)
+
+    try {
+      await program.methods
+        .processPayment(
+          'test',
+          'test',
+          null,
+          rewardPerSubmission,
+          5,
+          0
+        )
+        .accounts({
+          vault: newVaultPda,
+          owner: newOwner.publicKey,
+          hunterWallet: hunter,
+          platformWallet,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([newOwner])
+        .rpc()
+      assert.fail('Should have thrown an error')
+    } catch (error) {
+      assert.include(error.toString(), 'InsufficientFunds')
     }
   })
 })

@@ -81,7 +81,7 @@
  * Update wallet address
  * Body: { walletAddress, signature }
  */ -->
-
+<!-- 
 // ==================== COMPANY MANAGEMENT ====================
 
 /**
@@ -121,8 +121,8 @@
  * GET /api/companies/[companyId]/bounties
  * Get all bounties for a company
  * Query: { status?, type?, limit?, offset? }
- */
-
+ */ -->
+<!-- 
 // ==================== COMPANY MEMBERS ====================
 
 /**
@@ -145,8 +145,8 @@
 /**
  * DELETE /api/companies/[companyId]/members/[memberId]
  * Remove member from company
- */
-
+ */ -->
+<!-- 
 // ==================== BOUNTY MANAGEMENT ====================
 
 /**
@@ -199,7 +199,7 @@
 /**
  * GET /api/bounties/[bountyId]/stats
  * Get bounty statistics
- */
+ */ -->
 
 // ==================== SUBMISSION MANAGEMENT ====================
 
