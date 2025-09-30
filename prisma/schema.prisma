@@ -78,6 +78,7 @@ model User {
   passwordHash  String
   role          UserRole   @default(BOUNTY_HUNTER)
   status        UserStatus @default(ACTIVE)
+  emailVerified Boolean    @default(false)
   
   // Solana wallet details
   walletAddress String?    @unique
@@ -99,6 +100,12 @@ model User {
   twitterUrl    String?
   linkedinUrl   String?
   portfolioUrl  String?
+  
+  // Auth fields
+  otp           String?
+  otpExpiry     DateTime?
+  resetToken    String?
+  resetTokenExpiry DateTime?
   
   // Timestamps
   createdAt     DateTime   @default(now())
