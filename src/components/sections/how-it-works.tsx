@@ -14,8 +14,8 @@ export function HowItWorksSection() {
   return (
     <section className="py-24 bg-muted/30">
       <div className="container-custom">
-        <h2 className="section-title text-center mb-4">How It All Works</h2>
-        <p className="text-center text-muted-foreground mb-16 text-lg">
+        <h2 className="text-4xl lg:text-5xl font-medium text-center mb-6 leading-tight">How It All Works</h2>
+        <p className="text-center text-muted-foreground mb-16 text-base leading-relaxed">
           Getting started with Vulnera is simple and secure
         </p>
         
@@ -32,10 +32,10 @@ export function HowItWorksSection() {
                   viewport={{ once: true }}
                   className="flex items-start gap-4 bg-card p-6 rounded-xl border border-border hover:border-primary/50 transition-all"
                 >
-                  <div className="step-circle">{step.number}</div>
+                  <div className="step-circle font-mono">{step.number}</div>
                   <div>
-                    <h3 className="text-xl font-bold mb-1">{step.title}</h3>
-                    <p className="text-muted-foreground">{step.description}</p>
+                    <h3 className="text-lg font-medium mb-2">{step.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
                   </div>
                 </motion.div>
               ))}
@@ -60,7 +60,7 @@ export function HowItWorksSection() {
                     {step.number}
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold mb-1">{step.title}</h3>
+                    <h3 className="text-xl font-medium mb-1">{step.title}</h3>
                     <p className={step.highlighted ? "text-gray-900/80" : "text-muted-foreground"}>
                       {step.description}
                     </p>
@@ -81,7 +81,7 @@ export function HowItWorksSection() {
               <div className="text-center">
                 <Wallet className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
                 <div className="text-sm text-muted-foreground mb-2">Follow these</div>
-                <div className="text-lg font-semibold">easy steps</div>
+                <div className="text-lg font-medium">easy steps</div>
               </div>
               
               {/* Step dots around circle */}

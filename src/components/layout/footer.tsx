@@ -12,7 +12,7 @@ export function Footer() {
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2">
               <Shield className="w-8 h-8 text-yellow-400" />
-              <span className="text-xl font-bold">Vulnera</span>
+              <span className="text-xl font-semibold">Vulnera</span>
             </Link>
             <p className="text-sm text-muted-foreground">
               Decentralized bug bounty platform built on Solana. Secure the web, earn rewards.
@@ -32,7 +32,7 @@ export function Footer() {
 
           {/* Platform */}
           <div>
-            <h3 className="font-bold mb-4">Platform</h3>
+            <h3 className="font-medium mb-4">Platform</h3>
             <ul className="space-y-2 text-sm">
               <li><Link href="/vulnera" className="text-muted-foreground hover:text-foreground transition-colors">Browse Bounties</Link></li>
               <li><Link href="/vulnera" className="text-muted-foreground hover:text-foreground transition-colors">Submit Report</Link></li>
@@ -43,7 +43,7 @@ export function Footer() {
 
           {/* Resources */}
           <div>
-            <h3 className="font-bold mb-4">Resources</h3>
+            <h3 className="font-medium mb-4">Resources</h3>
             <ul className="space-y-2 text-sm">
               <li><Link href="/vulnera" className="text-muted-foreground hover:text-foreground transition-colors">Documentation</Link></li>
               <li><Link href="/vulnera" className="text-muted-foreground hover:text-foreground transition-colors">API Reference</Link></li>
@@ -54,7 +54,7 @@ export function Footer() {
 
           {/* Company */}
           <div>
-            <h3 className="font-bold mb-4">Company</h3>
+            <h3 className="font-medium mb-4">Company</h3>
             <ul className="space-y-2 text-sm">
               <li><Link href="/vulnera" className="text-muted-foreground hover:text-foreground transition-colors">About Us</Link></li>
               <li><Link href="/vulnera" className="text-muted-foreground hover:text-foreground transition-colors">Blog</Link></li>

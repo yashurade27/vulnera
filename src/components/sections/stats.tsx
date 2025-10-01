@@ -37,11 +37,11 @@ export function StatsSection() {
       <div className="absolute inset-0 radial-gradient-yellow" />
       
       <div className="container-custom relative z-10">
-        <div className="text-center mb-12">
-          <h2 className="section-title mb-4">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl lg:text-5xl font-medium mb-6 leading-tight">
             Join the Security Revolution
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          <p className="text-muted-foreground max-w-2xl mx-auto text-base leading-relaxed">
             Be part of a growing community making the digital world safer, one bug at a time
           </p>
         </div>
@@ -56,10 +56,10 @@ export function StatsSection() {
             <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <DollarSign className="w-6 h-6 text-green-400" />
             </div>
-            <div className="text-3xl lg:text-4xl font-bold text-gradient mb-2">
+            <div className="text-3xl lg:text-4xl font-medium text-gradient mb-2">
               $<CountUpNumber end={2500000} duration={2} />
             </div>
-            <div className="text-sm text-muted-foreground">Total Rewards Paid</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Total Rewards Paid</div>
           </motion.div>
           
           <motion.div
@@ -72,7 +72,7 @@ export function StatsSection() {
             <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <Users className="w-6 h-6 text-blue-400" />
             </div>
-            <div className="text-3xl lg:text-4xl font-bold text-gradient mb-2">
+            <div className="text-3xl lg:text-4xl font-medium text-gradient mb-2">
               <CountUpNumber end={542} duration={2} />+
             </div>
             <div className="text-sm text-muted-foreground">Active Researchers</div>
@@ -88,7 +88,7 @@ export function StatsSection() {
             <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <Bug className="w-6 h-6 text-red-400" />
             </div>
-            <div className="text-3xl lg:text-4xl font-bold text-gradient mb-2">
+            <div className="text-3xl lg:text-4xl font-medium text-gradient mb-2">
               <CountUpNumber end={1247} duration={2} />
             </div>
             <div className="text-sm text-muted-foreground">Bugs Discovered</div>
@@ -104,7 +104,7 @@ export function StatsSection() {
             <div className="w-12 h-12 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <TrendingUp className="w-6 h-6 text-yellow-400" />
             </div>
-            <div className="text-3xl lg:text-4xl font-bold text-gradient mb-2">
+            <div className="text-3xl lg:text-4xl font-medium text-gradient mb-2">
               <CountUpNumber end={142} duration={2} />
             </div>
             <div className="text-sm text-muted-foreground">Active Bounties</div>

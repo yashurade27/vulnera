@@ -1,6 +1,6 @@
 'use client'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -12,9 +12,20 @@ const ClusterDropdown = dynamic(() => import('@/components/cluster-dropdown').th
   ssr: false,
 })
 
-export function AppHeader({ links = [] }: { links: { label: string; path: string }[] }) {
+export function AppHeader() {
   const pathname = usePathname()
   const [showMenu, setShowMenu] = useState(false)
+
+  const links = useMemo(() => {
+    if (pathname.startsWith('/auth')) {
+      return [{ label: 'Home', path: '/' }]
+    }
+    return [
+      { label: 'Home', path: '/' },
+      { label: 'Account', path: '/account' },
+      { label: 'Vulnera Program', path: '/vulnera' },
+    ]
+  }, [pathname])
 
   function isActive(path: string) {
     return path === '/' ? pathname === '/' : pathname.startsWith(path)

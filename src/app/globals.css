@@ -40,6 +40,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-instrument-serif);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
 :root {
@@ -118,6 +120,12 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-jetbrains-mono), monospace;
+  }
+
+  h1, h2, h3, h4, h5, h6,
+  .font-serif {
+    font-family: var(--font-instrument-serif), serif;
   }
 
   button:not(:disabled),

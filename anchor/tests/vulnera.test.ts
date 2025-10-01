@@ -13,11 +13,20 @@ describe('vulnera_bounty', () => {
   let hunter: anchor.web3.PublicKey
   let platformWallet: anchor.web3.PublicKey
 
-  before(async () => {
-    // Create test accounts
-    hunter = anchor.web3.Keypair.generate().publicKey
-    platformWallet = anchor.web3.Keypair.generate().publicKey
-  })
+  hunter = anchor.web3.Keypair.generate().publicKey
+  platformWallet = anchor.web3.Keypair.generate().publicKey
+
+  // Helper function to airdrop and confirm
+  const fundAccount = async (provider: anchor.AnchorProvider, account: anchor.web3.PublicKey, amount: number) => {
+    const airdropSignature = await provider.connection.requestAirdrop(account, amount)
+    await provider.connection.confirmTransaction(airdropSignature)
+  }
+
+  // before(async () => {
+  //   // Create test accounts
+  //   hunter = anchor.web3.Keypair.generate().publicKey
+  //   platformWallet = anchor.web3.Keypair.generate().publicKey
+  // })
 
   const [vaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
     [Buffer.from('bounty-escrow'), owner.toBuffer()],
@@ -30,9 +39,7 @@ describe('vulnera_bounty', () => {
     await program.methods
       .initialize(escrowAmount)
       .accounts({
-        vault: vaultPda,
         owner,
-        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .rpc()
 
@@ -58,14 +65,11 @@ describe('vulnera_bounty', () => {
         null, // custom_amount
         rewardPerSubmission,
         maxSubmissions,
-        currentPaidSubmissions
+        currentPaidSubmissions,
       )
       .accounts({
-        vault: vaultPda,
-        owner,
         hunterWallet: hunter,
         platformWallet,
-        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .rpc()
 
@@ -101,19 +105,26 @@ describe('vulnera_bounty', () => {
   })
 
   it('Fails to initialize with insufficient escrow amount', async () => {
+    // 1. Create a brand new, unique owner for this test
+    const testOwner = anchor.web3.Keypair.generate()
+
+    // 2. Fund this new wallet so it can pay for the transaction
+    await fundAccount(provider, testOwner.publicKey, anchor.web3.LAMPORTS_PER_SOL)
+
     const invalidAmount = new anchor.BN(50000) // Less than MIN_ESCROW_AMOUNT
 
     try {
+      // 3. Call the instruction with the new owner
       await program.methods
         .initialize(invalidAmount)
         .accounts({
-          vault: vaultPda, // This might fail because PDA already exists, but for test
-          owner,
-          systemProgram: anchor.web3.SystemProgram.programId,
+          owner: testOwner.publicKey, // Use the new owner's public key
         })
+        .signers([testOwner]) // The new owner must sign to approve the transaction
         .rpc()
       assert.fail('Should have thrown an error')
     } catch (error) {
+      // 4. Now the test will correctly catch your custom program error!
       assert.include(error.toString(), 'InvalidEscrowAmount')
     }
   })
@@ -121,17 +132,20 @@ describe('vulnera_bounty', () => {
   it('Fails to process payment when max submissions reached', async () => {
     // First, need to initialize again or use a new PDA
     const newOwner = anchor.web3.Keypair.generate()
+
+    // ✅ FIX: Use the helper function to airdrop AND wait for confirmation
+    await fundAccount(provider, newOwner.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL)
+
     const [newVaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from('bounty-escrow'), newOwner.publicKey.toBuffer()],
-      program.programId
+      program.programId,
     )
 
+    // This will now succeed because the newOwner wallet has funds
     await program.methods
       .initialize(new anchor.BN(anchor.web3.LAMPORTS_PER_SOL))
       .accounts({
-        vault: newVaultPda,
         owner: newOwner.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([newOwner])
       .rpc()
@@ -142,22 +156,11 @@ describe('vulnera_bounty', () => {
 
     try {
       await program.methods
-        .processPayment(
-          'test',
-          'test',
-          null,
-          rewardPerSubmission,
-          maxSubmissions,
-          currentPaidSubmissions
-        )
+        .processPayment('test', 'test', null, rewardPerSubmission, maxSubmissions, currentPaidSubmissions)
         .accounts({
-          vault: newVaultPda,
-          owner: newOwner.publicKey,
           hunterWallet: hunter,
           platformWallet,
-          systemProgram: anchor.web3.SystemProgram.programId,
         })
-        .signers([newOwner])
         .rpc()
       assert.fail('Should have thrown an error')
     } catch (error) {
@@ -167,44 +170,36 @@ describe('vulnera_bounty', () => {
 
   it('Fails to process payment with insufficient funds', async () => {
     const newOwner = anchor.web3.Keypair.generate()
+    await fundAccount(provider, newOwner.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL)
+
     const [newVaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from('bounty-escrow'), newOwner.publicKey.toBuffer()],
-      program.programId
+      program.programId,
     )
 
+    // 1. Initialize with a VALID amount that is small (e.g., 0.5 SOL)
     await program.methods
-      .initialize(new anchor.BN(0.05 * anchor.web3.LAMPORTS_PER_SOL)) // Less than reward
+      .initialize(new anchor.BN(0.5 * anchor.web3.LAMPORTS_PER_SOL))
       .accounts({
-        vault: newVaultPda,
         owner: newOwner.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([newOwner])
       .rpc()
 
-    const rewardPerSubmission = new anchor.BN(0.1 * anchor.web3.LAMPORTS_PER_SOL)
+    // 2. Now, try to pay a reward that is LARGER than the escrow balance
+    const rewardPerSubmission = new anchor.BN(1 * anchor.web3.LAMPORTS_PER_SOL) // 1 SOL > 0.5 SOL
 
     try {
       await program.methods
-        .processPayment(
-          'test',
-          'test',
-          null,
-          rewardPerSubmission,
-          5,
-          0
-        )
+        .processPayment('test', 'test', null, rewardPerSubmission, 5, 0)
         .accounts({
-          vault: newVaultPda,
-          owner: newOwner.publicKey,
           hunterWallet: hunter,
           platformWallet,
-          systemProgram: anchor.web3.SystemProgram.programId,
         })
-        .signers([newOwner])
         .rpc()
       assert.fail('Should have thrown an error')
     } catch (error) {
+      // 3. The test will now correctly catch the 'InsufficientFunds' error
       assert.include(error.toString(), 'InsufficientFunds')
     }
   })

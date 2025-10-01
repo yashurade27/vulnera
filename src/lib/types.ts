@@ -39,6 +39,10 @@ export const verifyOtpSchema = z.object({
   otp: z.string().length(6),
 });
 
+export const verifyOtpFormSchema = z.object({
+  otp: z.string().length(6),
+});
+
 // ==================== USER SCHEMAS ====================
 
 export const updateUserProfileSchema = z.object({
@@ -426,6 +430,7 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ResendOtpInput = z.infer<typeof resendOtpSchema>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
+export type VerifyOtpFormInput = z.infer<typeof verifyOtpFormSchema>;
 export type UpdateUserProfileInput = z.infer<typeof updateUserProfileSchema>;
 export type UpdateWalletInput = z.infer<typeof updateWalletSchema>;
 export type CreateCompanyInput = z.infer<typeof createCompanySchema>;

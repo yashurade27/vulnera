@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Menu, X, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { Button } from '@/components/ui/button'
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -24,7 +25,7 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Shield className="w-8 h-8 text-yellow-400" />
-            <span className="text-xl font-bold">Vulnera</span>
+            <span className="text-xl font-semibold">Vulnera</span>
           </Link>
           
           {/* Desktop Menu */}
@@ -36,12 +37,13 @@ export function Navbar() {
             <Link href="/vulnera" className="link-premium">Docs</Link>
           </div>
           
-          {/* CTA Button */}
+          {/* Authentication Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <Link href="/vulnera">
-              <button className="btn-primary">
-                Connect Wallet
-              </button>
+            <Link href="/auth/login">
+              <Button variant="outline">Login</Button>
+            </Link>
+            <Link href="/auth/register">
+              <Button variant="default">Register</Button>
             </Link>
           </div>
           
@@ -70,8 +72,11 @@ export function Navbar() {
               <Link href="/account" className="block link-premium py-2">Leaderboard</Link>
               <Link href="/vulnera" className="block link-premium py-2">How It Works</Link>
               <Link href="/vulnera" className="block link-premium py-2">Docs</Link>
-              <Link href="/vulnera" className="block">
-                <button className="w-full btn-primary mt-4">Connect Wallet</button>
+              <Link href="/auth/login">
+                <Button className="w-full" variant="outline">Login</Button>
+              </Link>
+              <Link href="/auth/register">
+                <Button className="w-full mt-2" variant="default">Register</Button>
               </Link>
             </div>
           </motion.div>

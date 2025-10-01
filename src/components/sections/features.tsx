@@ -48,16 +48,16 @@ export function FeaturesSection() {
   return (
     <section className="py-24 relative">
       <div className="container-custom">
-        <h2 className="section-title text-center mb-4">
+        <h2 className="text-4xl lg:text-5xl font-medium text-center mb-6 ">
           How Vulnera{" "}
           <span className="inline-flex items-center">
             <span className="text-yellow-400">⚡</span>
           </span>{" "}
           Transforms
         </h2>
-        <p className="text-center text-muted-foreground mb-16 text-xl max-w-3xl mx-auto">
+        <p className="text-center text-muted-foreground mb-16 text-lg max-w-3xl mx-auto leading-relaxed">
           A decentralized approach to{" "}
-          <span className="highlight-yellow font-semibold">security research</span>{" "}
+          <span className="text-yellow-400 font-semibold">security research</span>{" "}
           that benefits everyone
         </p>
         
@@ -77,15 +77,15 @@ export function FeaturesSection() {
                   <Icon className={`w-8 h-8 ${feature.highlighted ? 'text-gray-900' : 'text-yellow-400'}`} />
                 </div>
                 
-                <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
-                <p className={feature.highlighted ? "text-gray-900/80" : "text-muted-foreground"}>
+                <h3 className="text-xl font-medium mb-3">{feature.title}</h3>
+                <p className={`text-sm leading-relaxed ${feature.highlighted ? "text-gray-900/80" : "text-muted-foreground"}`}>
                   {feature.description}
                 </p>
                 
                 {feature.highlighted && (
-                  <Link href="/vulnera" passHref>
-                    <Button asChild variant="ghost" size="icon" className="mt-6">
-                      <a><span className="text-xl">→</span></a>
+                  <Link href="/vulnera">
+                    <Button variant="ghost" size="icon" className="mt-6">
+                      <span className="text-xl">→</span>
                     </Button>
                   </Link>
                 )}
