@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { fundBountySchema, type FundBountyInput } from '@/lib/types';
+import { solanaService } from '@/lib/solana';
 
 export async function POST(
   request: NextRequest,
@@ -50,11 +51,11 @@ export async function POST(
         userId: session.user.id,
         companyId: existingBounty.companyId,
         isActive: true,
-        canApprovePayment: true, // Assuming this permission for funding
+        canApprovePayment: true,
       },
     });
 
-    if (!companyMember) {
+    if (!companyMember && session.user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Forbidden - You do not have permission to fund this bounty' },
         { status: 403 }
@@ -69,13 +70,51 @@ export async function POST(
       );
     }
 
+    // Verify transaction on blockchain
+    const txVerification = await solanaService.verifyTransaction(txSignature);
+    
+    if (!txVerification.confirmed) {
+      return NextResponse.json(
+        { error: 'Transaction not confirmed on blockchain' },
+        { status: 400 }
+      );
+    }
+
+    // Verify escrow account exists and has correct owner
+    const escrowData = await solanaService.getEscrowData(escrowAddress);
+    
+    if (!escrowData) {
+      return NextResponse.json(
+        { error: 'Escrow account not found or not initialized' },
+        { status: 400 }
+      );
+    }
+
+    if (escrowData.owner !== existingBounty.company.walletAddress) {
+      return NextResponse.json(
+        { error: 'Escrow owner does not match company wallet' },
+        { status: 400 }
+      );
+    }
+
+    // Verify escrow amount matches bounty reward
+    const expectedAmount = Number(existingBounty.rewardAmount) * 1_000_000_000;
+    if (escrowData.escrowAmount < expectedAmount) {
+      return NextResponse.json(
+        { error: `Escrow amount (${escrowData.escrowAmount}) is less than bounty reward (${expectedAmount})` },
+        { status: 400 }
+      );
+    }
+
     // Update bounty with funding information
     const fundedBounty = await prisma.bounty.update({
       where: { id: bountyId },
       data: {
         escrowAddress,
         txSignature,
-        publishedAt: new Date(), // Mark as published when funded
+        // Set bounty to ACTIVE when funded
+        status: 'ACTIVE',
+        publishedAt: new Date(),
       },
       include: {
         company: {
@@ -90,12 +129,30 @@ export async function POST(
       },
     });
 
-    // TODO: Verify transaction on blockchain
-    // This would involve calling a blockchain verification service
+    // Update company stats
+    await prisma.company.update({
+      where: { id: existingBounty.companyId },
+      data: {
+        totalBountiesFunded: { increment: existingBounty.rewardAmount },
+        activeBounties: { increment: 1 }
+      }
+    });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: 'BOUNTY_FUNDED',
+        entityType: 'BOUNTY',
+        entityId: bountyId,
+        newValue: { txSignature, escrowAddress, escrowAmount: escrowData.escrowAmount }
+      }
+    });
 
     return NextResponse.json({
       message: 'Bounty funded successfully',
-      bounty: fundedBounty
+      bounty: fundedBounty,
+      escrowAmount: escrowData.escrowAmount
     });
 
   } catch (error) {

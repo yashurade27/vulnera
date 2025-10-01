@@ -120,12 +120,11 @@ export async function POST(
       },
     });
 
-    // Update bounty stats
+    // Update bounty stats (only increment valid submissions, not paidOut yet)
     await prisma.bounty.update({
       where: { id: submission.bountyId },
       data: {
         validSubmissions: { increment: 1 },
-        paidOut: { increment: rewardAmount },
       },
     });
 
@@ -134,13 +133,28 @@ export async function POST(
       data: {
         userId: submission.userId,
         title: 'Submission approved',
-        message: `Your submission "${submission.title}" has been approved with a reward of $${rewardAmount}.`,
+        message: `Your submission "${submission.title}" has been approved with a reward of ${rewardAmount} SOL. Payment will be processed via blockchain.`,
         type: 'SUBMISSION',
         actionUrl: `/submissions/${submissionId}`,
       },
     });
 
-    return NextResponse.json({ submission: updatedSubmission });
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: 'SUBMISSION_APPROVED',
+        entityType: 'SUBMISSION',
+        entityId: submissionId,
+        oldValue: { status: submission.status },
+        newValue: { status: 'APPROVED', rewardAmount }
+      }
+    });
+
+    return NextResponse.json({ 
+      submission: updatedSubmission,
+      message: 'Submission approved. Please process payment via blockchain.' 
+    });
 
   } catch (error) {
     console.error('Approve submission error:', error);

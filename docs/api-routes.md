@@ -44,6 +44,11 @@
 /**
  * GET /api/auth/me
  * Get current authenticated user
+ */
+
+/**
+ * GET /api/auth/session
+ * Get current session (returns session object or null)
  */ -->
 
 // ==================== USER PROFILE ====================
@@ -99,6 +104,11 @@
 /**
  * GET /api/companies/[companyId]
  * Get company details
+ */
+
+/**
+ * GET /api/companies/my-company
+ * Get current user's company details
  */
 
 /**
@@ -188,6 +198,12 @@
  * POST /api/bounties/[bountyId]/close
  * Close bounty and withdraw remaining funds
  * Body: { txSignature }
+ */
+
+/**
+ * PATCH /api/bounties/[bountyId]/status
+ * Update bounty status independently (DRAFT, ACTIVE, CLOSED, EXPIRED)
+ * Body: { status }
  */
 
 /**
@@ -568,7 +584,7 @@
  * User Management: 7 routes
  * Company Management: 7 routes
  * Company Members: 4 routes
- * Bounty Management: 9 routes
+ * Bounty Management: 10 routes
  * Submission Management: 9 routes
  * Comments: 4 routes
  * Payment Management: 7 routes
@@ -582,5 +598,5 @@
  * Webhooks: 2 routes
  * Utilities: 2 routes
  *
- * TOTAL: ~92 API endpoints
+ * TOTAL: ~93 API endpoints
  */

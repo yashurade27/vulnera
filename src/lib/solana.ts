@@ -1,14 +1,17 @@
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, sendAndConfirmTransaction } from '@solana/web3.js'
 import * as nacl from 'tweetnacl'
 
-// Solana RPC endpoint - use environment variable or default to devnet
+// Solana RPC endpoint - use environment variable or default to Helius Devnet
 const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com'
 
 // Platform wallet address for fees - should be set in environment
 const PLATFORM_WALLET = process.env.PLATFORM_WALLET || '11111111111111111111111111111112'
 
-// Minimum escrow amount (0.1 SOL)
-export const MIN_ESCROW_AMOUNT = 0.1 * LAMPORTS_PER_SOL
+// Program ID from the smart contract
+export const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_PROGRAM_ID || '3Hfod1h8nFotUMiFL3AeaWrtgiaU5jAq28UeH6veAqBp')
+
+// Minimum escrow amount (0.1 SOL = 100,000,000 lamports)
+export const MIN_ESCROW_AMOUNT = 100_000_000
 
 // Platform fee (2%)
 export const PLATFORM_FEE_BPS = 200 // basis points
@@ -18,6 +21,17 @@ export class SolanaService {
 
   constructor() {
     this.connection = new Connection(SOLANA_RPC_URL, 'confirmed')
+  }
+
+  /**
+   * Derive escrow PDA address for a given owner
+   * Uses seeds: [b"bounty-escrow", owner.key()]
+   */
+  async deriveEscrowAddress(ownerPublicKey: PublicKey): Promise<[PublicKey, number]> {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from('bounty-escrow'), ownerPublicKey.toBuffer()],
+      PROGRAM_ID
+    )
   }
 
   /**
@@ -109,45 +123,60 @@ export class SolanaService {
   }
 
   /**
-   * Create a simple escrow transfer (temporary implementation)
-   * In production, this should use the Anchor program
+   * Derive escrow address for initialization
+   * The actual transaction should be signed and sent by the frontend
+   * This method returns the expected escrow PDA address
    */
-  async createEscrow(ownerWallet: string, amount: number): Promise<{ escrowAddress: string; txSignature: string }> {
-    // For now, create a temporary escrow account
-    // This is a placeholder - should be replaced with Anchor program call
+  async createEscrow(ownerWallet: string, amount: number): Promise<{ escrowAddress: string; expectedAmount: number }> {
     const owner = new PublicKey(ownerWallet)
-    const escrowKeypair = new PublicKey(ownerWallet) // Placeholder - generate proper escrow address
+    const [escrowPDA, bump] = await this.deriveEscrowAddress(owner)
 
     return {
-      escrowAddress: escrowKeypair.toString(),
-      txSignature: 'placeholder_tx_signature' // This would be the actual transaction signature
+      escrowAddress: escrowPDA.toString(),
+      expectedAmount: amount
     }
   }
 
   /**
-   * Release payment from escrow
+   * Get escrow account data
    */
-  async releasePayment(
-    escrowAddress: string,
-    recipientWallet: string,
-    amount: number
-  ): Promise<{ txSignature: string }> {
-    // Placeholder implementation
-    // Should use Anchor program to release payment
-    return {
-      txSignature: 'placeholder_payment_tx'
+  async getEscrowData(escrowAddress: string): Promise<{ owner: string; escrowAmount: number } | null> {
+    try {
+      const accountInfo = await this.connection.getAccountInfo(new PublicKey(escrowAddress))
+      if (!accountInfo) return null
+
+      // Parse account data (8 bytes discriminator + 32 bytes owner + 8 bytes amount)
+      const data = accountInfo.data
+      if (data.length < 48) return null
+
+      const owner = new PublicKey(data.slice(8, 40))
+      const escrowAmount = Number(data.readBigUInt64LE(40))
+
+      return {
+        owner: owner.toString(),
+        escrowAmount
+      }
+    } catch (error) {
+      console.error('Failed to get escrow data:', error)
+      return null
     }
   }
 
   /**
-   * Withdraw remaining escrow funds
+   * Verify escrow has sufficient balance for payment
    */
-  async withdrawEscrow(escrowAddress: string, ownerWallet: string): Promise<{ txSignature: string; amount: number }> {
-    // Placeholder implementation
-    return {
-      txSignature: 'placeholder_withdraw_tx',
-      amount: 0
-    }
+  async verifyEscrowBalance(escrowAddress: string, requiredAmount: number): Promise<boolean> {
+    const escrowData = await this.getEscrowData(escrowAddress)
+    if (!escrowData) return false
+    return escrowData.escrowAmount >= requiredAmount
+  }
+
+  /**
+   * Get remaining escrow balance for withdrawal
+   */
+  async getEscrowBalance(escrowAddress: string): Promise<number> {
+    const escrowData = await this.getEscrowData(escrowAddress)
+    return escrowData?.escrowAmount || 0
   }
 
   /**

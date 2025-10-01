@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { closeBountySchema, type CloseBountyInput } from '@/lib/types';
+import { solanaService } from '@/lib/solana';
 
 export async function POST(
   request: NextRequest,
@@ -50,11 +51,11 @@ export async function POST(
         userId: session.user.id,
         companyId: existingBounty.companyId,
         isActive: true,
-        canApprovePayment: true, // Assuming this permission for closing
+        canApprovePayment: true,
       },
     });
 
-    if (!companyMember) {
+    if (!companyMember && session.user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Forbidden - You do not have permission to close this bounty' },
         { status: 403 }
@@ -84,14 +85,39 @@ export async function POST(
       );
     }
 
+    // Verify transaction on blockchain
+    const txVerification = await solanaService.verifyTransaction(txSignature);
+    
+    if (!txVerification.confirmed) {
+      return NextResponse.json(
+        { error: 'Transaction not confirmed on blockchain' },
+        { status: 400 }
+      );
+    }
+
+    // Get transaction details to verify it's a close_bounty call
+    const txDetails = await solanaService.getTransaction(txSignature);
+    
+    if (!txDetails) {
+      return NextResponse.json(
+        { error: 'Transaction details not found' },
+        { status: 400 }
+      );
+    }
+
+    // Verify escrow is now empty or closed
+    let withdrawnAmount = 0;
+    if (existingBounty.escrowAddress) {
+      const remainingBalance = await solanaService.getEscrowBalance(existingBounty.escrowAddress);
+      withdrawnAmount = Number(existingBounty.rewardAmount) * 1_000_000_000 - Number(existingBounty.paidOut) * 1_000_000_000 - remainingBalance;
+    }
+
     // Close bounty
     const closedBounty = await prisma.bounty.update({
       where: { id: bountyId },
       data: {
         status: 'CLOSED',
         closedAt: new Date(),
-        // Store the withdrawal transaction signature
-        // Note: In a real implementation, you might want a separate field for withdrawal tx
       },
       include: {
         company: {
@@ -114,12 +140,25 @@ export async function POST(
       },
     });
 
-    // TODO: Verify withdrawal transaction on blockchain
-    // This would involve calling a blockchain verification service
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: 'BOUNTY_CLOSED',
+        entityType: 'BOUNTY',
+        entityId: bountyId,
+        newValue: { 
+          txSignature, 
+          withdrawnAmount,
+          closedAt: new Date().toISOString()
+        }
+      }
+    });
 
     return NextResponse.json({
       message: 'Bounty closed successfully',
-      bounty: closedBounty
+      bounty: closedBounty,
+      withdrawnAmount
     });
 
   } catch (error) {
