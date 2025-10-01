@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { Inter } from 'next/font/google';
 import { AppProviders } from '@/components/app-providers'
 import { AppLayout } from '@/components/app-layout'
 import React from 'react'
@@ -16,10 +17,11 @@ const links: { label: string; path: string }[] = [
   { label: 'Vulnera Program', path: '/vulnera' },
 ]
 
+const inter = Inter({ subsets: ['latin'] });
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`antialiased`}>
+    <html lang="en" suppressHydrationWarning className={inter.className}>
+      <body className="antialiased">
         <AppProviders>
           <AppLayout links={links}>{children}</AppLayout>
         </AppProviders>
