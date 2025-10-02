@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-vulnera = "3Hfod1h8nFotUMiFL3AeaWrtgiaU5jAq28UeH6veAqBp"
+vulnera = "Bz7rptkyjjunebuRXqH3xeYpkgaMvGeLkoY195UFt9g3"
 
 [registry]
 url = "https://api.apr.dev"

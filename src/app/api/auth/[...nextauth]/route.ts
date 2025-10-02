@@ -195,12 +195,12 @@ async function normalizeResponseBody(response: Response): Promise<Response> {
     const trimmed = rawBody.trim();
 
     if (trimmed === "" || trimmed === "null" || trimmed === "{}") {
-      return new Response(null, {
-        status: 200,
-        statusText: "OK",
-        headers: {
-          "content-type": "application/json",
-        },
+      const fallbackBody = trimmed === "" ? "null" : trimmed;
+
+      return new Response(fallbackBody, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: new Headers(response.headers),
       });
     }
   } catch (error) {

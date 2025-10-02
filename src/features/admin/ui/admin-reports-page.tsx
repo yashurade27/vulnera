@@ -38,7 +38,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { updateReportSchema } from '@/lib/types'
 
 const REPORT_STATUSES = [
-  { label: 'All statuses', value: undefined },
+  { label: 'All statuses', value: 'all' },
   { label: 'Open', value: 'OPEN' },
   { label: 'Under investigation', value: 'UNDER_INVESTIGATION' },
   { label: 'Resolved', value: 'RESOLVED' },
@@ -46,7 +46,7 @@ const REPORT_STATUSES = [
 ] as const
 
 const REPORT_TYPES = [
-  { label: 'All types', value: undefined },
+  { label: 'All types', value: 'all' },
   { label: 'Late response', value: 'LATE_RESPONSE' },
   { label: 'Unfair rejection', value: 'UNFAIR_REJECTION' },
   { label: 'Spam submission', value: 'SPAM_SUBMISSION' },
@@ -139,11 +139,11 @@ export function AdminReportsPage() {
         <CardContent className="space-y-4 p-4 sm:p-6">
           <div className="grid gap-3 sm:grid-cols-4">
             <Select
-              value={filters.status ?? ''}
+              value={filters.status ?? 'all'}
               onValueChange={(value) =>
                 setFilters((prev) => ({
                   ...prev,
-                  status: value ? (value as AdminReportFilters['status']) : undefined,
+                  status: value === 'all' ? undefined : (value as AdminReportFilters['status']),
                   page: 1,
                 }))
               }
@@ -153,7 +153,7 @@ export function AdminReportsPage() {
               </SelectTrigger>
               <SelectContent>
                 {REPORT_STATUSES.map((option) => (
-                  <SelectItem key={option.label} value={option.value ?? ''}>
+                  <SelectItem key={option.label} value={option.value}>
                     {option.label}
                   </SelectItem>
                 ))}
@@ -161,11 +161,11 @@ export function AdminReportsPage() {
             </Select>
 
             <Select
-              value={filters.type ?? ''}
+              value={filters.type ?? 'all'}
               onValueChange={(value) =>
                 setFilters((prev) => ({
                   ...prev,
-                  type: value ? (value as AdminReportFilters['type']) : undefined,
+                  type: value === 'all' ? undefined : (value as AdminReportFilters['type']),
                   page: 1,
                 }))
               }
@@ -175,7 +175,7 @@ export function AdminReportsPage() {
               </SelectTrigger>
               <SelectContent>
                 {REPORT_TYPES.map((option) => (
-                  <SelectItem key={option.label} value={option.value ?? ''}>
+                  <SelectItem key={option.label} value={option.value}>
                     {option.label}
                   </SelectItem>
                 ))}

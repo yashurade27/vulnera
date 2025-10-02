@@ -75,13 +75,13 @@ const createCompanyFormSchema = z.object({
 type CreateCompanyFormValues = z.infer<typeof createCompanyFormSchema>
 
 const VERIFIED_OPTIONS = [
-  { label: 'All companies', value: undefined },
+  { label: 'All companies', value: 'all' },
   { label: 'Verified only', value: 'true' },
   { label: 'Unverified only', value: 'false' },
 ] as const
 
 const ACTIVE_OPTIONS = [
-  { label: 'All statuses', value: undefined },
+  { label: 'All statuses', value: 'all' },
   { label: 'Active', value: 'true' },
   { label: 'Inactive', value: 'false' },
 ] as const
@@ -251,9 +251,9 @@ export function AdminCompaniesPage() {
             />
             <div className="flex flex-col gap-3 sm:flex-row">
               <Select
-                value={filters.verified ?? ''}
+                value={filters.verified ?? 'all'}
                 onValueChange={(value) => {
-                  const nextValue = value === '' ? undefined : (value as AdminCompanyFilters['verified'])
+                  const nextValue = value === 'all' ? undefined : (value as AdminCompanyFilters['verified'])
                   setFilters((prev) => ({
                     ...prev,
                     verified: nextValue,
@@ -266,7 +266,7 @@ export function AdminCompaniesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {VERIFIED_OPTIONS.map((option) => (
-                    <SelectItem key={option.label} value={option.value ?? ''}>
+                    <SelectItem key={option.label} value={option.value}>
                       {option.label}
                     </SelectItem>
                   ))}
@@ -274,9 +274,9 @@ export function AdminCompaniesPage() {
               </Select>
 
               <Select
-                value={filters.active ?? ''}
+                value={filters.active ?? 'all'}
                 onValueChange={(value) => {
-                  const nextValue = value === '' ? undefined : (value as AdminCompanyFilters['active'])
+                  const nextValue = value === 'all' ? undefined : (value as AdminCompanyFilters['active'])
                   setFilters((prev) => ({
                     ...prev,
                     active: nextValue,
@@ -289,7 +289,7 @@ export function AdminCompaniesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {ACTIVE_OPTIONS.map((option) => (
-                    <SelectItem key={option.label} value={option.value ?? ''}>
+                    <SelectItem key={option.label} value={option.value}>
                       {option.label}
                     </SelectItem>
                   ))}

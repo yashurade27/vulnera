@@ -41,8 +41,17 @@ export function SettingsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [messageToSign, setMessageToSign] = useState<string>("")
   const [activeTab, setActiveTab] = useState("profile")
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const userId = session?.user?.id
+
+  const generateMessageToSign = (walletAddress: string) => {
+    const timestamp = Date.now()
+    const message = `Verify wallet ownership for Vulnera platform\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\nUser ID: ${userId ?? "unknown"}`
+    setMessageToSign(message)
+    return message
+  }
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(updateUserProfileSchema),
     defaultValues: {
@@ -63,8 +72,6 @@ export function SettingsPage() {
       signature: "",
     },
   })
-
-  const userId = session?.user?.id
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -95,6 +102,10 @@ export function SettingsPage() {
           walletAddress: payload?.user?.walletAddress ?? "",
           signature: "",
         })
+        // Generate message if wallet address exists
+        if (payload?.user?.walletAddress) {
+          generateMessageToSign(payload.user.walletAddress)
+        }
       } catch (err) {
         console.error(err)
         setError(err instanceof Error ? err.message : "Unexpected error loading profile")
@@ -120,8 +131,8 @@ export function SettingsPage() {
         throw new Error("Upload failed")
       }
 
-    const payload = await response.json()
-    profileForm.setValue("avatarUrl", payload.url ?? undefined, { shouldValidate: true })
+      const payload = await response.json()
+      profileForm.setValue("avatarUrl", payload.url ?? undefined, { shouldValidate: true })
       toast.success("Avatar updated")
     } catch (error) {
       console.error(error)
@@ -174,6 +185,12 @@ export function SettingsPage() {
       toast.error("You need to be signed in")
       return
     }
+
+    if (!messageToSign) {
+      toast.error("Please enter a wallet address first to generate the message to sign")
+      return
+    }
+
     try {
       const response = await fetch(`/api/users/${userId}/wallet`, {
         method: "PATCH",
@@ -181,7 +198,10 @@ export function SettingsPage() {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          ...values,
+          message: messageToSign,
+        }),
       })
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => null)
@@ -507,12 +527,37 @@ export function SettingsPage() {
                         <FormItem>
                           <FormLabel>Wallet address</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter your Solana wallet address" {...field} />
+                            <Input
+                              placeholder="Enter your Solana wallet address"
+                              {...field}
+                              onChange={(event) => {
+                                const value = event.target.value.trim()
+                                field.onChange(value)
+                                if (value) {
+                                  generateMessageToSign(value)
+                                  walletForm.setValue("signature", "") // Reset signature when address changes
+                                } else {
+                                  setMessageToSign("")
+                                }
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                    {messageToSign && (
+                      <div className="p-4 rounded-lg bg-muted border">
+                        <FormLabel className="text-sm font-medium">Message to sign</FormLabel>
+                        <div className="mt-2 p-3 bg-background rounded border font-mono text-sm whitespace-pre-wrap">
+                          {messageToSign}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Copy this message and sign it in your Solana wallet (Phantom, Backpack, etc.). The wallet
+                          will return a base58 signature you can paste below.
+                        </p>
+                      </div>
+                    )}
                     <FormField
                       control={walletForm.control}
                       name="signature"
@@ -523,7 +568,9 @@ export function SettingsPage() {
                             <Input placeholder="Paste the signed message from your wallet" {...field} />
                           </FormControl>
                           <FormDescription>
-                            Sign a message in your wallet client and paste the base64 signature to prove ownership.
+                            1. Enter your wallet address above to generate a message<br/>
+                            2. Sign that message in your Solana wallet (use the "Sign Message" feature)<br/>
+                            3. Paste the base58 signature returned by your wallet client
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

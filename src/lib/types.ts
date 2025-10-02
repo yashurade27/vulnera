@@ -59,6 +59,7 @@ export const updateUserProfileSchema = z.object({
 export const updateWalletSchema = z.object({
   walletAddress: z.string(),
   signature: z.string(),
+  message: z.string(),
 });
 
 // ==================== COMPANY SCHEMAS ====================
@@ -84,6 +85,7 @@ export const updateCompanySchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(1000).optional(),
   website: z.string().url().optional(),
+  walletAddress: z.string().optional(),
   logoUrl: z.string().url().optional(),
   industry: z.string().max(50).optional(),
   companySize: z.string().max(20).optional(),

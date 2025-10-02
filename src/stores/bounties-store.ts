@@ -9,12 +9,16 @@ interface Bounty {
   rewardAmount: number
   status: string
   endsAt: string | null
+  escrowAddress: string | null
+  escrowBalanceLamports: number | null
+  txSignature: string | null
   company: {
     id: string
     name: string
     slug: string
     logoUrl: string | null
     isVerified: boolean
+    walletAddress?: string | null
   }
   _count: {
     submissions: number
@@ -27,6 +31,9 @@ interface BountyDetails extends Bounty {
   inScope: string | null
   outOfScope: string | null
   guidelines: string | null
+  escrowAddress: string | null
+  escrowBalanceLamports: number | null
+  txSignature: string | null
   stats?: {
     totalSubmissions: number
     paidSubmissions: number
@@ -34,15 +41,17 @@ interface BountyDetails extends Bounty {
   }
 }
 
+interface SubmissionReporter {
+  displayName: string
+  username?: string | null
+}
+
 interface Submission {
   id: string
   title: string
   status: string
   createdAt: string
-  hunter: {
-    name: string
-    email: string
-  }
+  reporter: SubmissionReporter
 }
 
 interface BountiesStore {

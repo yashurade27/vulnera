@@ -73,7 +73,23 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
       }
 
       const data = await response.json()
-      setSubmissions(data.submissions || [])
+      const normalized = Array.isArray(data?.submissions)
+        ? data.submissions.map((submission: any) => ({
+            id: submission?.id,
+            title: submission?.title ?? "Submission",
+            status: submission?.status ?? "PENDING",
+            createdAt: submission?.createdAt ?? submission?.submittedAt ?? new Date().toISOString(),
+            reporter: {
+              displayName:
+                submission?.user?.fullName ??
+                submission?.user?.username ??
+                submission?.hunter?.name ??
+                "Anonymous Hunter",
+              username: submission?.user?.username ?? submission?.hunter?.username ?? null,
+            },
+          }))
+        : []
+      setSubmissions(normalized)
       setIsCompanyMember(true)
     } catch (error) {
       console.error("Failed to fetch submissions:", error)
@@ -115,6 +131,15 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
 
   const daysLeft = currentBounty.endsAt
     ? Math.ceil((new Date(currentBounty.endsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : null
+  const escrowSol = currentBounty.escrowBalanceLamports
+    ? currentBounty.escrowBalanceLamports / 1_000_000_000
+    : 0
+  const escrowExplorerUrl = currentBounty.escrowAddress
+    ? `https://explorer.solana.com/address/${currentBounty.escrowAddress}?cluster=devnet`
+    : null
+  const txExplorerUrl = currentBounty.txSignature
+    ? `https://explorer.solana.com/tx/${currentBounty.txSignature}?cluster=devnet`
     : null
 
   return (
@@ -169,9 +194,40 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
             </div>
 
             <div className="process-card lg:min-w-[280px]">
-              <div className="text-center mb-4">
-                <div className="text-3xl font-bold text-yellow-400 mb-1">${currentBounty.rewardAmount.toLocaleString()}</div>
-                <p className="text-sm text-muted-foreground">Reward Amount</p>
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-yellow-400 mb-1">
+                    {currentBounty.rewardAmount.toLocaleString()} SOL
+                  </div>
+                  <p className="text-sm text-muted-foreground">Reward per Submission</p>
+                </div>
+                <div className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 px-4 py-3 text-left">
+                  <p className="text-xs uppercase text-muted-foreground">Escrow Balance</p>
+                  <p className="text-lg font-semibold text-yellow-200">
+                    {escrowSol.toLocaleString(undefined, { maximumFractionDigits: 4 })} SOL
+                  </p>
+                  {currentBounty.escrowAddress ? (
+                    <p className="mt-2 text-[11px] font-mono break-all text-muted-foreground">
+                      {currentBounty.escrowAddress}
+                    </p>
+                  ) : null}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {escrowExplorerUrl ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={escrowExplorerUrl} target="_blank" rel="noopener noreferrer">
+                          View Escrow Account
+                        </Link>
+                      </Button>
+                    ) : null}
+                    {txExplorerUrl ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={txExplorerUrl} target="_blank" rel="noopener noreferrer">
+                          Funding Transaction
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
               </div>
               <Button className="w-full btn-primary" onClick={() => router.push(`/bounties/${bountyId}/submit`)}>
                 Submit Bug Report
@@ -270,7 +326,10 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        By {submission.hunter.name} • {new Date(submission.createdAt).toLocaleDateString()}
+                        By {submission.reporter.displayName}
+                        {submission.reporter.username ? ` (@${submission.reporter.username})` : ""} •
+                        {" "}
+                        {new Date(submission.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   ))}
@@ -335,6 +394,11 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
               <Button variant="outline" className="w-full bg-transparent" asChild>
                 <Link href={`/companies/${currentBounty.company.slug}`}>View Company Profile</Link>
               </Button>
+              {currentBounty.company.walletAddress ? (
+                <p className="mt-4 text-[11px] font-mono break-all text-muted-foreground">
+                  Wallet: {currentBounty.company.walletAddress}
+                </p>
+              ) : null}
             </div>
           </aside>
         </div>

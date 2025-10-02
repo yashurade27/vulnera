@@ -15,6 +15,9 @@ interface BountyCardProps {
     rewardAmount: number
     status: string
     endsAt: string | null
+    escrowAddress: string | null
+    escrowBalanceLamports: number | null
+    txSignature: string | null
     company: {
       id: string
       name: string
@@ -41,6 +44,11 @@ export function BountyCard({ bounty }: BountyCardProps) {
     const d = new Date(date)
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
   }
+
+  const escrowSol = bounty.escrowBalanceLamports ? bounty.escrowBalanceLamports / 1_000_000_000 : 0
+  const explorerUrl = bounty.escrowAddress
+    ? `https://explorer.solana.com/address/${bounty.escrowAddress}?cluster=devnet`
+    : null
 
   const getDaysRemaining = (date: string | null) => {
     if (!date) return null
@@ -80,14 +88,32 @@ export function BountyCard({ bounty }: BountyCardProps) {
       </CardHeader>
 
       <CardContent>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-yellow-400" />
-            <span className="text-2xl font-bold text-yellow-400">${bounty.rewardAmount.toLocaleString()}</span>
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-yellow-400" />
+              <div className="flex flex-col">
+                <span className="text-xs uppercase text-muted-foreground">Reward / Submission</span>
+                <span className="text-2xl font-bold text-yellow-400">{bounty.rewardAmount.toLocaleString()} SOL</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Users className="w-4 h-4" />
+              <span>{bounty._count.submissions} submissions</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Users className="w-4 h-4" />
-            <span>{bounty._count.submissions} submissions</span>
+          <div className="flex items-center justify-between rounded border border-yellow-400/30 bg-yellow-500/10 px-3 py-2">
+            <div className="flex flex-col">
+              <span className="text-xs uppercase text-muted-foreground">Escrow Balance</span>
+              <span className="text-sm font-semibold text-yellow-200">{escrowSol.toLocaleString(undefined, { maximumFractionDigits: 4 })} SOL</span>
+            </div>
+            {explorerUrl ? (
+              <Button size="sm" variant="outline" className="text-xs" asChild>
+                <Link href={explorerUrl} target="_blank" rel="noopener noreferrer">
+                  View Escrow
+                </Link>
+              </Button>
+            ) : null}
           </div>
         </div>
 

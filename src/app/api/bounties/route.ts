@@ -4,6 +4,14 @@ import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { createBountySchema, getBountiesQuerySchema, type CreateBountyInput } from '@/lib/types';
+import { solanaService } from '@/lib/solana';
+
+function serializeBounty(bounty: any) {
+  return {
+    ...bounty,
+    rewardAmount: Number(bounty.rewardAmount),
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -82,9 +90,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Get bounties with pagination
-    const [bounties, total] = await Promise.all([
+    const fundedWhere: Prisma.BountyWhereInput = {
+      ...where,
+      escrowAddress: { not: null },
+      txSignature: { not: null },
+    };
+
+    const [bounties, totalCandidates] = await Promise.all([
       prisma.bounty.findMany({
-        where,
+        where: fundedWhere,
         include: {
           company: {
             select: {
@@ -93,6 +107,7 @@ export async function GET(request: NextRequest) {
               slug: true,
               logoUrl: true,
               isVerified: true,
+              walletAddress: true,
             },
           },
           _count: {
@@ -105,11 +120,59 @@ export async function GET(request: NextRequest) {
         take: limit,
         skip: offset,
       }),
-      prisma.bounty.count({ where }),
+      prisma.bounty.findMany({
+        where: fundedWhere,
+        select: {
+          id: true,
+          escrowAddress: true,
+        },
+      }),
     ]);
 
+    const escrowCache = new Map<string, number>();
+
+    const enriched = await Promise.all(
+      bounties.map(async (bounty) => {
+        const serialized = serializeBounty(bounty);
+        let escrowBalanceLamports: number | null = null;
+        if (serialized.escrowAddress) {
+          if (escrowCache.has(serialized.escrowAddress)) {
+            escrowBalanceLamports = escrowCache.get(serialized.escrowAddress) ?? 0;
+          } else {
+            const escrowData = await solanaService.getEscrowData(serialized.escrowAddress);
+            escrowBalanceLamports = escrowData?.escrowAmount ?? 0;
+            escrowCache.set(serialized.escrowAddress, escrowBalanceLamports);
+          }
+        }
+        return {
+          ...serialized,
+          escrowBalanceLamports,
+        };
+      })
+    );
+
+    const fundedBounties = enriched.filter(
+      (bounty) => bounty.escrowAddress && bounty.escrowBalanceLamports && bounty.escrowBalanceLamports > 0
+    );
+
+    let total = 0;
+    for (const candidate of totalCandidates) {
+      if (!candidate.escrowAddress) {
+        continue;
+      }
+      let escrowAmount = escrowCache.get(candidate.escrowAddress);
+      if (escrowAmount === undefined) {
+        const escrowData = await solanaService.getEscrowData(candidate.escrowAddress);
+        escrowAmount = escrowData?.escrowAmount ?? 0;
+        escrowCache.set(candidate.escrowAddress, escrowAmount);
+      }
+      if (escrowAmount && escrowAmount > 0) {
+        total += 1;
+      }
+    }
+
     return NextResponse.json({
-      bounties,
+      bounties: fundedBounties,
       pagination: {
         total,
         limit,
@@ -196,16 +259,42 @@ export async function POST(request: NextRequest) {
 
     // Validate dates
     const now = new Date();
-    if (startsAt && startsAt <= now) {
-      return NextResponse.json(
-        { error: 'Start date must be in the future' },
-        { status: 400 }
-      );
+    const todayIsoDate = now.toISOString().split('T')[0];
+
+    let normalizedStartDate: Date | undefined;
+    let normalizedStartIso: string | undefined;
+
+    if (startsAt) {
+      normalizedStartDate = startsAt;
+      normalizedStartIso = normalizedStartDate.toISOString().split('T')[0];
+
+      if (normalizedStartIso < todayIsoDate) {
+        return NextResponse.json(
+          { error: 'Start date cannot be before today' },
+          { status: 400 }
+        );
+      }
     }
 
-    if (endsAt && startsAt && endsAt <= startsAt) {
+    if (endsAt && normalizedStartIso) {
+      const normalizedEndIso = endsAt.toISOString().split('T')[0];
+      if (normalizedEndIso < normalizedStartIso) {
+        return NextResponse.json(
+          { error: 'End date cannot be before the start date' },
+          { status: 400 }
+        );
+      }
+    }
+
+    const existingForCompany = await prisma.bounty.count({
+      where: {
+        companyId,
+      },
+    });
+
+    if (existingForCompany > 0) {
       return NextResponse.json(
-        { error: 'End date must be after start date' },
+        { error: 'A bounty already exists for this company. Multiple bounties per company are not supported.' },
         { status: 400 }
       );
     }
@@ -243,16 +332,6 @@ export async function POST(request: NextRequest) {
           select: {
             submissions: true,
           },
-        },
-      },
-    });
-
-    // Update company's active bounties count
-    await prisma.company.update({
-      where: { id: companyId },
-      data: {
-        activeBounties: {
-          increment: 1,
         },
       },
     });

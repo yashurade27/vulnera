@@ -83,6 +83,17 @@ const IMPACT_LEVELS = [
   { value: "CRITICAL", label: "Critical", description: "Severe impact, system-wide vulnerability" },
 ]
 
+const mapSubmissionSummary = (submission: any) => ({
+  id: submission?.id,
+  title: submission?.title ?? "Submission",
+  status: submission?.status ?? "PENDING",
+  createdAt: submission?.createdAt ?? submission?.submittedAt ?? new Date().toISOString(),
+  reporter: {
+    displayName: submission?.user?.fullName ?? submission?.user?.username ?? "You",
+    username: submission?.user?.username ?? null,
+  },
+})
+
 function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }> }) {
   const { bountyId } = React.use(params)
   const router = useRouter()
@@ -242,7 +253,7 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
       }
 
       if (submissionPayload?.submission) {
-        addSubmission(submissionPayload.submission)
+        addSubmission(mapSubmissionSummary(submissionPayload.submission))
       }
 
       router.push(`/bounties/${bountyId}?submitted=true`)

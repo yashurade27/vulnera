@@ -89,7 +89,7 @@ export async function PATCH(
       },
     });
 
-    if (!member || !member.canManageMembers) {
+    if (!member || !member.isActive) {
       // Also allow admins
       if (session.user.role !== 'ADMIN') {
         return NextResponse.json(

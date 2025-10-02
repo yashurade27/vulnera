@@ -19,6 +19,7 @@ import {
 import { ThemeSelect } from "@/components/theme-select"
 import { WalletDropdown } from "@/components/wallet-dropdown"
 import { cn } from "@/lib/utils"
+import { NotificationBell } from "@/components/notifications/notification-bell"
 
 const ClusterDropdown = dynamic(
   () => import("@/components/cluster-dropdown").then((mod) => mod.ClusterDropdown),
@@ -81,8 +82,10 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
       return <div className="h-9 w-9 rounded-full bg-white/5 animate-pulse" aria-hidden />
     }
     if (isAuthenticated && user) {
-      return (
-        <DropdownMenu>
+        return (
+          <>
+            <NotificationBell userId={user.id} />
+            <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
@@ -119,6 +122,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </>
       )
     }
 
@@ -173,13 +177,16 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
             {renderDesktopAuth()}
           </div>
 
-          <button
-            className="md:hidden p-2 hover:bg-muted rounded-lg transition-colors"
-            onClick={handleMobileToggle}
-            aria-label="Toggle menu"
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            {isAuthenticated && user ? <NotificationBell userId={user.id} /> : null}
+            <button
+              className="p-2 hover:bg-muted rounded-lg transition-colors"
+              onClick={handleMobileToggle}
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -239,6 +246,9 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
                   <div className="flex flex-col gap-2 text-sm">
                     <Link href={dashboardHref} className="link-premium" onClick={closeMobileMenu}>
                       {dashboardLabel}
+                    </Link>
+                    <Link href="/notifications" className="link-premium" onClick={closeMobileMenu}>
+                      Notifications
                     </Link>
                     <Link href={profileHref} className="link-premium" onClick={closeMobileMenu}>
                       Profile

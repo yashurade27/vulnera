@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { getCompanyBountiesQuerySchema } from '@/lib/types';
 import { type RouteParams } from '@/lib/next';
+import { solanaService } from '@/lib/solana';
 
 export async function GET(
   request: NextRequest,
@@ -54,9 +55,15 @@ export async function GET(
     }
 
     // Get bounties with pagination
-    const [bounties, total] = await Promise.all([
+    const fundedWhere: Prisma.BountyWhereInput = {
+      ...where,
+      escrowAddress: { not: null },
+      txSignature: { not: null },
+    };
+
+    const [bounties, totalCandidates] = await Promise.all([
       prisma.bounty.findMany({
-        where,
+        where: fundedWhere,
         select: {
           id: true,
           title: true,
@@ -78,6 +85,8 @@ export async function GET(
           updatedAt: true,
           publishedAt: true,
           closedAt: true,
+          escrowAddress: true,
+          txSignature: true,
           _count: {
             select: {
               submissions: true,
@@ -88,11 +97,60 @@ export async function GET(
         take: limit,
         skip: offset,
       }),
-      prisma.bounty.count({ where }),
+      prisma.bounty.findMany({
+        where: fundedWhere,
+        select: {
+          id: true,
+          escrowAddress: true,
+        },
+      }),
     ]);
 
+    const escrowCache = new Map<string, number>();
+
+    const enriched = await Promise.all(
+      bounties.map(async (bounty) => {
+        let escrowBalanceLamports: number | null = null;
+        if (bounty.escrowAddress) {
+          if (escrowCache.has(bounty.escrowAddress)) {
+            escrowBalanceLamports = escrowCache.get(bounty.escrowAddress) ?? 0;
+          } else {
+            const escrowData = await solanaService.getEscrowData(bounty.escrowAddress);
+            escrowBalanceLamports = escrowData?.escrowAmount ?? 0;
+            escrowCache.set(bounty.escrowAddress, escrowBalanceLamports);
+          }
+        }
+
+        return {
+          ...bounty,
+          rewardAmount: Number(bounty.rewardAmount),
+          escrowBalanceLamports,
+        };
+      })
+    );
+
+    const fundedBounties = enriched.filter(
+      (bounty) => bounty.escrowAddress && bounty.escrowBalanceLamports && bounty.escrowBalanceLamports > 0
+    );
+
+    let total = 0;
+    for (const candidate of totalCandidates) {
+      if (!candidate.escrowAddress) {
+        continue;
+      }
+      let escrowAmount = escrowCache.get(candidate.escrowAddress);
+      if (escrowAmount === undefined) {
+        const escrowData = await solanaService.getEscrowData(candidate.escrowAddress);
+        escrowAmount = escrowData?.escrowAmount ?? 0;
+        escrowCache.set(candidate.escrowAddress, escrowAmount);
+      }
+      if (escrowAmount && escrowAmount > 0) {
+        total += 1;
+      }
+    }
+
     return NextResponse.json({
-      bounties,
+      bounties: fundedBounties,
       pagination: {
         total,
         limit,

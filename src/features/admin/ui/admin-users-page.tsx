@@ -51,14 +51,14 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
 })
 
 const ROLES = [
-  { label: 'All roles', value: undefined },
+  { label: 'All roles', value: 'all' },
   { label: 'Bounty Hunter', value: 'BOUNTY_HUNTER' },
   { label: 'Company Admin', value: 'COMPANY_ADMIN' },
   { label: 'Admin', value: 'ADMIN' },
 ] as const
 
 const STATUSES = [
-  { label: 'All statuses', value: undefined },
+  { label: 'All statuses', value: 'all' },
   { label: 'Active', value: 'ACTIVE' },
   { label: 'Suspended', value: 'SUSPENDED' },
   { label: 'Banned', value: 'BANNED' },
@@ -173,11 +173,11 @@ export function AdminUsersPage() {
             />
             <div className="flex flex-col gap-3 sm:flex-row">
               <Select
-                value={filters.role ?? ''}
+                value={filters.role ?? 'all'}
                 onValueChange={(value) =>
                   setFilters((prev) => ({
                     ...prev,
-                    role: value ? (value as AdminUserFilters['role']) : undefined,
+                    role: value === 'all' ? undefined : (value as AdminUserFilters['role']),
                     page: 1,
                   }))
                 }
@@ -187,18 +187,18 @@ export function AdminUsersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {ROLES.map((option) => (
-                    <SelectItem key={option.label} value={option.value ?? ''}>
+                    <SelectItem key={option.label} value={option.value}>
                       {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Select
-                value={filters.status ?? ''}
+                value={filters.status ?? 'all'}
                 onValueChange={(value) =>
                   setFilters((prev) => ({
                     ...prev,
-                    status: value ? (value as AdminUserFilters['status']) : undefined,
+                    status: value === 'all' ? undefined : (value as AdminUserFilters['status']),
                     page: 1,
                   }))
                 }
@@ -208,7 +208,7 @@ export function AdminUsersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {STATUSES.map((option) => (
-                    <SelectItem key={option.label} value={option.value ?? ''}>
+                    <SelectItem key={option.label} value={option.value}>
                       {option.label}
                     </SelectItem>
                   ))}

@@ -152,8 +152,12 @@ export async function POST(
 
     return NextResponse.json({
       message: 'Bounty funded successfully',
-      bounty: fundedBounty,
-      escrowAmount: escrowData.escrowAmount
+      bounty: {
+        ...fundedBounty,
+        rewardAmount: Number(fundedBounty.rewardAmount),
+      },
+      escrowAmount: escrowData.escrowAmount,
+      escrowBalanceLamports: escrowData.escrowAmount,
     });
 
   } catch (error) {

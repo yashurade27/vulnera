@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { updateBountySchema, type UpdateBountyInput } from '@/lib/types';
+import { solanaService } from '@/lib/solana';
 
 export async function GET(
   request: NextRequest,
@@ -39,7 +40,18 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ bounty });
+    const serialized = {
+      ...bounty,
+      rewardAmount: Number(bounty.rewardAmount),
+    };
+
+    let escrowBalanceLamports: number | null = null;
+    if (serialized.escrowAddress) {
+      const escrowData = await solanaService.getEscrowData(serialized.escrowAddress);
+      escrowBalanceLamports = escrowData?.escrowAmount ?? 0;
+    }
+
+    return NextResponse.json({ bounty: { ...serialized, escrowBalanceLamports } });
 
   } catch (error) {
     console.error('Get bounty error:', error);

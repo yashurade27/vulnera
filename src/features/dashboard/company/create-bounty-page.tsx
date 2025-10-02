@@ -33,8 +33,8 @@ interface BountyFormData {
   inScope: string
   outOfScope: string
   requirements: string
-  rewardAmount: number
-  maxSubmissions: number
+  rewardAmount: string
+  maxSubmissions: string
   startDate: string
   endDate: string
 }
@@ -63,8 +63,8 @@ export function CreateBountyPage() {
     inScope: "",
     outOfScope: "",
     requirements: "",
-    rewardAmount: 0,
-    maxSubmissions: 0,
+    rewardAmount: "",
+    maxSubmissions: "",
     startDate: "",
     endDate: "",
   })
@@ -75,6 +75,8 @@ export function CreateBountyPage() {
   const [funding, setFunding] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fundingError, setFundingError] = useState<string | null>(null)
+  const [walletInput, setWalletInput] = useState("")
+  const [savingWallet, setSavingWallet] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -100,17 +102,28 @@ export function CreateBountyPage() {
     }
   }, [])
 
-  const updateFormData = (field: keyof BountyFormData, value: string | number) => {
+  const updateFormData = <K extends keyof BountyFormData>(field: K, value: BountyFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   const totalEscrowAmount = useMemo(() => {
-    const reward = Number.isFinite(formData.rewardAmount) ? formData.rewardAmount : 0
-    const max = Number.isFinite(formData.maxSubmissions) ? formData.maxSubmissions : 0
-    return reward * (max || 1)
+    const reward = Number.parseFloat(formData.rewardAmount)
+    const max = Number.parseFloat(formData.maxSubmissions)
+    const rewardValue = Number.isFinite(reward) && reward > 0 ? reward : 0
+    const maxValue = Number.isFinite(max) && max > 0 ? max : 0
+    if (maxValue === 0) {
+      return rewardValue
+    }
+    return rewardValue * maxValue
   }, [formData.rewardAmount, formData.maxSubmissions])
 
-  const lamportsAmount = useMemo(() => Math.round(totalEscrowAmount * 1_000_000_000), [totalEscrowAmount])
+  const lamportsAmount = useMemo(() => {
+    const raw = totalEscrowAmount * 1_000_000_000
+    if (!Number.isFinite(raw) || raw <= 0) {
+      return 0
+    }
+    return Math.round(raw)
+  }, [totalEscrowAmount])
 
   const splitLines = (value: string) =>
     value
@@ -133,14 +146,33 @@ export function CreateBountyPage() {
       setCreating(true)
       setError(null)
 
+      const rewardValue = Number.parseFloat(formData.rewardAmount)
+      if (!Number.isFinite(rewardValue) || rewardValue <= 0) {
+        throw new Error("Reward amount must be a positive number")
+      }
+
+      const trimmedMaxInput = formData.maxSubmissions.trim()
+      const parsedMax = trimmedMaxInput ? Number.parseFloat(trimmedMaxInput) : undefined
+      let normalizedMax: number | undefined
+
+      if (parsedMax !== undefined) {
+        if (!Number.isFinite(parsedMax) || parsedMax < 1) {
+          throw new Error("Maximum payouts must be at least 1")
+        }
+        if (!Number.isInteger(parsedMax)) {
+          throw new Error("Maximum payouts must be a whole number")
+        }
+        normalizedMax = parsedMax
+      }
+
       const payload: Record<string, unknown> = {
         companyId: company.id,
         title: formData.title,
         description: formData.description,
         bountyType: formData.bountyType,
         targetUrl: formData.targetUrl || undefined,
-        rewardAmount: formData.rewardAmount.toString(),
-        maxSubmissions: formData.maxSubmissions || undefined,
+        rewardAmount: rewardValue.toString(),
+        maxSubmissions: normalizedMax,
         inScope: splitLines(formData.inScope),
         outOfScope: splitLines(formData.outOfScope),
         requirements: formData.requirements,
@@ -148,6 +180,8 @@ export function CreateBountyPage() {
         startsAt: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
         endsAt: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
       }
+
+      console.log("Submitting bounty payload", payload)
 
       const createRes = await fetch("/api/bounties", {
         method: "POST",
@@ -158,6 +192,7 @@ export function CreateBountyPage() {
 
       const createJson = await createRes.json()
       if (!createRes.ok) {
+        console.error("Bounty creation failed", createRes.status, createJson)
         throw new Error(createJson?.error ?? "Failed to create bounty")
       }
 
@@ -179,6 +214,7 @@ export function CreateBountyPage() {
         })
         const escrowJson = await escrowRes.json()
         if (!escrowRes.ok) {
+          console.error("Escrow derivation failed", escrowRes.status, escrowJson)
           throw new Error(escrowJson?.error ?? "Unable to derive escrow address")
         }
         setEscrowInfo({
@@ -187,6 +223,7 @@ export function CreateBountyPage() {
         })
       }
     } catch (err) {
+      console.error("handleCreateBounty error", err)
       setCreatedBountyId(null)
       setEscrowInfo(null)
       setError(err instanceof Error ? err.message : "Unable to create bounty")
@@ -229,6 +266,37 @@ export function CreateBountyPage() {
     }
   }
 
+  const handleSaveWallet = async () => {
+    if (!company?.id || !walletInput.trim()) {
+      setError("Please enter a valid wallet address")
+      return
+    }
+
+    setSavingWallet(true)
+    try {
+      const res = await fetch(`/api/companies/${company.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ walletAddress: walletInput.trim() }),
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error?.error || "Failed to update wallet address")
+      }
+
+      // Update the company state
+      setCompany((prev) => prev ? { ...prev, walletAddress: walletInput.trim() } : null)
+      setWalletInput("")
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save wallet address")
+    } finally {
+      setSavingWallet(false)
+    }
+  }
+
   const steps = [
     { number: 1, title: "Basic Info", icon: FileText },
     { number: 2, title: "Target & Scope", icon: CheckCircle2 },
@@ -246,6 +314,9 @@ export function CreateBountyPage() {
             {company?.name ? `Launch a new program for ${company.name}` : "Set up a new bug bounty program"}
           </p>
           {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          <pre className="hidden" data-debug-state>
+            {JSON.stringify({ step, creating, createdBountyId, hasCompany: Boolean(company), formData }, null, 2)}
+          </pre>
         </div>
       </div>
 
@@ -401,8 +472,8 @@ export function CreateBountyPage() {
                         type="number"
                         min="0"
                         step="0.01"
-                        value={formData.rewardAmount || ""}
-                        onChange={(e) => updateFormData("rewardAmount", Number(e.target.value))}
+                        value={formData.rewardAmount}
+                        onChange={(e) => updateFormData("rewardAmount", e.target.value)}
                         className="pl-9"
                       />
                     </div>
@@ -413,10 +484,12 @@ export function CreateBountyPage() {
                       id="maxSubmissions"
                       type="number"
                       min="1"
-                      value={formData.maxSubmissions || ""}
-                      onChange={(e) => updateFormData("maxSubmissions", Number(e.target.value))}
+                      step="1"
+                      value={formData.maxSubmissions}
+                      onChange={(e) => updateFormData("maxSubmissions", e.target.value)}
                       className="mt-2"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">Use whole numbers. Leave blank for unlimited payouts.</p>
                   </div>
                 </div>
                 <div className="p-4 rounded-lg bg-yellow-400/10 border border-yellow-400/30">
@@ -431,6 +504,7 @@ export function CreateBountyPage() {
                     <Input
                       id="startDate"
                       type="date"
+                      min={new Date().toISOString().split('T')[0]}
                       value={formData.startDate}
                       onChange={(e) => updateFormData("startDate", e.target.value)}
                       className="mt-2"
@@ -477,9 +551,37 @@ export function CreateBountyPage() {
                         </p>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Wallet information missing—ensure your company profile has a wallet address to derive the escrow.
-                      </p>
+                      <div className="space-y-4">
+                        <div className="p-4 rounded-lg bg-yellow-400/10 border border-yellow-400/30">
+                          <p className="text-sm font-semibold text-yellow-400 mb-2">Wallet Address Required</p>
+                          <p className="text-xs text-muted-foreground mb-4">
+                            Your company needs a wallet address to create and fund bounties on the blockchain.
+                          </p>
+                          <div className="space-y-2">
+                            <Label htmlFor="walletInput">Solana Wallet Address</Label>
+                            <Input
+                              id="walletInput"
+                              placeholder="Enter your Solana wallet address"
+                              value={walletInput}
+                              onChange={(e) => setWalletInput(e.target.value)}
+                            />
+                          </div>
+                          <Button
+                            className="w-full mt-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
+                            onClick={handleSaveWallet}
+                            disabled={savingWallet || !walletInput.trim()}
+                          >
+                            {savingWallet ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin mr-2" />
+                                Saving...
+                              </>
+                            ) : (
+                              "Save Wallet Address"
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     )}
                     <div className="space-y-2">
                       <Label htmlFor="txSignature">Blockchain Transaction Signature</Label>
@@ -516,10 +618,22 @@ export function CreateBountyPage() {
                     <div className="p-4 rounded-lg bg-card border border-border text-sm text-muted-foreground">
                       <p>Finalize the setup to derive the escrow address based on your configured reward pool.</p>
                     </div>
+                    {error ? (
+                      <div className="rounded-md border border-red-400/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                        {error}
+                      </div>
+                    ) : null}
                     <Button
                       className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
                       size="lg"
-                      onClick={handleCreateBounty}
+                      onClick={() => {
+                        console.log("Create bounty clicked", {
+                          hasCompany: Boolean(company?.id),
+                          formData,
+                          lamportsAmount,
+                        })
+                        void handleCreateBounty()
+                      }}
                       disabled={creating}
                     >
                       {creating ? (
