@@ -17,9 +17,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ThemeSelect } from "@/components/theme-select"
-import { WalletDropdown } from "@/components/wallet-dropdown"
 import { cn } from "@/lib/utils"
 import { NotificationBell } from "@/components/notifications/notification-bell"
+
+const WalletMultiButton = dynamic(
+  () => import("@solana/wallet-adapter-react-ui").then((mod) => mod.WalletMultiButton),
+  { ssr: false }
+)
 
 const ClusterDropdown = dynamic(
   () => import("@/components/cluster-dropdown").then((mod) => mod.ClusterDropdown),
@@ -171,7 +175,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
               <>
                 <ThemeSelect />
                 <ClusterDropdown />
-                <WalletDropdown />
+                <WalletMultiButton />
               </>
             ) : null}
             {renderDesktopAuth()}
@@ -221,7 +225,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
                 <div className="flex flex-wrap gap-3">
                   <ThemeSelect />
                   <ClusterDropdown />
-                  <WalletDropdown />
+                  <WalletMultiButton />
                 </div>
               ) : null}
 

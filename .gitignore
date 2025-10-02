@@ -53,5 +53,6 @@ test-ledger
 
 /generated/prisma
 
+/wallet-keypair.json
 # scripts
 scripts/

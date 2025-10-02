@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useConnection, useWallet } from "@solana/wallet-adapter-react"
+import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from "@solana/web3.js"
 import {
   ArrowLeft,
   ArrowRight,
@@ -53,6 +55,9 @@ interface EscrowInfo {
 
 export function CreateBountyPage() {
   const router = useRouter()
+  const { connection } = useConnection()
+  const { publicKey, sendTransaction } = useWallet()
+
   const [step, setStep] = useState(1)
   const [company, setCompany] = useState<CompanySummary | null>(null)
   const [formData, setFormData] = useState<BountyFormData>({
@@ -232,35 +237,58 @@ export function CreateBountyPage() {
     }
   }
 
-  const handleFundBounty = async () => {
-    if (!createdBountyId || !escrowInfo?.escrowAddress) {
-      setFundingError("Create the bounty and derive the escrow address first")
-      return
-    }
-    if (!txSignature) {
-      setFundingError("Enter the transaction signature from your wallet")
+  const handleSendAndConfirmTransaction = async () => {
+    if (!publicKey || !createdBountyId || !escrowInfo?.escrowAddress || !escrowInfo.expectedAmount) {
+      setFundingError("Missing required information to fund the bounty.")
       return
     }
 
     try {
       setFunding(true)
       setFundingError(null)
+
+      // 1. Create Transaction
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: publicKey,
+          toPubkey: new PublicKey(escrowInfo.escrowAddress),
+          lamports: escrowInfo.expectedAmount,
+        }),
+      )
+
+      // 2. Get recent blockhash
+      const {
+        context: { slot: minContextSlot },
+        value: { blockhash, lastValidBlockHeight },
+      } = await connection.getLatestBlockhashAndContext()
+
+      // 3. Send transaction
+      const signature = await sendTransaction(transaction, connection, { minContextSlot })
+
+      // 4. Confirm transaction
+      await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature })
+
+      // 5. Verify with backend
       const fundRes = await fetch(`/api/bounties/${createdBountyId}/fund`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          txSignature: txSignature.trim(),
+          txSignature: signature,
           escrowAddress: escrowInfo.escrowAddress,
         }),
       })
+
       const fundJson = await fundRes.json()
       if (!fundRes.ok) {
         throw new Error(fundJson?.error ?? "Funding verification failed")
       }
+
+      // 6. Redirect on success
       router.push(`/bounties/${createdBountyId}`)
     } catch (err) {
-      setFundingError(err instanceof Error ? err.message : "Unable to verify funding")
+      console.error("Funding error:", err)
+      setFundingError(err instanceof Error ? err.message : "Unable to send funding transaction.")
     } finally {
       setFunding(false)
     }
@@ -583,29 +611,20 @@ export function CreateBountyPage() {
                         </div>
                       </div>
                     )}
-                    <div className="space-y-2">
-                      <Label htmlFor="txSignature">Blockchain Transaction Signature</Label>
-                      <Input
-                        id="txSignature"
-                        placeholder="Paste the signature after funding the escrow"
-                        value={txSignature}
-                        onChange={(e) => setTxSignature(e.target.value)}
-                      />
-                      {fundingError ? <p className="text-xs text-red-400">{fundingError}</p> : null}
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-3">
+                    {fundingError ? <p className="text-xs text-red-400 mt-4">{fundingError}</p> : null}
+                    <div className="flex flex-col sm:flex-row gap-3 mt-4">
                       <Button
                         className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
-                        onClick={handleFundBounty}
-                        disabled={funding}
+                        onClick={handleSendAndConfirmTransaction}
+                        disabled={funding || !escrowInfo || !publicKey}
                       >
                         {funding ? (
                           <>
                             <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin mr-2" />
-                            Verifying...
+                            Funding...
                           </>
                         ) : (
-                          "Confirm Funding"
+                          "Fund Bounty"
                         )}
                       </Button>
                       <Button variant="outline" asChild>

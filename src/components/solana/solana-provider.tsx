@@ -1,18 +1,24 @@
-import { ReactNode } from 'react'
-import { createSolanaDevnet, createSolanaLocalnet, createWalletUiConfig, WalletUi } from '@wallet-ui/react'
-import { WalletUiGillProvider } from '@wallet-ui/react-gill'
-import { solanaMobileWalletAdapter } from './solana-mobile-wallet-adapter'
+'use client'
 
-const config = createWalletUiConfig({
-  clusters: [createSolanaDevnet(), createSolanaLocalnet()],
-})
+import { WalletAdapterNetwork } from '@solana/wallet-adapter-base'
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react'
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
+import { PhantomWalletAdapter, SolflareWalletAdapter, TorusWalletAdapter } from '@solana/wallet-adapter-wallets'
+import { ReactNode, useMemo } from 'react'
+import { useCluster } from '@/features/cluster/cluster-context'
 
-solanaMobileWalletAdapter({ clusters: config.clusters })
+import '@solana/wallet-adapter-react-ui/styles.css'
 
 export function SolanaProvider({ children }: { children: ReactNode }) {
+  const { cluster } = useCluster()
+  const endpoint = useMemo(() => cluster.endpoint, [cluster])
+  const wallets = useMemo(() => [new PhantomWalletAdapter(), new SolflareWalletAdapter(), new TorusWalletAdapter()], [])
+
   return (
-    <WalletUi config={config}>
-      <WalletUiGillProvider>{children}</WalletUiGillProvider>
-    </WalletUi>
+    <ConnectionProvider endpoint={endpoint}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>{children}</WalletModalProvider>
+      </WalletProvider>
+    </ConnectionProvider>
   )
 }
