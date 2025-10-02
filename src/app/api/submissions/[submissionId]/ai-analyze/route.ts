@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
+import { type RouteParams } from '@/lib/next';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { submissionId: string } }
+  { params }: RouteParams<{ submissionId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +18,7 @@ export async function POST(
       );
     }
 
-    const { submissionId } = params;
+    const { submissionId } = await params;
 
     const submission = await prisma.submission.findUnique({
       where: { id: submissionId },

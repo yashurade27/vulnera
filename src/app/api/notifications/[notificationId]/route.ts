@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
+import { type RouteParams } from '@/lib/next';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { notificationId: string } }
+  { params }: RouteParams<{ notificationId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +18,7 @@ export async function PATCH(
       );
     }
 
-    const { notificationId } = params;
+  const { notificationId } = await params;
 
     // Check if notification exists and belongs to user
     const notification = await prisma.notification.findFirst({
@@ -72,7 +73,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { notificationId: string } }
+  { params }: RouteParams<{ notificationId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -84,7 +85,7 @@ export async function DELETE(
       );
     }
 
-    const { notificationId } = params;
+  const { notificationId } = await params;
 
     // Check if notification exists and belongs to user
     const notification = await prisma.notification.findFirst({

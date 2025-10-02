@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
-import { createBountySchema, getBountiesQuerySchema, type CreateBountyInput, type GetBountiesQuery } from '@/lib/types';
+import { Prisma } from '@prisma/client';
+import { createBountySchema, getBountiesQuerySchema, type CreateBountyInput } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters
-    const query: any = {};
+    const query: { [key: string]: string | undefined } = {};
     if (searchParams.get('status')) query.status = searchParams.get('status')!;
     if (searchParams.get('type')) query.type = searchParams.get('type')!;
     if (searchParams.get('companyId')) query.companyId = searchParams.get('companyId')!;
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     } = parsed.data;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.BountyWhereInput = {};
 
     if (status) {
       where.status = status;

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
-import { inviteMemberSchema, getMembersQuerySchema, type InviteMemberInput, type GetMembersQuery } from '@/lib/types';
+import { inviteMemberSchema, getMembersQuerySchema, type InviteMemberInput } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: RouteParams<{ companyId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +19,7 @@ export async function POST(
       );
     }
 
-    const { companyId } = params;
+  const { companyId } = await params;
 
     // Check if user has permission to manage members
     const member = await prisma.companyMember.findUnique({
@@ -123,14 +124,14 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: RouteParams<{ companyId: string }>
 ) {
   try {
-    const { companyId } = params;
+    const { companyId } = await params;
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters - let the schema handle validation and transformation
-    const query: any = {};
+    const query: { [key: string]: string | undefined } = {};
     if (searchParams.get('limit')) query.limit = searchParams.get('limit')!;
     if (searchParams.get('offset')) query.offset = searchParams.get('offset')!;
 

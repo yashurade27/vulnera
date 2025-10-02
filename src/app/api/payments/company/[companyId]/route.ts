@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
-import { getCompanyPaymentsQuerySchema, type GetCompanyPaymentsQuery } from '@/lib/types';
+import { Prisma } from '@prisma/client';
+import { getCompanyPaymentsQuerySchema } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: RouteParams<{ companyId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +20,7 @@ export async function GET(
       );
     }
 
-    const { companyId } = params;
+  const { companyId } = await params;
 
     // Check if user is a member of the company or admin
     const isCompanyMember = await prisma.companyMember.findFirst({
@@ -39,7 +41,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters
-    const query: any = {};
+    const query: { [key: string]: string | undefined } = {};
     if (searchParams.get('status')) query.status = searchParams.get('status')!;
     if (searchParams.get('limit')) query.limit = searchParams.get('limit')!;
     if (searchParams.get('offset')) query.offset = searchParams.get('offset')!;
@@ -63,7 +65,7 @@ export async function GET(
     } = parsed.data;
 
     // Build where clause
-    const where: any = { companyId };
+    const where: Prisma.PaymentWhereInput = { companyId };
 
     if (status) {
       where.status = status;

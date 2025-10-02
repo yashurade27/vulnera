@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { searchBountiesQuerySchema, type SearchBountiesQuery } from '@/lib/types';
+import { Prisma } from '@prisma/client';
+import { searchBountiesQuerySchema } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters
-    const query: any = {};
+    const query: { [key: string]: string | undefined } = {};
     if (searchParams.get('q')) query.q = searchParams.get('q')!;
     if (searchParams.get('type')) query.type = searchParams.get('type')!;
     if (searchParams.get('minReward')) query.minReward = searchParams.get('minReward')!;
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
     } = parsed.data;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.BountyWhereInput = {};
 
     // Status filter
     where.status = status;

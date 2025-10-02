@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { updateCompanySchema, type UpdateCompanyInput } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: RouteParams<{ companyId: string }>
 ) {
   try {
-    const { companyId } =  params;
+    const { companyId } = await params;
 
     const company = await prisma.company.findUnique({
       where: { id: companyId },
@@ -63,7 +65,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: RouteParams<{ companyId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -75,7 +77,7 @@ export async function PATCH(
       );
     }
 
-    const { companyId } = params;
+  const { companyId } = await params;
 
     // Check if user is a member of this company with appropriate permissions
     const member = await prisma.companyMember.findUnique({
@@ -108,7 +110,7 @@ export async function PATCH(
     }
 
     // If updating name, check/generate new slug
-    let updateData: any = parsed.data;
+    const updateData: Prisma.CompanyUpdateInput = { ...parsed.data };
     if (parsed.data.name) {
       const slug = parsed.data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const existingSlug = await prisma.company.findFirst({
@@ -174,7 +176,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: RouteParams<{ companyId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -186,7 +188,7 @@ export async function DELETE(
       );
     }
 
-    const { companyId } = params;
+  const { companyId } = await params;
 
     // Check if user is a member of this company with appropriate permissions
     const member = await prisma.companyMember.findUnique({

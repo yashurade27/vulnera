@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { verifyPaymentSchema, type VerifyPaymentInput } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { paymentId: string } }
+  { params }: RouteParams<{ paymentId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +20,7 @@ export async function POST(
       );
     }
 
-    const { paymentId } = params;
+  const { paymentId } = await params;
 
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
@@ -61,10 +63,10 @@ export async function POST(
       );
     }
 
-    const { txSignature, confirmations } = parsed.data;
+    const { txSignature: _, confirmations } = parsed.data;
 
     // Update payment with verification details
-    const updateData: any = {
+    const updateData: Prisma.PaymentUpdateInput = {
       confirmations,
       blockchainConfirmed: confirmations >= 1, // Assuming 1 confirmation is sufficient
     };

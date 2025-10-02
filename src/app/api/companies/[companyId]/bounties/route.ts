@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getCompanyBountiesQuerySchema, type GetCompanyBountiesQuery } from '@/lib/types';
+import { Prisma } from '@prisma/client';
+import { getCompanyBountiesQuerySchema } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: RouteParams<{ companyId: string }>
 ) {
   try {
-    const { companyId } = params;
+    const { companyId } = await params;
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters - let the schema handle validation and transformation
-    const query: any = {};
+    const query: { [key: string]: string | undefined } = {};
     if (searchParams.get('status')) query.status = searchParams.get('status')!;
     if (searchParams.get('type')) query.type = searchParams.get('type')!;
     if (searchParams.get('limit')) query.limit = searchParams.get('limit')!;
@@ -41,7 +43,7 @@ export async function GET(
     }
 
     // Build where clause
-    const where: any = { companyId };
+    const where: Prisma.BountyWhereInput = { companyId };
 
     if (status) {
       where.status = status;

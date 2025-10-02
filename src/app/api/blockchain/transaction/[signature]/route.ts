@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { solanaService } from '@/lib/solana'
+import { type RouteParams } from '@/lib/next'
 
-interface RouteParams {
-  params: {
-    signature: string
-  }
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: RouteParams<{ signature: string }>
+) {
   try {
-    const { signature } = params
+    const { signature } = await params
 
     if (!signature || signature.length !== 88) {
       return NextResponse.json(

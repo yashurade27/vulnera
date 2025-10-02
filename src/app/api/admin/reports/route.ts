@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,9 +27,9 @@ export async function GET(request: NextRequest) {
     const sortOrder = (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc';
 
     // Build where clause
-    const where: any = {};
-    if (status) where.status = status;
-    if (type) where.type = type;
+    const where: Prisma.ReportWhereInput = {};
+    if (status) where.status = status as 'OPEN' | 'UNDER_INVESTIGATION' | 'RESOLVED' | 'DISMISSED';
+    if (type) where.type = type as 'LATE_RESPONSE' | 'UNFAIR_REJECTION' | 'SPAM_SUBMISSION' | 'INAPPROPRIATE_CONTENT' | 'OTHER';
     if (reporterId) where.reporterId = reporterId;
 
     // Get total count for pagination

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { searchCompaniesQuerySchema, type SearchCompaniesQuery } from '@/lib/types';
+import { Prisma } from '@prisma/client';
+import { searchCompaniesQuerySchema } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters
-    const query: any = {};
+    const query: { [key: string]: string | undefined } = {};
     if (searchParams.get('q')) query.q = searchParams.get('q')!;
     if (searchParams.get('industry')) query.industry = searchParams.get('industry')!;
     if (searchParams.get('verified')) query.verified = searchParams.get('verified')!;
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
     } = parsed.data;
 
     // Build where clause
-    const where: any = {
+    const where: Prisma.CompanyWhereInput = {
       isActive: true, // Only show active companies
     };
 

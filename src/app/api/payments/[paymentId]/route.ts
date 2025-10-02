@@ -3,10 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { updatePaymentSchema, type UpdatePaymentInput } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { paymentId: string } }
+  { params }: RouteParams<{ paymentId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +19,7 @@ export async function GET(
       );
     }
 
-    const { paymentId } = params;
+    const { paymentId } = await params;
 
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
@@ -91,7 +92,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { paymentId: string } }
+  { params }: RouteParams<{ paymentId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -103,7 +104,7 @@ export async function PATCH(
       );
     }
 
-    const { paymentId } = params;
+    const { paymentId } = await params;
 
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
@@ -150,7 +151,7 @@ export async function PATCH(
 
     // If status is being updated to COMPLETED, set completedAt
     if (updateData.status === 'COMPLETED' && payment.status !== 'COMPLETED') {
-      (updateData as any).completedAt = new Date();
+      updateData.completedAt = new Date();
     }
 
     const updatedPayment = await prisma.payment.update({

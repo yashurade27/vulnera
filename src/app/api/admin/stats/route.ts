@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Get session and check admin role
     const session = await getServerSession(authOptions);
@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
       totalBounties,
       activeBounties,
       totalSubmissions,
-      totalPayments,
       resolvedVulnerabilities,
       userStats,
       companyStats,
@@ -36,10 +35,6 @@ export async function GET(request: NextRequest) {
       prisma.bounty.count(),
       prisma.bounty.count({ where: { status: 'ACTIVE' } }),
       prisma.submission.count(),
-      prisma.payment.aggregate({
-        _sum: { amount: true },
-        where: { status: 'COMPLETED' },
-      }),
 
       // Resolved vulnerabilities (approved submissions)
       prisma.submission.count({ where: { status: 'APPROVED' } }),

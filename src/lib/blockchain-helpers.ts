@@ -216,12 +216,3 @@ export function formatSol(lamports: number, decimals: number = 4): string {
   const sol = lamportsToSol(lamports)
   return `${sol.toFixed(decimals)} SOL`
 }
-
-/**
- * Format USD equivalent (mock - would need real price feed)
- */
-export function formatUsd(lamports: number, solPriceUsd: number): string {
-  const sol = lamportsToSol(lamports)
-  const usd = sol * solPriceUsd
-  return `$${usd.toFixed(2)}`
-}

@@ -1,65 +1,190 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { Menu, X, Shield } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import Link from "next/link";
-import { Button } from '@/components/ui/button'
+import { useEffect, useMemo, useState } from "react"
+import { Menu, X, Shield, LogOut, User, LayoutDashboard } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useSession, signOut } from "next-auth/react"
+import dynamic from "next/dynamic"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ThemeSelect } from "@/components/theme-select"
+import { WalletDropdown } from "@/components/wallet-dropdown"
+import { cn } from "@/lib/utils"
 
-export function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+const ClusterDropdown = dynamic(
+  () => import("@/components/cluster-dropdown").then((mod) => mod.ClusterDropdown),
+  { ssr: false }
+)
+
+interface NavbarProps {
+  showUtilityControls?: boolean
+}
+
+const navLinks = [
+  { id: "home", href: "/", label: "Home" },
+  { id: "bounties", href: "/bounties", label: "Bounties" },
+  { id: "leaderboard", href: "/leaderboard", label: "Leaderboard" },
+  { id: "how-it-works", href: "/vulnera", label: "How It Works" },
+  { id: "docs", href: "/vulnera", label: "Docs" },
+]
+
+export function Navbar({ showUtilityControls = false }: NavbarProps) {
+  const pathname = usePathname()
+  const { data: session, status } = useSession()
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+      setIsScrolled(window.scrollY > 20)
+    }
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  const isAuthenticated = status === "authenticated"
+  const user = session?.user
+
+  const userInitials = useMemo(() => {
+    if (!user) return "U"
+    const source = user.fullName || user.username || user.email || "U"
+    return source.charAt(0).toUpperCase()
+  }, [user])
+
+  const dashboardHref =
+    user?.role === "ADMIN"
+      ? "/admin"
+      : user?.role === "COMPANY_ADMIN"
+        ? "/dashboard/company"
+        : "/dashboard/hunter"
+  const dashboardLabel = user?.role === "ADMIN" ? "Admin" : "Dashboard"
+  const profileHref = user?.id ? `/profile/${user.id}` : "/profile"
+
+  const handleMobileToggle = () => setIsMobileMenuOpen((prev) => !prev)
+  const closeMobileMenu = () => setIsMobileMenuOpen(false)
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: "/" })
+  }
+
+  const renderDesktopAuth = () => {
+    if (status === "loading") {
+      return <div className="h-9 w-9 rounded-full bg-white/5 animate-pulse" aria-hidden />
+    }
+    if (isAuthenticated && user) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="relative inline-flex items-center justify-center rounded-full ring-offset-background transition hover:ring-2 hover:ring-yellow-400/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70"
+              aria-label="Account menu"
+            >
+              <Avatar className="h-9 w-9">
+                {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={user.fullName ?? user.username ?? "User"} /> : null}
+                <AvatarFallback className="bg-yellow-500/20 text-yellow-200 font-medium">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-48">
+            <div className="px-3 py-2">
+              <p className="text-sm font-semibold text-foreground">{user.fullName ?? user.username ?? user.email}</p>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href={dashboardHref} className="flex items-center gap-2">
+                <LayoutDashboard className="h-4 w-4" /> {dashboardLabel}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={profileHref} className="flex items-center gap-2">
+                <User className="h-4 w-4" /> Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut} className="text-red-400 focus:text-red-400">
+              <LogOut className="mr-2 h-4 w-4" /> Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    }
+
+    return (
+      <>
+        <Link href="/auth/login">
+          <Button variant="outline">Login</Button>
+        </Link>
+        <Link href="/auth/register">
+          <Button className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400">
+            Register
+          </Button>
+        </Link>
+      </>
+    )
+  }
 
   return (
-    <nav className={`nav-glass ${isScrolled ? "shadow-lg" : ""}`}>
+    <nav className={cn("nav-glass transition-shadow", isScrolled ? "shadow-lg" : "shadow-none") }>
       <div className="container-custom">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity" onClick={closeMobileMenu}>
             <Shield className="w-8 h-8 text-yellow-400" />
             <span className="text-xl font-semibold">Vulnera</span>
           </Link>
-          
-          {/* Desktop Menu */}
+
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/" className="link-premium">Home</Link>
-            <Link href="/vulnera" className="link-premium">Bounties</Link>
-            <Link href="/account" className="link-premium">Leaderboard</Link>
-            <Link href="/vulnera" className="link-premium">How It Works</Link>
-            <Link href="/vulnera" className="link-premium">Docs</Link>
+            {navLinks.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                className={cn(
+                  "link-premium transition-colors",
+                  pathname === item.href || pathname.startsWith(`${item.href}/`)
+                    ? "text-yellow-300"
+                    : ""
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
-          
-          {/* Authentication Buttons */}
-          <div className="hidden md:flex items-center gap-4">
-            <Link href="/auth/login">
-              <Button variant="outline">Login</Button>
-            </Link>
-            <Link href="/auth/register">
-              <Button variant="default">Register</Button>
-            </Link>
+
+          <div className="hidden md:flex items-center gap-3">
+            {showUtilityControls ? (
+              <>
+                <ThemeSelect />
+                <ClusterDropdown />
+                <WalletDropdown />
+              </>
+            ) : null}
+            {renderDesktopAuth()}
           </div>
-          
-          {/* Mobile Menu Button */}
+
           <button
             className="md:hidden p-2 hover:bg-muted rounded-lg transition-colors"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            onClick={handleMobileToggle}
+            aria-label="Toggle menu"
           >
             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
-      
-      {/* Mobile Menu */}
+
       <AnimatePresence>
-        {isMobileMenuOpen && (
+        {isMobileMenuOpen ? (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
@@ -67,21 +192,87 @@ export function Navbar() {
             className="md:hidden border-t border-white/10 bg-background/95 backdrop-blur-xl"
           >
             <div className="container-custom py-4 space-y-4">
-              <Link href="/" className="block link-premium py-2">Home</Link>
-              <Link href="/vulnera" className="block link-premium py-2">Bounties</Link>
-              <Link href="/account" className="block link-premium py-2">Leaderboard</Link>
-              <Link href="/vulnera" className="block link-premium py-2">How It Works</Link>
-              <Link href="/vulnera" className="block link-premium py-2">Docs</Link>
-              <Link href="/auth/login">
-                <Button className="w-full" variant="outline">Login</Button>
-              </Link>
-              <Link href="/auth/register">
-                <Button className="w-full mt-2" variant="default">Register</Button>
-              </Link>
+              <div className="space-y-2">
+                {navLinks.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className={cn(
+                      "block link-premium py-2",
+                      pathname === item.href || pathname.startsWith(`${item.href}/`)
+                        ? "text-yellow-300"
+                        : ""
+                    )}
+                    onClick={closeMobileMenu}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+
+              {showUtilityControls ? (
+                <div className="flex flex-wrap gap-3">
+                  <ThemeSelect />
+                  <ClusterDropdown />
+                  <WalletDropdown />
+                </div>
+              ) : null}
+
+              {status === "loading" ? (
+                <div className="h-10 w-full rounded-xl bg-white/5 animate-pulse" aria-hidden />
+              ) : isAuthenticated && user ? (
+                <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      {user.avatarUrl ? (
+                        <AvatarImage src={user.avatarUrl} alt={user.fullName ?? user.username ?? "User"} />
+                      ) : null}
+                      <AvatarFallback className="bg-yellow-500/20 text-yellow-200 font-medium">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-semibold">{user.fullName ?? user.username ?? user.email}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 text-sm">
+                    <Link href={dashboardHref} className="link-premium" onClick={closeMobileMenu}>
+                      {dashboardLabel}
+                    </Link>
+                    <Link href={profileHref} className="link-premium" onClick={closeMobileMenu}>
+                      Profile
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        closeMobileMenu()
+                        await handleSignOut()
+                      }}
+                      className="inline-flex items-center gap-2 text-red-300 hover:text-red-200"
+                    >
+                      <LogOut className="h-4 w-4" /> Sign out
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <Link href="/auth/login" onClick={closeMobileMenu}>
+                    <Button className="w-full" variant="outline">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link href="/auth/register" onClick={closeMobileMenu}>
+                    <Button className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400">
+                      Register
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
     </nav>
-  );
+  )
 }

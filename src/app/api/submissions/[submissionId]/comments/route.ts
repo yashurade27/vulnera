@@ -4,10 +4,11 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { createCommentSchema, getCommentsQuerySchema } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { submissionId: string } }
+  { params }: RouteParams<{ submissionId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -24,8 +25,10 @@ export async function GET(
     const includeInternal = validatedQuery.includeInternal === 'true';
 
     // Check if user can access this submission
+    const { submissionId } = await params;
+
     const submission = await prisma.submission.findUnique({
-      where: { id: params.submissionId },
+      where: { id: submissionId },
       select: { id: true, userId: true, companyId: true },
     });
 
@@ -48,7 +51,7 @@ export async function GET(
     }
 
     // Build where clause for comments
-    const whereClause: any = { submissionId: params.submissionId };
+  const whereClause: any = { submissionId };
 
     // If not a company member, only show public comments
     if (!isCompanyMember) {
@@ -86,7 +89,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { submissionId: string } }
+  { params }: RouteParams<{ submissionId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -98,8 +101,10 @@ export async function POST(
     const validatedData = createCommentSchema.parse(body);
 
     // Check if submission exists and user can access it
+    const { submissionId } = await params;
+
     const submission = await prisma.submission.findUnique({
-      where: { id: params.submissionId },
+      where: { id: submissionId },
       select: { id: true, userId: true, companyId: true, status: true },
     });
 
@@ -129,7 +134,7 @@ export async function POST(
     // Create the comment
     const comment = await prisma.comment.create({
       data: {
-        submissionId: params.submissionId,
+        submissionId,
         userId: session.user.id,
         content: validatedData.content,
         isInternal: validatedData.isInternal,
@@ -156,7 +161,7 @@ export async function POST(
           title: 'New comment on submission',
           message: `${session.user.username} commented on submission: ${submission.id}`,
           type: 'SUBMISSION',
-          actionUrl: `/submissions/${params.submissionId}`,
+          actionUrl: `/submissions/${submissionId}`,
         },
       });
     } else if (isCompanyMember && !isSubmitter) {
@@ -167,7 +172,7 @@ export async function POST(
           title: 'New comment on your submission',
           message: `Company commented on your submission: ${submission.id}`,
           type: 'SUBMISSION',
-          actionUrl: `/submissions/${params.submissionId}`,
+          actionUrl: `/submissions/${submissionId}`,
         },
       });
     }

@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const utapi = new UTApi({
-  token: process.env.UPLOADTHING_SECRET,
+  token: process.env.UPLOADTHING_TOKEN,
 });
 
 export async function POST(request: NextRequest) {

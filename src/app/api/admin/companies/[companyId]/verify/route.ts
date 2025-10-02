@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
+import { type RouteParams } from '@/lib/next';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: RouteParams<{ companyId: string }>
 ) {
   try {
     // Get session and check admin role
@@ -18,7 +19,7 @@ export async function PATCH(
       );
     }
 
-    const { companyId } = params;
+  const { companyId } = await params;
 
     // Check if company exists
     const company = await prisma.company.findUnique({
@@ -59,6 +60,7 @@ export async function PATCH(
         totalBountiesPaid: true,
         activeBounties: true,
         resolvedVulnerabilities: true,
+        reputation: true,
         isVerified: true,
         isActive: true,
         createdAt: true,

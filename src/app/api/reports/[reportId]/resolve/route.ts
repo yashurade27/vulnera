@@ -3,10 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { resolveReportSchema, type ResolveReportInput } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { reportId: string } }
+  { params }: RouteParams<{ reportId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -26,7 +27,7 @@ export async function POST(
       );
     }
 
-    const { reportId } = params;
+  const { reportId } = await params;
 
     const body: ResolveReportInput = await request.json();
     const parsed = resolveReportSchema.safeParse(body);

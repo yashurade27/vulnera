@@ -3,10 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { updateSubmissionSchema, type UpdateSubmissionInput } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { submissionId: string } }
+  { params }: RouteParams<{ submissionId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +19,7 @@ export async function GET(
       );
     }
 
-    const { submissionId } = params;
+  const { submissionId } = await params;
 
     const submission = await prisma.submission.findUnique({
       where: { id: submissionId },
@@ -116,7 +117,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { submissionId: string } }
+  { params }: RouteParams<{ submissionId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -128,7 +129,7 @@ export async function PATCH(
       );
     }
 
-    const { submissionId } = params;
+  const { submissionId } = await params;
 
     const submission = await prisma.submission.findUnique({
       where: { id: submissionId },
@@ -200,7 +201,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { submissionId: string } }
+  { params }: RouteParams<{ submissionId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -212,7 +213,7 @@ export async function DELETE(
       );
     }
 
-    const { submissionId } = params;
+  const { submissionId } = await params;
 
     const submission = await prisma.submission.findUnique({
       where: { id: submissionId },

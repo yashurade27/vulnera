@@ -3,10 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { updateMemberSchema, type UpdateMemberInput } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { companyId: string; memberId: string } }
+  { params }: RouteParams<{ companyId: string; memberId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +19,7 @@ export async function PATCH(
       );
     }
 
-    const { companyId, memberId } = params;
+  const { companyId, memberId } = await params;
 
     // Check if user has permission to manage members
     const requesterMember = await prisma.companyMember.findUnique({
@@ -112,7 +113,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { companyId: string; memberId: string } }
+  { params }: RouteParams<{ companyId: string; memberId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -124,7 +125,7 @@ export async function DELETE(
       );
     }
 
-    const { companyId, memberId } = params;
+  const { companyId, memberId } = await params;
 
     // Check if user has permission to manage members
     const requesterMember = await prisma.companyMember.findUnique({

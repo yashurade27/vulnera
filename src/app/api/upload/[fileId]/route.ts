@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { UTApi } from "uploadthing/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { type RouteParams } from "@/lib/next";
 
 const utapi = new UTApi({
   token: process.env.UPLOADTHING_SECRET,
@@ -9,7 +10,7 @@ const utapi = new UTApi({
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { fileId: string } }
+  { params }: RouteParams<{ fileId: string }>
 ) {
   try {
     // Check authentication
@@ -21,7 +22,7 @@ export async function DELETE(
       );
     }
 
-    const fileId = params.fileId;
+  const { fileId } = await params;
 
     if (!fileId) {
       return NextResponse.json(

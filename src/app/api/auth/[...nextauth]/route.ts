@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import type { NextAuthOptions } from "next-auth";
+import type { NextRequest } from "next/server";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
 import { loginSchema, type ExtendedUser } from "@/lib/types";
@@ -9,13 +10,30 @@ declare module "next-auth" {
   interface Session {
     user: ExtendedUser;
   }
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface User extends ExtendedUser {}
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
+    email?: string;
     role?: string;
     email_verified?: boolean;
+    fullName?: string | null;
+    username?: string | null;
+    avatarUrl?: string | null;
+    walletAddress?: string | null;
+    bio?: string | null;
+    country?: string | null;
+    githubUrl?: string | null;
+    twitterUrl?: string | null;
+    linkedinUrl?: string | null;
+    portfolioUrl?: string | null;
+    status?: string;
+    totalEarnings?: number;
+    totalBounties?: number;
+    reputation?: number;
+    rank?: number | null;
   }
 }
 
@@ -90,18 +108,68 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        token.sub = user.id;
+        token.email = user.email ?? token.email;
+        if (!token.email) {
+          token.email = "";
+        }
         token.role = user.role;
         token.email_verified = !!user.emailVerified;
+        token.fullName = user.fullName ?? null;
+        token.username = user.username ?? null;
+        token.avatarUrl = user.avatarUrl ?? null;
+        token.walletAddress = user.walletAddress ?? null;
+        token.bio = user.bio ?? null;
+        token.country = user.country ?? null;
+        token.githubUrl = user.githubUrl ?? null;
+        token.twitterUrl = user.twitterUrl ?? null;
+        token.linkedinUrl = user.linkedinUrl ?? null;
+        token.portfolioUrl = user.portfolioUrl ?? null;
+        token.status = user.status;
+        token.totalEarnings = Number(user.totalEarnings ?? 0);
+        token.totalBounties = Number(user.totalBounties ?? 0);
+        token.reputation = Number(user.reputation ?? 0);
+        token.rank = user.rank ?? null;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.sub!;
-        session.user.role = token.role as 'BOUNTY_HUNTER' | 'COMPANY_ADMIN' | 'ADMIN';
-        session.user.emailVerified = token.email_verified || false;
+      if (!token?.sub) {
+        return session;
       }
-      return session;
+
+      const email = token.email ?? session.user?.email ?? "";
+      const username = token.username ?? session.user?.username ?? email;
+      const status = token.status as 'ACTIVE' | 'SUSPENDED' | 'BANNED' | undefined;
+
+      const enrichedUser: ExtendedUser = {
+        id: token.sub,
+        name: token.fullName || token.username || token.email,
+        email,
+        image: token.avatarUrl || null,
+        username,
+        role: (token.role as 'BOUNTY_HUNTER' | 'COMPANY_ADMIN' | 'ADMIN') ?? session.user?.role ?? 'BOUNTY_HUNTER',
+        status: status ?? session.user?.status ?? 'ACTIVE',
+        emailVerified: token.email_verified ?? session.user?.emailVerified ?? false,
+        fullName: token.fullName ?? session.user?.fullName ?? null,
+        avatarUrl: token.avatarUrl ?? session.user?.avatarUrl ?? null,
+        walletAddress: token.walletAddress ?? session.user?.walletAddress ?? null,
+        bio: token.bio ?? session.user?.bio ?? null,
+        country: token.country ?? session.user?.country ?? null,
+        githubUrl: token.githubUrl ?? session.user?.githubUrl ?? null,
+        twitterUrl: token.twitterUrl ?? session.user?.twitterUrl ?? null,
+        linkedinUrl: token.linkedinUrl ?? session.user?.linkedinUrl ?? null,
+        portfolioUrl: token.portfolioUrl ?? session.user?.portfolioUrl ?? null,
+        totalEarnings: token.totalEarnings ?? session.user?.totalEarnings ?? 0,
+        totalBounties: token.totalBounties ?? session.user?.totalBounties ?? 0,
+        reputation: token.reputation ?? session.user?.reputation ?? 0,
+        rank: token.rank ?? session.user?.rank ?? null,
+      };
+
+      return {
+        ...session,
+        user: enrichedUser,
+      };
     }
   },
   session: {
@@ -113,8 +181,47 @@ export const authOptions: NextAuthOptions = {
     error: '/auth/login',
   },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV !== 'production',
 };
 
 const handler = NextAuth(authOptions);
 
-export { handler as GET, handler as POST };
+type HandlerContext = Parameters<typeof handler>[1];
+
+async function normalizeResponseBody(response: Response): Promise<Response> {
+  try {
+    const clone = response.clone();
+    const rawBody = await clone.text();
+    const trimmed = rawBody.trim();
+
+    if (trimmed === "" || trimmed === "null" || trimmed === "{}") {
+      return new Response(null, {
+        status: 200,
+        statusText: "OK",
+        headers: {
+          "content-type": "application/json",
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Failed to normalize NextAuth response body", error);
+  }
+
+  return response;
+}
+
+async function handleAuthRequest(req: NextRequest, context: HandlerContext) {
+  const response = await handler(req, context);
+  if (response instanceof Response) {
+    return normalizeResponseBody(response);
+  }
+  return response;
+}
+
+export async function GET(req: NextRequest, context: HandlerContext) {
+  return handleAuthRequest(req, context);
+}
+
+export async function POST(req: NextRequest, context: HandlerContext) {
+  return handleAuthRequest(req, context);
+}

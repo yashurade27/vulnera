@@ -4,10 +4,11 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { authOptions } from '../../../../auth/[...nextauth]/route';
 import { updateCommentSchema } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { submissionId: string; commentId: string } }
+  { params }: RouteParams<{ submissionId: string; commentId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,8 +20,10 @@ export async function PATCH(
     const validatedData = updateCommentSchema.parse(body);
 
     // Find the comment and check ownership
+    const { submissionId, commentId } = await params;
+
     const comment = await prisma.comment.findUnique({
-      where: { id: params.commentId },
+      where: { id: commentId },
       select: {
         id: true,
         userId: true,
@@ -37,18 +40,18 @@ export async function PATCH(
     }
 
     // Verify the comment belongs to the submission
-    if (comment.submissionId !== params.submissionId) {
+  if (comment.submissionId !== submissionId) {
       return NextResponse.json({ error: 'Comment does not belong to this submission' }, { status: 400 });
     }
 
     // Only the author can update their comment
-    if (comment.userId !== session.user.id) {
+  if (comment.userId !== session.user.id) {
       return NextResponse.json({ error: 'You can only update your own comments' }, { status: 403 });
     }
 
     // Update the comment
     const updatedComment = await prisma.comment.update({
-      where: { id: params.commentId },
+      where: { id: commentId },
       data: {
         content: validatedData.content,
         updatedAt: new Date(),
@@ -78,7 +81,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { submissionId: string; commentId: string } }
+  { params }: RouteParams<{ submissionId: string; commentId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -87,8 +90,10 @@ export async function DELETE(
     }
 
     // Find the comment and check ownership/permissions
+    const { submissionId, commentId } = await params;
+
     const comment = await prisma.comment.findUnique({
-      where: { id: params.commentId },
+      where: { id: commentId },
       select: {
         id: true,
         userId: true,
@@ -102,7 +107,7 @@ export async function DELETE(
     }
 
     // Verify the comment belongs to the submission
-    if (comment.submissionId !== params.submissionId) {
+  if (comment.submissionId !== submissionId) {
       return NextResponse.json({ error: 'Comment does not belong to this submission' }, { status: 400 });
     }
 
@@ -112,9 +117,9 @@ export async function DELETE(
     let canDelete = isAuthor;
 
     // If not the author, check if user is a company admin for this submission
-    if (!canDelete) {
+  if (!canDelete) {
       const submission = await prisma.submission.findUnique({
-        where: { id: params.submissionId },
+        where: { id: submissionId },
         select: { companyId: true },
       });
 
@@ -136,7 +141,7 @@ export async function DELETE(
 
     // Delete the comment
     await prisma.comment.delete({
-      where: { id: params.commentId },
+      where: { id: commentId },
     });
 
     return NextResponse.json({ message: 'Comment deleted successfully' });

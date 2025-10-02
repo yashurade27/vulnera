@@ -3,16 +3,22 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { type RouteParams } from '@/lib/next';
 
 const updateUserByAdminSchema = z.object({
   role: z.enum(['BOUNTY_HUNTER', 'COMPANY_ADMIN', 'ADMIN']).optional(),
   status: z.enum(['ACTIVE', 'SUSPENDED', 'BANNED']).optional(),
   emailVerified: z.boolean().optional(),
+  reputation: z
+    .number()
+    .min(0, { message: 'Reputation cannot be negative' })
+    .max(10000, { message: 'Reputation too high' })
+    .optional(),
 });
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: RouteParams<{ userId: string }>
 ) {
   try {
     // Get session and check admin role
@@ -25,7 +31,7 @@ export async function PATCH(
       );
     }
 
-    const { userId } = params;
+  const { userId } = await params;
 
     const body = await request.json();
     const parsed = updateUserByAdminSchema.safeParse(body);

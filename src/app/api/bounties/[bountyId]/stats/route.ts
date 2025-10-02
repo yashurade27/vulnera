@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { type RouteParams } from '@/lib/next';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { bountyId: string } }
+  { params }: RouteParams<{ bountyId: string }>
 ) {
   try {
-    const { bountyId } = params;
+    const { bountyId } = await params;
 
     // Check if bounty exists
     const existingBounty = await prisma.bounty.findUnique({

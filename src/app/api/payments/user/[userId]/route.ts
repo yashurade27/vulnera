@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
-import { getUserPaymentsQuerySchema, type GetUserPaymentsQuery } from '@/lib/types';
+import { Prisma } from '@prisma/client';
+import { getUserPaymentsQuerySchema } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: RouteParams<{ userId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +20,7 @@ export async function GET(
       );
     }
 
-    const { userId } = params;
+  const { userId } = await params;
 
     // Users can only view their own payments, admins can view any
     if (session.user.id !== userId && session.user.role !== 'ADMIN') {
@@ -31,7 +33,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters
-    const query: any = {};
+    const query: { [key: string]: string | undefined } = {};
     if (searchParams.get('status')) query.status = searchParams.get('status')!;
     if (searchParams.get('limit')) query.limit = searchParams.get('limit')!;
     if (searchParams.get('offset')) query.offset = searchParams.get('offset')!;
@@ -55,7 +57,7 @@ export async function GET(
     } = parsed.data;
 
     // Build where clause
-    const where: any = { userId };
+    const where: Prisma.PaymentWhereInput = { userId };
 
     if (status) {
       where.status = status;

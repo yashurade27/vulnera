@@ -3,10 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { updateReportSchema, type UpdateReportInput } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { reportId: string } }
+  { params }: RouteParams<{ reportId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +19,7 @@ export async function GET(
       );
     }
 
-    const { reportId } = params;
+  const { reportId } = await params;
 
     const report = await prisma.report.findUnique({
       where: { id: reportId },
@@ -109,7 +110,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { reportId: string } }
+  { params }: RouteParams<{ reportId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -129,7 +130,7 @@ export async function PATCH(
       );
     }
 
-    const { reportId } = params;
+    const { reportId } = await params;
 
     const body: UpdateReportInput = await request.json();
     const parsed = updateReportSchema.safeParse(body);

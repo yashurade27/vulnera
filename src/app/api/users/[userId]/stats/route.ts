@@ -3,10 +3,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params
+    const { userId } = await params
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -23,7 +23,7 @@ export async function GET(
     }
 
     // Calculate additional stats
-    const submissions = await prisma.submission.findMany({
+  const submissions = await prisma.submission.findMany({
       where: { userId, status: 'APPROVED' },
       select: { rewardAmount: true },
     })

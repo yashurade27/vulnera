@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
-import { getBountySubmissionsQuerySchema, type GetBountySubmissionsQuery } from '@/lib/types';
+import { Prisma } from '@prisma/client';
+import { getBountySubmissionsQuerySchema } from '@/lib/types';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { bountyId: string } }
+  { params }: { params: Promise<{ bountyId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,11 +19,11 @@ export async function GET(
       );
     }
 
-    const { bountyId } = params;
+    const { bountyId } = await params;
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters
-    const query: any = {};
+    const query: { [key: string]: string | undefined } = {};
     if (searchParams.get('status')) query.status = searchParams.get('status')!;
     if (searchParams.get('limit')) query.limit = searchParams.get('limit')!;
     if (searchParams.get('offset')) query.offset = searchParams.get('offset')!;
@@ -71,7 +72,7 @@ export async function GET(
     }
 
     // Build where clause
-    const where: any = {
+    const where: Prisma.SubmissionWhereInput = {
       bountyId,
     };
 

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
-import { createCompanySchema, getCompaniesQuerySchema, type CreateCompanyInput, type GetCompaniesQuery } from '@/lib/types';
+import { Prisma } from '@prisma/client';
+import { createCompanySchema, getCompaniesQuerySchema, type CreateCompanyInput } from '@/lib/types';
 
 
 export async function POST(request: NextRequest) {
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, description, website, walletAddress, industry, companySize, location } = parsed.data;
+  const { name, description, website, walletAddress, industry, companySize, location, logoUrl } = parsed.data;
 
     // Check if wallet address is already used
     const existingCompany = await prisma.company.findUnique({
@@ -68,12 +69,13 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         slug,
-        description,
-        website,
-        walletAddress,
-        industry,
-        companySize,
-        location,
+  description,
+  website,
+  walletAddress,
+  industry,
+  companySize,
+  location,
+  logoUrl,
         isVerified: false, // New companies start unverified
         isActive: true,
       },
@@ -94,6 +96,7 @@ export async function POST(request: NextRequest) {
         totalBountiesPaid: true,
         activeBounties: true,
         resolvedVulnerabilities: true,
+        reputation: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -132,7 +135,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters - let the schema handle validation and transformation
-    const query: any = {};
+    const query: { [key: string]: string | undefined } = {};
     if (searchParams.get('search')) query.search = searchParams.get('search')!;
     if (searchParams.get('verified')) query.verified = searchParams.get('verified')!;
     if (searchParams.get('active')) query.active = searchParams.get('active')!;
@@ -150,7 +153,7 @@ export async function GET(request: NextRequest) {
     const { search, verified, active, limit = 20, offset = 0 } = parsed.data;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.CompanyWhereInput = {};
 
     if (search) {
       where.OR = [
@@ -188,6 +191,7 @@ export async function GET(request: NextRequest) {
           totalBountiesPaid: true,
           activeBounties: true,
           resolvedVulnerabilities: true,
+          reputation: true,
           createdAt: true,
           updatedAt: true,
           _count: {

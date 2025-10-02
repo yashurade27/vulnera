@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../../auth/[...nextauth]/route'
 import { prisma } from '@/lib/prisma'
+import { type RouteParams } from '@/lib/next'
 
 const statusSchema = {
   PATCH: async (request: NextRequest, params: { bountyId: string }) => {
@@ -36,7 +37,8 @@ const statusSchema = {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { bountyId: string } }
+  { params }: RouteParams<{ bountyId: string }>
 ) {
-  return statusSchema.PATCH(request, params)
+  const resolvedParams = await params
+  return statusSchema.PATCH(request, resolvedParams)
 }

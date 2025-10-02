@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,9 +25,9 @@ export async function GET(request: NextRequest) {
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0;
 
     // Build where clause
-    const where: any = {};
-    if (role) where.role = role;
-    if (status) where.status = status;
+    const where: Prisma.UserWhereInput = {};
+    if (role) where.role = role as 'BOUNTY_HUNTER' | 'COMPANY_ADMIN' | 'ADMIN';
+    if (status) where.status = status as 'ACTIVE' | 'SUSPENDED' | 'BANNED';
     if (search) {
       where.OR = [
         { email: { contains: search, mode: 'insensitive' } },

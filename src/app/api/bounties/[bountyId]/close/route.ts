@@ -4,10 +4,11 @@ import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { closeBountySchema, type CloseBountyInput } from '@/lib/types';
 import { solanaService } from '@/lib/solana';
+import { type RouteParams } from '@/lib/next';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { bountyId: string } }
+  { params }: RouteParams<{ bountyId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,7 +20,7 @@ export async function POST(
       );
     }
 
-    const { bountyId } = params;
+  const { bountyId } = await params;
     const body: CloseBountyInput = await request.json();
     const parsed = closeBountySchema.safeParse(body);
 

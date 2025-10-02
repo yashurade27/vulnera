@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
-import { createReportSchema, getReportsQuerySchema, type CreateReportInput, type GetReportsQuery } from '@/lib/types';
+import { Prisma } from '@prisma/client';
+import { createReportSchema, getReportsQuerySchema, type CreateReportInput } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
       sortOrder = 'desc'
     } = parsedQuery.data;
 
-    const where: any = {};
+    const where: Prisma.ReportWhereInput = {};
     if (status) where.status = status;
     if (type) where.type = type;
     if (reporterId) where.reporterId = reporterId;

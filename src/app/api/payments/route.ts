@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
-import { createPaymentSchema, getPaymentsQuerySchema, type CreatePaymentInput, type GetPaymentsQuery } from '@/lib/types';
+import { Prisma } from '@prisma/client';
+import { createPaymentSchema, getPaymentsQuerySchema, type CreatePaymentInput } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters
-    const query: any = {};
+    const query: { [key: string]: string | undefined } = {};
     if (searchParams.get('userId')) query.userId = searchParams.get('userId')!;
     if (searchParams.get('companyId')) query.companyId = searchParams.get('companyId')!;
     if (searchParams.get('status')) query.status = searchParams.get('status')!;
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
     } = parsed.data;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.PaymentWhereInput = {};
 
     if (userId) {
       where.userId = userId;

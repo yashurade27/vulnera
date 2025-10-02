@@ -71,6 +71,13 @@ export const createCompanySchema = z.object({
   industry: z.string().max(50).optional(),
   companySize: z.string().max(20).optional(),
   location: z.string().max(100).optional(),
+  logoUrl: z.string().url().optional(),
+});
+
+export const registerCompanyOnChainSchema = z.object({
+  companyId: z.string(),
+  txSignature: z.string().min(1),
+  smartContractAddress: z.string().optional(),
 });
 
 export const updateCompanySchema = z.object({
@@ -434,6 +441,7 @@ export type VerifyOtpFormInput = z.infer<typeof verifyOtpFormSchema>;
 export type UpdateUserProfileInput = z.infer<typeof updateUserProfileSchema>;
 export type UpdateWalletInput = z.infer<typeof updateWalletSchema>;
 export type CreateCompanyInput = z.infer<typeof createCompanySchema>;
+export type RegisterCompanyOnChainInput = z.infer<typeof registerCompanyOnChainSchema>;
 export type UpdateCompanyInput = z.infer<typeof updateCompanySchema>;
 export type GetCompaniesQuery = z.infer<typeof getCompaniesQuerySchema>;
 export type GetCompanyBountiesQuery = z.infer<typeof getCompanyBountiesQuerySchema>;
@@ -509,7 +517,9 @@ export interface DbUser {
 
 export interface ExtendedUser {
   id: string;
+  name?: string | null;
   email: string;
+  image?: string | null;
   username: string;
   role: 'BOUNTY_HUNTER' | 'COMPANY_ADMIN' | 'ADMIN';
   status: 'ACTIVE' | 'SUSPENDED' | 'BANNED';

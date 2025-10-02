@@ -3,13 +3,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { updateUserProfileSchema, type UpdateUserProfileInput } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: RouteParams<{ userId: string }>
 ) {
   try {
-    const { userId } = params;
+  const { userId } = await params;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -59,7 +60,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: RouteParams<{ userId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -71,7 +72,7 @@ export async function PATCH(
       );
     }
 
-    const { userId } = params;
+  const { userId } = await params;
 
     // Only allow users to update their own profile or admins
     if (session.user.id !== userId && session.user.role !== 'ADMIN') {

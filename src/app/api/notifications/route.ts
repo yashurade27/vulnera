@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
-import { getNotificationsQuerySchema, type GetNotificationsQuery } from '@/lib/types';
+import { getNotificationsQuerySchema } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
