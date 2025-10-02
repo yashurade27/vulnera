@@ -81,12 +81,19 @@ export async function POST(
       );
     }
 
-    // Verify escrow account exists and has correct owner
-    const escrowData = await solanaService.getEscrowData(escrowAddress);
+    // Retry mechanism to allow RPC node to catch up
+    let escrowData = null;
+    for (let i = 0; i < 5; i++) {
+      escrowData = await solanaService.getEscrowData(escrowAddress);
+      if (escrowData) {
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+    }
     
     if (!escrowData) {
       return NextResponse.json(
-        { error: 'Escrow account not found or not initialized' },
+        { error: 'Escrow account not found or not initialized after multiple attempts' },
         { status: 400 }
       );
     }
@@ -98,11 +105,15 @@ export async function POST(
       );
     }
 
-    // Verify escrow amount matches bounty reward
-    const expectedAmount = Number(existingBounty.rewardAmount) * 1_000_000_000;
-    if (escrowData.escrowAmount < expectedAmount) {
+    // Verify escrow amount matches bounty reward pool
+    const reward = Number(existingBounty.rewardAmount);
+    const maxSubmissions = existingBounty.maxSubmissions ?? 1;
+    const totalExpectedAmount = reward * maxSubmissions;
+    const totalExpectedLamports = totalExpectedAmount * 1_000_000_000;
+
+    if (escrowData.escrowAmount < totalExpectedLamports) {
       return NextResponse.json(
-        { error: `Escrow amount (${escrowData.escrowAmount}) is less than bounty reward (${expectedAmount})` },
+        { error: `Escrow amount (${escrowData.escrowAmount}) is less than the total expected amount (${totalExpectedLamports})` },
         { status: 400 }
       );
     }

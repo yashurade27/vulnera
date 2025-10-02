@@ -1,4 +1,11 @@
-import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, sendAndConfirmTransaction } from '@solana/web3.js'
+import {
+  Connection,
+  PublicKey,
+  Transaction,
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+  sendAndConfirmTransaction,
+} from '@solana/web3.js'
 import * as nacl from 'tweetnacl'
 
 // Solana RPC endpoint - use environment variable or default to Helius Devnet
@@ -8,7 +15,9 @@ const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.
 const PLATFORM_WALLET = process.env.PLATFORM_WALLET || '11111111111111111111111111111112'
 
 // Program ID from the smart contract
-export const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_PROGRAM_ID || '3Hfod1h8nFotUMiFL3AeaWrtgiaU5jAq28UeH6veAqBp')
+export const PROGRAM_ID = new PublicKey(
+  process.env.NEXT_PUBLIC_PROGRAM_ID || 'CZ6kuqEBvfdzM8h3rACEYazp771BFDXDMNgsoNSNvJ5Q',
+)
 
 // Minimum escrow amount (0.1 SOL = 100,000,000 lamports)
 export const MIN_ESCROW_AMOUNT = 100_000_000
@@ -28,10 +37,7 @@ export class SolanaService {
    * Uses seeds: [b"bounty-escrow", owner.key()]
    */
   async deriveEscrowAddress(ownerPublicKey: PublicKey): Promise<[PublicKey, number]> {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from('bounty-escrow'), ownerPublicKey.toBuffer()],
-      PROGRAM_ID
-    )
+    return PublicKey.findProgramAddressSync([Buffer.from('bounty-escrow'), ownerPublicKey.toBuffer()], PROGRAM_ID)
   }
 
   /**
@@ -59,7 +65,7 @@ export class SolanaService {
     try {
       const tx = await this.connection.getTransaction(signature, {
         commitment: 'confirmed',
-        maxSupportedTransactionVersion: 0
+        maxSupportedTransactionVersion: 0,
       })
 
       if (!tx) {
@@ -77,7 +83,7 @@ export class SolanaService {
         logs: tx.meta?.logMessages || [],
         accounts: Array.from(accountKeys.staticAccountKeys).map((key: PublicKey) => key.toString()),
         instructions: tx.transaction.message.compiledInstructions.length,
-        recentBlockhash: tx.transaction.message.recentBlockhash
+        recentBlockhash: tx.transaction.message.recentBlockhash,
       }
     } catch (error) {
       console.error('Failed to get transaction:', error)
@@ -91,7 +97,7 @@ export class SolanaService {
   async verifyTransaction(signature: string): Promise<{ confirmed: boolean; blockTime?: number; status?: string }> {
     try {
       const tx = await this.connection.getTransaction(signature, {
-        commitment: 'confirmed'
+        commitment: 'confirmed',
       })
 
       if (!tx) {
@@ -101,7 +107,7 @@ export class SolanaService {
       return {
         confirmed: !tx.meta?.err,
         blockTime: tx.blockTime ?? undefined,
-        status: tx.meta?.err ? 'failed' : 'confirmed'
+        status: tx.meta?.err ? 'failed' : 'confirmed',
       }
     } catch (error) {
       console.error('Transaction verification failed:', error)
@@ -133,7 +139,7 @@ export class SolanaService {
 
     return {
       escrowAddress: escrowPDA.toString(),
-      expectedAmount: amount
+      expectedAmount: amount,
     }
   }
 
@@ -143,18 +149,34 @@ export class SolanaService {
   async getEscrowData(escrowAddress: string): Promise<{ owner: string; escrowAmount: number } | null> {
     try {
       const accountInfo = await this.connection.getAccountInfo(new PublicKey(escrowAddress))
-      if (!accountInfo) return null
+      if (!accountInfo) {
+        console.log(`[getEscrowData] Account not found for ${escrowAddress}`)
+        return null
+      }
+
+      // CRITICAL: Check if the account is owned by our program.
+      // If not, it's not a valid escrow account.
+      if (!accountInfo.owner.equals(PROGRAM_ID)) {
+        console.error(`[getEscrowData] Account ${escrowAddress} is owned by the wrong program.
+          Expected: ${PROGRAM_ID.toBase58()}
+          Got: ${accountInfo.owner.toBase58()}`)
+        return null
+      }
 
       // Parse account data (8 bytes discriminator + 32 bytes owner + 8 bytes amount)
       const data = accountInfo.data
-      if (data.length < 48) return null
+      if (data.length < 48) {
+        console.error(`[getEscrowData] Account data is too short. Expected 48, got ${data.length}`)
+        return null
+      }
 
       const owner = new PublicKey(data.slice(8, 40))
+      // This is the 'virtual' amount stored in the account's state
       const escrowAmount = Number(data.readBigUInt64LE(40))
 
       return {
         owner: owner.toString(),
-        escrowAmount
+        escrowAmount,
       }
     } catch (error) {
       console.error('Failed to get escrow data:', error)

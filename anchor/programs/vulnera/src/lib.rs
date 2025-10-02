@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{system_program, sysvar::clock::Clock};
 
-declare_id!("Bz7rptkyjjunebuRXqH3xeYpkgaMvGeLkoY195UFt9g3");
+declare_id!("CZ6kuqEBvfdzM8h3rACEYazp771BFDXDMNgsoNSNvJ5Q");
 
 // Platform fee in basis points (200 = 2%)
 pub const DEFAULT_PLATFORM_FEE: u16 = 200;
@@ -81,18 +81,40 @@ pub mod vulnera_bounty {
         Ok(())
     }
 
-    /// Closes the bounty and returns remaining funds.
+    /// Closes the bounty and returns remaining funds to the owner.
     pub fn close_bounty(ctx: Context<CloseBounty>, bounty_id: String) -> Result<()> {
-        let remaining = ctx.accounts.vault.escrow_amount;
-
-        // Transfer remaining to owner
-        **ctx.accounts.vault.to_account_info().try_borrow_mut_lamports()? -= remaining;
-        **ctx.accounts.owner.to_account_info().try_borrow_mut_lamports()? += remaining;
+        // By using the `close` constraint on the vault account in the `CloseBounty` struct,
+        // the Solana runtime will automatically handle the transfer of all remaining lamports
+        // to the owner. No manual transfer logic is needed here.
 
         emit!(BountyClosed {
             bounty_id,
-            remaining_amount: remaining,
+            // We can get the actual remaining lamports from the account info before it's closed.
+            remaining_amount: ctx.accounts.vault.to_account_info().lamports(),
         });
+
+        Ok(())
+    }
+
+    /// Deposits additional funds into an existing bounty escrow.
+    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
+        let vault = &mut ctx.accounts.vault;
+        vault.escrow_amount = vault.escrow_amount.checked_add(amount).ok_or(VaultError::Overflow)?;
+
+        // Transfer funds from owner to vault
+        let ix = anchor_lang::solana_program::system_instruction::transfer(
+            ctx.accounts.owner.key,
+            &vault.key(),
+            amount,
+        );
+        anchor_lang::solana_program::program::invoke(
+            &ix,
+            &[
+                ctx.accounts.owner.to_account_info(),
+                vault.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
 
         Ok(())
     }
@@ -106,6 +128,20 @@ pub struct Initialize<'info> {
         space = 8 + 32 + 8, // Discriminator + owner + escrow_amount
         seeds = [b"bounty-escrow", owner.key().as_ref()],
         bump
+    )]
+    pub vault: Account<'info, BountyEscrow>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct Deposit<'info> {
+    #[account(
+        mut,
+        seeds = [b"bounty-escrow", owner.key().as_ref()],
+        bump,
+        has_one = owner
     )]
     pub vault: Account<'info, BountyEscrow>,
     #[account(mut)]
@@ -128,7 +164,16 @@ pub struct ProcessPayment<'info> {
 
 #[derive(Accounts)]
 pub struct CloseBounty<'info> {
-    #[account(mut, seeds = [b"bounty-escrow", owner.key().as_ref()], bump, has_one = owner)]
+    #[account(
+        mut,
+        seeds = [b"bounty-escrow", owner.key().as_ref()],
+        bump,
+        has_one = owner,
+        // This is the crucial change:
+        // It tells Solana to transfer all lamports from `vault` to `owner`
+        // and then delete the `vault` account from the blockchain.
+        close = owner
+    )]
     pub vault: Account<'info, BountyEscrow>,
     #[account(mut)]
     pub owner: Signer<'info>,

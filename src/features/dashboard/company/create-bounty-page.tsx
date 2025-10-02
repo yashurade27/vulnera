@@ -48,6 +48,9 @@ const BOUNTY_TYPES = [
   { value: "SECURITY", label: "Security Vulnerabilities", color: "bg-red-500/10 text-red-400 border-red-500/30" },
 ]
 
+import { useProgram } from "@/lib/use-program"
+import { BN } from "@coral-xyz/anchor"
+
 interface EscrowInfo {
   escrowAddress: string
   expectedAmount: number
@@ -57,6 +60,7 @@ export function CreateBountyPage() {
   const router = useRouter()
   const { connection } = useConnection()
   const { publicKey, sendTransaction } = useWallet()
+  const { program } = useProgram()
 
   const [step, setStep] = useState(1)
   const [company, setCompany] = useState<CompanySummary | null>(null)
@@ -237,8 +241,8 @@ export function CreateBountyPage() {
     }
   }
 
-  const handleSendAndConfirmTransaction = async () => {
-    if (!publicKey || !createdBountyId || !escrowInfo?.escrowAddress || !escrowInfo.expectedAmount) {
+  const handleInitializeEscrow = async () => {
+    if (!program || !publicKey || !createdBountyId || !escrowInfo?.escrowAddress || !escrowInfo.expectedAmount) {
       setFundingError("Missing required information to fund the bounty.")
       return
     }
@@ -247,35 +251,49 @@ export function CreateBountyPage() {
       setFunding(true)
       setFundingError(null)
 
-      // 1. Create Transaction
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: new PublicKey(escrowInfo.escrowAddress),
-          lamports: escrowInfo.expectedAmount,
-        }),
-      )
+      const [escrowPda] = await PublicKey.findProgramAddress(
+        [Buffer.from("bounty-escrow"), publicKey.toBuffer()],
+        program.programId
+      );
 
-      // 2. Get recent blockhash
-      const {
-        context: { slot: minContextSlot },
-        value: { blockhash, lastValidBlockHeight },
-      } = await connection.getLatestBlockhashAndContext()
+      // Check if the account already exists
+      const accountInfo = await connection.getAccountInfo(escrowPda);
 
-      // 3. Send transaction
-      const signature = await sendTransaction(transaction, connection, { minContextSlot })
+      let signature: string;
+      if (accountInfo === null) {
+        // Account doesn't exist, so initialize it
+        console.log("Vault account not found. Initializing...");
+        signature = await program.methods
+          .initialize(new BN(escrowInfo.expectedAmount))
+          .accounts({
+            vault: escrowPda,
+            owner: publicKey,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+      } else {
+        // Account exists, so deposit into it
+        console.log("Vault account found. Depositing funds...");
+        signature = await program.methods
+          .deposit(new BN(escrowInfo.expectedAmount))
+          .accounts({
+            vault: escrowPda,
+            owner: publicKey,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+      }
 
-      // 4. Confirm transaction
-      await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature })
+      console.log("Transaction successful with signature:", signature);
 
-      // 5. Verify with backend
+      // Verify with backend
       const fundRes = await fetch(`/api/bounties/${createdBountyId}/fund`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
           txSignature: signature,
-          escrowAddress: escrowInfo.escrowAddress,
+          escrowAddress: escrowPda.toBase58(),
         }),
       })
 
@@ -284,7 +302,7 @@ export function CreateBountyPage() {
         throw new Error(fundJson?.error ?? "Funding verification failed")
       }
 
-      // 6. Redirect on success
+      // Redirect on success
       router.push(`/bounties/${createdBountyId}`)
     } catch (err) {
       console.error("Funding error:", err)
@@ -615,7 +633,7 @@ export function CreateBountyPage() {
                     <div className="flex flex-col sm:flex-row gap-3 mt-4">
                       <Button
                         className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
-                        onClick={handleSendAndConfirmTransaction}
+                        onClick={handleInitializeEscrow}
                         disabled={funding || !escrowInfo || !publicKey}
                       >
                         {funding ? (

@@ -1,41 +1,38 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
-import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
-import { createBountySchema, getBountiesQuerySchema, type CreateBountyInput } from '@/lib/types';
-import { solanaService } from '@/lib/solana';
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../auth/[...nextauth]/route'
+import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
+import { createBountySchema, getBountiesQuerySchema, type CreateBountyInput } from '@/lib/types'
+import { solanaService } from '@/lib/solana'
 
 function serializeBounty(bounty: any) {
   return {
     ...bounty,
     rewardAmount: Number(bounty.rewardAmount),
-  };
+  }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(request.url)
 
     // Parse query parameters
-    const query: { [key: string]: string | undefined } = {};
-    if (searchParams.get('status')) query.status = searchParams.get('status')!;
-    if (searchParams.get('type')) query.type = searchParams.get('type')!;
-    if (searchParams.get('companyId')) query.companyId = searchParams.get('companyId')!;
-    if (searchParams.get('search')) query.search = searchParams.get('search')!;
-    if (searchParams.get('minReward')) query.minReward = searchParams.get('minReward')!;
-    if (searchParams.get('maxReward')) query.maxReward = searchParams.get('maxReward')!;
-    if (searchParams.get('limit')) query.limit = searchParams.get('limit')!;
-    if (searchParams.get('offset')) query.offset = searchParams.get('offset')!;
-    if (searchParams.get('sortBy')) query.sortBy = searchParams.get('sortBy')!;
-    if (searchParams.get('sortOrder')) query.sortOrder = searchParams.get('sortOrder')!;
+    const query: { [key: string]: string | undefined } = {}
+    if (searchParams.get('status')) query.status = searchParams.get('status')!
+    if (searchParams.get('type')) query.type = searchParams.get('type')!
+    if (searchParams.get('companyId')) query.companyId = searchParams.get('companyId')!
+    if (searchParams.get('search')) query.search = searchParams.get('search')!
+    if (searchParams.get('minReward')) query.minReward = searchParams.get('minReward')!
+    if (searchParams.get('maxReward')) query.maxReward = searchParams.get('maxReward')!
+    if (searchParams.get('limit')) query.limit = searchParams.get('limit')!
+    if (searchParams.get('offset')) query.offset = searchParams.get('offset')!
+    if (searchParams.get('sortBy')) query.sortBy = searchParams.get('sortBy')!
+    if (searchParams.get('sortOrder')) query.sortOrder = searchParams.get('sortOrder')!
 
-    const parsed = getBountiesQuerySchema.safeParse(query);
+    const parsed = getBountiesQuerySchema.safeParse(query)
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid query parameters', details: parsed.error.issues },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid query parameters', details: parsed.error.issues }, { status: 400 })
     }
 
     const {
@@ -48,22 +45,22 @@ export async function GET(request: NextRequest) {
       limit = 20,
       offset = 0,
       sortBy = 'createdAt',
-      sortOrder = 'desc'
-    } = parsed.data;
+      sortOrder = 'desc',
+    } = parsed.data
 
     // Build where clause
-    const where: Prisma.BountyWhereInput = {};
+    const where: Prisma.BountyWhereInput = {}
 
     if (status) {
-      where.status = status;
+      where.status = status
     }
 
     if (type) {
-      where.bountyType = type;
+      where.bountyType = type
     }
 
     if (companyId) {
-      where.companyId = companyId;
+      where.companyId = companyId
     }
 
     if (search) {
@@ -71,22 +68,22 @@ export async function GET(request: NextRequest) {
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
         { company: { name: { contains: search, mode: 'insensitive' } } },
-      ];
+      ]
     }
 
     if (minReward !== undefined || maxReward !== undefined) {
-      where.rewardAmount = {};
+      where.rewardAmount = {}
       if (minReward !== undefined) {
-        where.rewardAmount.gte = minReward;
+        where.rewardAmount.gte = minReward
       }
       if (maxReward !== undefined) {
-        where.rewardAmount.lte = maxReward;
+        where.rewardAmount.lte = maxReward
       }
     }
 
     // Only show active bounties by default unless status is specified
     if (!status) {
-      where.status = 'ACTIVE';
+      where.status = 'ACTIVE'
     }
 
     // Get bounties with pagination
@@ -94,7 +91,7 @@ export async function GET(request: NextRequest) {
       ...where,
       escrowAddress: { not: null },
       txSignature: { not: null },
-    };
+    }
 
     const [bounties, totalCandidates] = await Promise.all([
       prisma.bounty.findMany({
@@ -127,47 +124,47 @@ export async function GET(request: NextRequest) {
           escrowAddress: true,
         },
       }),
-    ]);
+    ])
 
-    const escrowCache = new Map<string, number>();
+    const escrowCache = new Map<string, number>()
 
     const enriched = await Promise.all(
       bounties.map(async (bounty) => {
-        const serialized = serializeBounty(bounty);
-        let escrowBalanceLamports: number | null = null;
+        const serialized = serializeBounty(bounty)
+        let escrowBalanceLamports: number | null = null
         if (serialized.escrowAddress) {
           if (escrowCache.has(serialized.escrowAddress)) {
-            escrowBalanceLamports = escrowCache.get(serialized.escrowAddress) ?? 0;
+            escrowBalanceLamports = escrowCache.get(serialized.escrowAddress) ?? 0
           } else {
-            const escrowData = await solanaService.getEscrowData(serialized.escrowAddress);
-            escrowBalanceLamports = escrowData?.escrowAmount ?? 0;
-            escrowCache.set(serialized.escrowAddress, escrowBalanceLamports);
+            const escrowData = await solanaService.getEscrowData(serialized.escrowAddress)
+            escrowBalanceLamports = escrowData?.escrowAmount ?? 0
+            escrowCache.set(serialized.escrowAddress, escrowBalanceLamports)
           }
         }
         return {
           ...serialized,
           escrowBalanceLamports,
-        };
-      })
-    );
+        }
+      }),
+    )
 
     const fundedBounties = enriched.filter(
-      (bounty) => bounty.escrowAddress && bounty.escrowBalanceLamports && bounty.escrowBalanceLamports > 0
-    );
+      (bounty) => bounty.escrowAddress && bounty.escrowBalanceLamports && bounty.escrowBalanceLamports > 0,
+    )
 
-    let total = 0;
+    let total = 0
     for (const candidate of totalCandidates) {
       if (!candidate.escrowAddress) {
-        continue;
+        continue
       }
-      let escrowAmount = escrowCache.get(candidate.escrowAddress);
+      let escrowAmount = escrowCache.get(candidate.escrowAddress)
       if (escrowAmount === undefined) {
-        const escrowData = await solanaService.getEscrowData(candidate.escrowAddress);
-        escrowAmount = escrowData?.escrowAmount ?? 0;
-        escrowCache.set(candidate.escrowAddress, escrowAmount);
+        const escrowData = await solanaService.getEscrowData(candidate.escrowAddress)
+        escrowAmount = escrowData?.escrowAmount ?? 0
+        escrowCache.set(candidate.escrowAddress, escrowAmount)
       }
       if (escrowAmount && escrowAmount > 0) {
-        total += 1;
+        total += 1
       }
     }
 
@@ -179,36 +176,26 @@ export async function GET(request: NextRequest) {
         offset,
         hasMore: offset + limit < total,
       },
-    });
-
+    })
   } catch (error) {
-    console.error('Get bounties error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Get bounties error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions)
 
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body: CreateBountyInput = await request.json();
-    const parsed = createBountySchema.safeParse(body);
+    const body: CreateBountyInput = await request.json()
+    const parsed = createBountySchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid input', details: parsed.error.issues },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid input', details: parsed.error.issues }, { status: 400 })
     }
 
     const {
@@ -226,7 +213,7 @@ export async function POST(request: NextRequest) {
       startsAt,
       endsAt,
       responseDeadline,
-    } = parsed.data;
+    } = parsed.data
 
     // Check if user is a member of the company and has permission to create bounties
     const companyMember = await prisma.companyMember.findFirst({
@@ -236,53 +223,44 @@ export async function POST(request: NextRequest) {
         isActive: true,
         canCreateBounty: true,
       },
-    });
+    })
 
     if (!companyMember) {
       return NextResponse.json(
         { error: 'Forbidden - You do not have permission to create bounties for this company' },
-        { status: 403 }
-      );
+        { status: 403 },
+      )
     }
 
     // Check if company exists and is active
     const company = await prisma.company.findUnique({
       where: { id: companyId },
-    });
+    })
 
     if (!company || !company.isActive) {
-      return NextResponse.json(
-        { error: 'Company not found or inactive' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Company not found or inactive' }, { status: 404 })
     }
 
     // Validate dates
-    const now = new Date();
-    const todayIsoDate = now.toISOString().split('T')[0];
+    const now = new Date()
+    const todayIsoDate = now.toISOString().split('T')[0]
 
-    let normalizedStartDate: Date | undefined;
-    let normalizedStartIso: string | undefined;
+    let normalizedStartDate: Date | undefined
+    let normalizedStartIso: string | undefined
 
     if (startsAt) {
-      normalizedStartDate = startsAt;
-      normalizedStartIso = normalizedStartDate.toISOString().split('T')[0];
+      normalizedStartDate = startsAt
+      normalizedStartIso = normalizedStartDate.toISOString().split('T')[0]
 
       if (normalizedStartIso < todayIsoDate) {
-        return NextResponse.json(
-          { error: 'Start date cannot be before today' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Start date cannot be before today' }, { status: 400 })
       }
     }
 
     if (endsAt && normalizedStartIso) {
-      const normalizedEndIso = endsAt.toISOString().split('T')[0];
+      const normalizedEndIso = endsAt.toISOString().split('T')[0]
       if (normalizedEndIso < normalizedStartIso) {
-        return NextResponse.json(
-          { error: 'End date cannot be before the start date' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'End date cannot be before the start date' }, { status: 400 })
       }
     }
 
@@ -290,13 +268,13 @@ export async function POST(request: NextRequest) {
       where: {
         companyId,
       },
-    });
+    })
 
     if (existingForCompany > 0) {
       return NextResponse.json(
         { error: 'A bounty already exists for this company. Multiple bounties per company are not supported.' },
-        { status: 400 }
-      );
+        { status: 400 },
+      )
     }
 
     // Create bounty
@@ -334,18 +312,11 @@ export async function POST(request: NextRequest) {
           },
         },
       },
-    });
+    })
 
-    return NextResponse.json(
-      { bounty, message: 'Bounty created successfully' },
-      { status: 201 }
-    );
-
+    return NextResponse.json({ bounty, message: 'Bounty created successfully' }, { status: 201 })
   } catch (error) {
-    console.error('Create bounty error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Create bounty error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
