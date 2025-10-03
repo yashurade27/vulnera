@@ -1,34 +1,33 @@
-"use client"
+'use client'
 
-import { useEffect, useMemo, useState } from "react"
-import { Menu, X, Shield, LogOut, User, LayoutDashboard } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useSession, signOut } from "next-auth/react"
-import dynamic from "next/dynamic"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useEffect, useMemo, useState } from 'react'
+import { Menu, X, Shield, LogOut, User, LayoutDashboard } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useSession, signOut } from 'next-auth/react'
+import dynamic from 'next/dynamic'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { ThemeSelect } from "@/components/theme-select"
-import { cn } from "@/lib/utils"
-import { NotificationBell } from "@/components/notifications/notification-bell"
+} from '@/components/ui/dropdown-menu'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { cn } from '@/lib/utils'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 
 const WalletMultiButton = dynamic(
-  () => import("@solana/wallet-adapter-react-ui").then((mod) => mod.WalletMultiButton),
-  { ssr: false }
+  () => import('@solana/wallet-adapter-react-ui').then((mod) => mod.WalletMultiButton),
+  { ssr: false },
 )
 
-const ClusterDropdown = dynamic(
-  () => import("@/components/cluster-dropdown").then((mod) => mod.ClusterDropdown),
-  { ssr: false }
-)
+const ClusterDropdown = dynamic(() => import('@/components/cluster-dropdown').then((mod) => mod.ClusterDropdown), {
+  ssr: false,
+})
 
 interface NavbarProps {
   showUtilityControls?: boolean
@@ -50,27 +49,23 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20)
     }
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const isAuthenticated = status === "authenticated"
+  const isAuthenticated = status === 'authenticated'
   const user = session?.user
 
   const userInitials = useMemo(() => {
-    if (!user) return "U"
-    const source = user.fullName || user.username || user.email || "U"
+    if (!user) return 'U'
+    const source = user.fullName || user.username || user.email || 'U'
     return source.charAt(0).toUpperCase()
   }, [user])
 
   const dashboardHref =
-    user?.role === "ADMIN"
-      ? "/admin"
-      : user?.role === "COMPANY_ADMIN"
-        ? "/dashboard/company"
-        : "/dashboard/hunter"
-  const dashboardLabel = user?.role === "ADMIN" ? "Admin" : "Dashboard"
-  const profileHref = user?.id ? `/profile/${user.id}` : "/profile"
+    user?.role === 'ADMIN' ? '/admin' : user?.role === 'COMPANY_ADMIN' ? '/dashboard/company' : '/dashboard/hunter'
+  const dashboardLabel = user?.role === 'ADMIN' ? 'Admin' : 'Dashboard'
+  const profileHref = user?.id ? `/profile/${user.id}` : '/profile'
 
   const handleMobileToggle = () => setIsMobileMenuOpen((prev) => !prev)
   const closeMobileMenu = () => setIsMobileMenuOpen(false)
@@ -117,50 +112,52 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
   }, [user])
 
   const renderDesktopAuth = () => {
-    if (status === "loading") {
+    if (status === 'loading') {
       return <div className="h-9 w-9 rounded-full bg-white/5 animate-pulse" aria-hidden />
     }
     if (isAuthenticated && user) {
-        return (
-          <>
-            <NotificationBell userId={user.id} />
-            <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="relative inline-flex items-center justify-center rounded-full ring-offset-background transition hover:ring-2 hover:ring-yellow-400/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70"
-              aria-label="Account menu"
-            >
-              <Avatar className="h-9 w-9">
-                {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={user.fullName ?? user.username ?? "User"} /> : null}
-                <AvatarFallback className="bg-yellow-500/20 text-yellow-200 font-medium">
-                  {userInitials}
-                </AvatarFallback>
-              </Avatar>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-48">
-            <div className="px-3 py-2">
-              <p className="text-sm font-semibold text-foreground">{user.fullName ?? user.username ?? user.email}</p>
-              <p className="text-xs text-muted-foreground">{user.email}</p>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href={dashboardHref} className="flex items-center gap-2">
-                <LayoutDashboard className="h-4 w-4" /> {dashboardLabel}
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={profileHref} className="flex items-center gap-2">
-                <User className="h-4 w-4" /> Profile
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut} className="text-red-400 focus:text-red-400">
-              <LogOut className="mr-2 h-4 w-4" /> Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      return (
+        <>
+          <NotificationBell userId={user.id} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="relative inline-flex items-center justify-center rounded-full ring-offset-background transition hover:ring-2 hover:ring-yellow-400/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70"
+                aria-label="Account menu"
+              >
+                <Avatar className="h-9 w-9">
+                  {user.avatarUrl ? (
+                    <AvatarImage src={user.avatarUrl} alt={user.fullName ?? user.username ?? 'User'} />
+                  ) : null}
+                  <AvatarFallback className="bg-yellow-500/20 text-yellow-200 font-medium">
+                    {userInitials}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-48">
+              <div className="px-3 py-2">
+                <p className="text-sm font-semibold text-foreground">{user.fullName ?? user.username ?? user.email}</p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href={dashboardHref} className="flex items-center gap-2">
+                  <LayoutDashboard className="h-4 w-4" /> {dashboardLabel}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={profileHref} className="flex items-center gap-2">
+                  <User className="h-4 w-4" /> Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} className="text-red-400 focus:text-red-400">
+                <LogOut className="mr-2 h-4 w-4" /> Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </>
       )
     }
@@ -180,10 +177,14 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
   }
 
   return (
-    <nav className={cn("nav-glass transition-shadow", isScrolled ? "shadow-lg" : "shadow-none") }>
+    <nav className={cn('nav-glass transition-shadow', isScrolled ? 'shadow-lg' : 'shadow-none')}>
       <div className="container-custom">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity" onClick={closeMobileMenu}>
+          <Link
+            href="/"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            onClick={closeMobileMenu}
+          >
             <Shield className="w-8 h-8 text-yellow-400" />
             <span className="text-xl font-semibold">Vulnera</span>
           </Link>
@@ -194,10 +195,8 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
                 key={item.id}
                 href={item.href}
                 className={cn(
-                  "link-premium transition-colors",
-                  pathname === item.href || pathname.startsWith(`${item.href}/`)
-                    ? "text-yellow-300"
-                    : ""
+                  'link-premium transition-colors',
+                  pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'text-yellow-300' : '',
                 )}
               >
                 {item.label}
@@ -208,7 +207,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
           <div className="hidden md:flex items-center gap-3">
             {showUtilityControls ? (
               <>
-                <ThemeSelect />
+                <ThemeToggle />
                 <ClusterDropdown />
                 <WalletMultiButton />
               </>
@@ -233,7 +232,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
         {isMobileMenuOpen ? (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
+            animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             className="md:hidden border-t border-white/10 bg-background/95 backdrop-blur-xl"
           >
@@ -244,10 +243,8 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
                     key={item.id}
                     href={item.href}
                     className={cn(
-                      "block link-premium py-2",
-                      pathname === item.href || pathname.startsWith(`${item.href}/`)
-                        ? "text-yellow-300"
-                        : ""
+                      'block link-premium py-2',
+                      pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'text-yellow-300' : '',
                     )}
                     onClick={closeMobileMenu}
                   >
@@ -258,20 +255,20 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
 
               {showUtilityControls ? (
                 <div className="flex flex-wrap gap-3">
-                  <ThemeSelect />
+                  <ThemeToggle />
                   <ClusterDropdown />
                   <WalletMultiButton />
                 </div>
               ) : null}
 
-              {status === "loading" ? (
+              {status === 'loading' ? (
                 <div className="h-10 w-full rounded-xl bg-white/5 animate-pulse" aria-hidden />
               ) : isAuthenticated && user ? (
                 <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
                       {user.avatarUrl ? (
-                        <AvatarImage src={user.avatarUrl} alt={user.fullName ?? user.username ?? "User"} />
+                        <AvatarImage src={user.avatarUrl} alt={user.fullName ?? user.username ?? 'User'} />
                       ) : null}
                       <AvatarFallback className="bg-yellow-500/20 text-yellow-200 font-medium">
                         {userInitials}
