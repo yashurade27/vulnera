@@ -15,7 +15,7 @@ export function AppAlert({
     <Alert variant="warning" className={className}>
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>{children}</AlertTitle>
-      <AlertDescription className="flex justify-end">{action}</AlertDescription>
+      {action ? <AlertDescription className="flex justify-end">{action}</AlertDescription> : null}
     </Alert>
   )
 }
