@@ -5,7 +5,7 @@ interface Bounty {
   id: string
   title: string
   description: string
-  bountyType: string
+  bountyTypes: string[]
   rewardAmount: number
   status: string
   endsAt: string | null

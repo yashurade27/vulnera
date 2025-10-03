@@ -12,7 +12,7 @@ interface BountyCardProps {
     id: string
     title: string
     description: string
-    bountyType: string
+    bountyTypes: string[]
     rewardAmount: number
     status: string
     endsAt: string | null
@@ -77,9 +77,17 @@ export function BountyCard({ bounty }: BountyCardProps) {
               <p className="text-xs text-muted-foreground">@{bounty.company.slug}</p>
             </div>
           </div>
-          <Badge variant="outline" className={BOUNTY_TYPE_COLORS[bounty.bountyType] || ""}>
-            {bounty.bountyType}
-          </Badge>
+          <div className="flex flex-wrap gap-2 justify-end">
+            {bounty.bountyTypes?.length ? (
+              bounty.bountyTypes.map((type) => (
+                <Badge key={type} variant="outline" className={BOUNTY_TYPE_COLORS[type] || ""}>
+                  {type}
+                </Badge>
+              ))
+            ) : (
+              <Badge variant="outline">Unknown</Badge>
+            )}
+          </div>
         </div>
 
         <CardTitle className="text-xl leading-tight group-hover:text-yellow-400 transition-colors">

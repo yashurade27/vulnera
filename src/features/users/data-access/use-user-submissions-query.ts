@@ -38,7 +38,7 @@ export interface UserSubmissionSummary {
     id: string
     title: string
     status: string
-    bountyType: string
+    bountyTypes: string[]
     rewardAmount: number | null
   } | null
   company: {
@@ -52,6 +52,7 @@ export interface UserSubmissionTopBounty {
   submissions: number
   title: string
   rewardAmount: number | null
+  bountyTypes?: string[]
   company: {
     id: string
     name: string

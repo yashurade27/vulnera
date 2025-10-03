@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (type) {
-      where.bountyType = type
+      where.bountyTypes = { has: type }
     }
 
     if (companyId) {
@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
       companyId,
       title,
       description,
-      bountyType,
+      bountyTypes,
       targetUrl,
       rewardAmount,
       maxSubmissions,
@@ -299,7 +299,7 @@ export async function POST(request: NextRequest) {
         companyId,
         title,
         description,
-        bountyType,
+  bountyTypes,
         targetUrl,
         rewardAmount,
         maxSubmissions,

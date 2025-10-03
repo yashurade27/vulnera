@@ -140,7 +140,7 @@ interface CompanyStatsOverview {
 interface CompanyBountySummary {
   id: string
   title: string
-  bountyType: string
+  bountyTypes: string[]
   rewardAmount: number
   status: string
   createdAt?: string
@@ -205,7 +205,7 @@ interface MembershipApiResponse {
 interface BountyApiResponse {
   id: string
   title: string
-  bountyType: string
+  bountyTypes: string[]
   rewardAmount: number
   status: string
   createdAt: string
@@ -443,7 +443,9 @@ export function ProfilePage({ userId }: ProfilePageProps) {
               ? companyBountiesData.bounties.map((bounty: BountyApiResponse) => ({
                   id: bounty?.id,
                   title: bounty?.title ?? "Bounty",
-                  bountyType: bounty?.bountyType ?? "SECURITY",
+                  bountyTypes: Array.isArray(bounty?.bountyTypes) && bounty.bountyTypes.length
+                    ? bounty.bountyTypes
+                    : ["SECURITY"],
                   rewardAmount: Number(bounty?.rewardAmount ?? 0),
                   status: bounty?.status ?? "ACTIVE",
                   createdAt: bounty?.createdAt ?? undefined,
@@ -927,9 +929,13 @@ export function ProfilePage({ userId }: ProfilePageProps) {
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div>
                             <h3 className="font-semibold text-base line-clamp-2">{bounty.title}</h3>
-                            <Badge variant="outline" className="mt-2 text-xs">
-                              {bounty.bountyType}
-                            </Badge>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {bounty.bountyTypes.map((type) => (
+                                <Badge key={type} variant="outline" className="text-xs">
+                                  {type}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                           <Button asChild size="sm" variant="ghost">
                             <Link href={`/bounties/${bounty.id}`} className="flex items-center gap-1 text-xs">

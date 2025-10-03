@@ -106,24 +106,26 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
   useEffect(() => {
     const companyId = currentBounty?.company?.id
     if (!companyId) return
-    let isCancelled = false
+
+    let isActive = true
 
     ;(async () => {
       try {
-        const res = await fetch(`/api/companies/${companyId}/owner`)
-        if (!isCancelled && res.ok) {
-          const data = await res.json()
-          setOwnerId(data.userId)
+        const response = await fetch(`/api/companies/${companyId}/owner`)
+        if (isActive && response.ok) {
+          const data = await response.json()
+          setOwnerId(data.userId ?? null)
         }
-      } catch (error) {
-        if (!isCancelled) {
-          console.error('Failed to fetch company owner:', error)
+      } catch (fetchError) {
+        if (isActive) {
+          console.error('Failed to fetch company owner:', fetchError)
+          setOwnerId(null)
         }
       }
     })()
 
     return () => {
-      isCancelled = true
+      isActive = false
     }
   }, [currentBounty?.company?.id])
 
@@ -199,9 +201,21 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
               <h1 className="text-3xl lg:text-4xl font-medium mb-4">{currentBounty.title}</h1>
 
               <div className="flex flex-wrap items-center gap-3">
-                <Badge variant="secondary" className="bg-yellow-400/10 text-yellow-400 border-yellow-400/20">
-                  {currentBounty.bountyType}
-                </Badge>
+                {currentBounty.bountyTypes?.length ? (
+                  currentBounty.bountyTypes.map((type) => (
+                    <Badge
+                      key={type}
+                      variant="secondary"
+                      className="bg-yellow-400/10 text-yellow-400 border-yellow-400/20"
+                    >
+                      {type}
+                    </Badge>
+                  ))
+                ) : (
+                  <Badge variant="secondary" className="bg-yellow-400/10 text-yellow-400 border-yellow-400/20">
+                    Unknown
+                  </Badge>
+                )}
                 <Badge variant="outline">{currentBounty.status}</Badge>
                 {daysLeft !== null && (
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">

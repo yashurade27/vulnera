@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         title: true,
-        bountyType: true,
+        bountyTypes: true,
         rewardAmount: true,
         totalSubmissions: true,
         createdAt: true,
@@ -38,7 +38,10 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      trendingBounties,
+      trendingBounties: trendingBounties.map((bounty) => ({
+        ...bounty,
+        bountyTypes: bounty.bountyTypes ?? [],
+      })),
       sortBy,
       limit,
     });

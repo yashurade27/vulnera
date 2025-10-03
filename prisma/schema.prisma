@@ -204,7 +204,7 @@ model Bounty {
   description     String         @db.Text
   
   // Bounty details
-  bountyType      BountyType
+  bountyTypes     BountyType[] @default([])
   targetUrl       String?
   rewardAmount    Decimal        @db.Decimal(20, 9)
   maxSubmissions  Int?
@@ -245,7 +245,6 @@ model Bounty {
   submissions     Submission[]
   
   @@index([companyId, status])
-  @@index([status, bountyType])
   @@index([startsAt, endsAt])
 }
 

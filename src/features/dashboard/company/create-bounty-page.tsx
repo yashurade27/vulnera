@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 
 interface CompanySummary {
@@ -30,7 +29,7 @@ interface CompanySummary {
 interface BountyFormData {
   title: string
   description: string
-  bountyType: string
+  bountyTypes: string[]
   targetUrl: string
   inScope: string
   outOfScope: string
@@ -67,7 +66,7 @@ export function CreateBountyPage() {
   const [formData, setFormData] = useState<BountyFormData>({
     title: "",
     description: "",
-    bountyType: "",
+    bountyTypes: [],
     targetUrl: "",
     inScope: "",
     outOfScope: "",
@@ -146,7 +145,7 @@ export function CreateBountyPage() {
       return
     }
 
-    if (!formData.title || !formData.description || !formData.bountyType || !formData.requirements) {
+    if (!formData.title || !formData.description || formData.bountyTypes.length === 0 || !formData.requirements) {
       setError("Please complete all required fields")
       return
     }
@@ -178,7 +177,7 @@ export function CreateBountyPage() {
         companyId: company.id,
         title: formData.title,
         description: formData.description,
-        bountyType: formData.bountyType,
+        bountyTypes: formData.bountyTypes,
         targetUrl: formData.targetUrl || undefined,
         rewardAmount: rewardValue.toString(),
         maxSubmissions: normalizedMax,
@@ -434,22 +433,36 @@ export function CreateBountyPage() {
                 </div>
                 <div>
                   <Label htmlFor="bountyType">Bounty Type</Label>
-                  <Select value={formData.bountyType} onValueChange={(value) => updateFormData("bountyType", value)}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Select bounty type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BOUNTY_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={type.color}>
-                              {type.label}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {BOUNTY_TYPES.map((type) => {
+                      const selected = formData.bountyTypes.includes(type.value)
+                      return (
+                        <Button
+                          key={type.value}
+                          type="button"
+                          variant={selected ? "default" : "outline"}
+                          className={
+                            selected
+                              ? "bg-yellow-400 text-gray-900 border-yellow-400 hover:bg-yellow-300"
+                              : "border-dashed"
+                          }
+                          onClick={() => {
+                            setFormData((prev) => {
+                              const next = selected
+                                ? prev.bountyTypes.filter((v) => v !== type.value)
+                                : [...prev.bountyTypes, type.value]
+                              return { ...prev, bountyTypes: next }
+                            })
+                          }}
+                        >
+                          <Badge variant="outline" className={type.color}>
+                            {type.label}
+                          </Badge>
+                        </Button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">Select all vulnerability categories that apply.</p>
                 </div>
               </div>
             )}
