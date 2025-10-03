@@ -1,10 +1,11 @@
 "use client"
 
-import { Calendar, DollarSign, Building2, CheckCircle2, Users } from "lucide-react"
+import { Calendar, DollarSign, Building2, CheckCircle2, Users, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useEscrowBalance } from "@/hooks/use-escrow-balance"
 
 interface BountyCardProps {
   bounty: {
@@ -39,13 +40,13 @@ const BOUNTY_TYPE_COLORS: Record<string, string> = {
 }
 
 export function BountyCard({ bounty }: BountyCardProps) {
+  const { balance: escrowSol, isLoading: isLoadingEscrow } = useEscrowBalance(bounty.escrowAddress)
   const formatDate = (date: string | null) => {
     if (!date) return "No deadline"
     const d = new Date(date)
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
   }
 
-  const escrowSol = bounty.escrowBalanceLamports ? bounty.escrowBalanceLamports / 1_000_000_000 : 0
   const explorerUrl = bounty.escrowAddress
     ? `https://explorer.solana.com/address/${bounty.escrowAddress}?cluster=devnet`
     : null
@@ -105,7 +106,13 @@ export function BountyCard({ bounty }: BountyCardProps) {
           <div className="flex items-center justify-between rounded border border-yellow-400/30 bg-yellow-500/10 px-3 py-2">
             <div className="flex flex-col">
               <span className="text-xs uppercase text-muted-foreground">Escrow Balance</span>
-              <span className="text-sm font-semibold text-yellow-200">{escrowSol.toLocaleString(undefined, { maximumFractionDigits: 4 })} SOL</span>
+              {isLoadingEscrow ? (
+                <Loader2 className="w-4 h-4 animate-spin mt-1" />
+              ) : (
+                <span className="text-sm font-semibold text-yellow-200">
+                  {(escrowSol ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 })} SOL
+                </span>
+              )}
             </div>
             {explorerUrl ? (
               <Button size="sm" variant="outline" className="text-xs" asChild>

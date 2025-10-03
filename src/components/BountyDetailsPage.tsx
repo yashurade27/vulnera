@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Connection, PublicKey, LAMPORTS_PER_SOL, clusterApiUrl } from '@solana/web3.js'
 import {
   ArrowLeft,
   Building2,
@@ -14,12 +13,14 @@ import {
   Target,
   Shield,
   TrendingUp,
+  Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { useBountiesStore } from '@/stores/bounties-store'
 import Image from 'next/image'
+import { useEscrowBalance } from '@/hooks/use-escrow-balance'
 
 export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: string }> }) {
   const { bountyId } = React.use(params)
@@ -27,7 +28,7 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
   const { currentBounty, setCurrentBounty, submissions, setSubmissions, loading, setLoading, clearSubmissions } =
     useBountiesStore()
   const [isCompanyMember, setIsCompanyMember] = useState(false)
-  const [escrowSol, setEscrowSol] = useState<number | null>(null)
+  const { balance: escrowSol, isLoading: isLoadingEscrow } = useEscrowBalance(currentBounty?.escrowAddress ?? null)
   const [ownerId, setOwnerId] = useState<string | null>(null)
 
   const fetchBountyDetails = useCallback(async () => {
@@ -49,13 +50,6 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
       }
 
       setCurrentBounty(data.bounty)
-
-      //  Fetch Solana balance if escrowAddress exists
-      if (data.bounty.escrowAddress) {
-        const connection = new Connection(clusterApiUrl('devnet'), 'confirmed')
-        const balanceLamports = await connection.getBalance(new PublicKey(data.bounty.escrowAddress))
-        setEscrowSol(balanceLamports / LAMPORTS_PER_SOL)
-      }
     } catch (error) {
       console.error('Failed to fetch bounty details:', error)
     } finally {
@@ -107,21 +101,31 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
 
   useEffect(() => {
     fetchBountyDetails()
-    // fetch company owner after bounty loaded
+  }, [fetchBountyDetails])
+
+  useEffect(() => {
+    const companyId = currentBounty?.company?.id
+    if (!companyId) return
+    let isCancelled = false
+
     ;(async () => {
-      if (currentBounty?.id) {
-        try {
-          const res = await fetch(`/api/companies/${currentBounty.id}/owner`)
-          if (res.ok) {
-            const data = await res.json()
-            setOwnerId(data.userId)
-          }
-        } catch (e) {
-          console.error('Failed to fetch company owner:', e)
+      try {
+        const res = await fetch(`/api/companies/${companyId}/owner`)
+        if (!isCancelled && res.ok) {
+          const data = await res.json()
+          setOwnerId(data.userId)
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.error('Failed to fetch company owner:', error)
         }
       }
     })()
-  }, [fetchBountyDetails, currentBounty])
+
+    return () => {
+      isCancelled = true
+    }
+  }, [currentBounty?.company?.id])
 
   useEffect(() => {
     fetchSubmissions()
@@ -218,11 +222,15 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                 </div>
                 <div className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 px-4 py-3 text-left">
                   <p className="text-xs uppercase text-muted-foreground">Escrow Balance</p>
-                  <p className="text-lg font-semibold text-yellow-200">
-                    {escrowSol !== null
-                      ? `${escrowSol.toLocaleString(undefined, { maximumFractionDigits: 4 })} SOL`
-                      : 'Loading...'}
-                  </p>
+                  {isLoadingEscrow ? (
+                    <div className="flex items-center h-[28px]">
+                      <Loader2 className="w-5 h-5 animate-spin text-yellow-200" />
+                    </div>
+                  ) : (
+                    <p className="text-lg font-semibold text-yellow-200">
+                      {(escrowSol ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 })} SOL
+                    </p>
+                  )}
                   {currentBounty.escrowAddress ? (
                     <p className="mt-2 text-[11px] font-mono break-all text-muted-foreground">
                       {currentBounty.escrowAddress}
