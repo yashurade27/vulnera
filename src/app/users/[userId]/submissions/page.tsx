@@ -1,12 +1,13 @@
-import { Suspense } from "react"
-import { Loader2 } from "lucide-react"
-import { UserSubmissionsPage } from "@/features/users/user-submissions-page"
+import { Suspense } from 'react'
+import { Loader2 } from 'lucide-react'
+import { UserSubmissionsPage } from '@/features/users/user-submissions-page'
 
 interface UserSubmissionsRouteProps {
-  params: { userId: string }
+  params: Promise<{ userId: string }>
 }
 
-export default function UserSubmissionsRoute({ params }: UserSubmissionsRouteProps) {
+export default async function UserSubmissionsRoute({ params }: UserSubmissionsRouteProps) {
+  const { userId } = await params
   return (
     <Suspense
       fallback={
@@ -17,7 +18,7 @@ export default function UserSubmissionsRoute({ params }: UserSubmissionsRoutePro
         </div>
       }
     >
-      <UserSubmissionsPage userId={params.userId} />
+      <UserSubmissionsPage userId={userId} />
     </Suspense>
   )
 }

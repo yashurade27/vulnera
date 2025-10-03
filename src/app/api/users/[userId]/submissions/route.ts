@@ -15,10 +15,9 @@ const SUBMISSION_STATUSES: SubmissionStatus[] = [
 
 const SORT_FIELDS = new Set(['submittedAt', 'status', 'rewardAmount'] as const)
 
-const decimalToNumber = (value: Prisma.Decimal | null | undefined): number =>
-  value ? Number(value) : 0
+const decimalToNumber = (value: Prisma.Decimal | null | undefined): number => (value ? Number(value) : 0)
 
-export async function GET(request: NextRequest, { params }: { params: { userId: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -26,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: { userId: 
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { userId } = params
+    const { userId } = await params
 
     if (session.user.id !== userId && session.user.role !== 'ADMIN' && session.user.role !== 'COMPANY_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
