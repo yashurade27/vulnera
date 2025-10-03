@@ -77,9 +77,6 @@ export function CreateBountyPage() {
     endDate: "",
   })
   const [txSignature, setTxSignature] = useState("")
-  const [createdBountyId, setCreatedBountyId] = useState<string | null>(null)
-  const [escrowInfo, setEscrowInfo] = useState<EscrowInfo | null>(null)
-  const [creating, setCreating] = useState(false)
   const [funding, setFunding] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fundingError, setFundingError] = useState<string | null>(null)
@@ -140,47 +137,30 @@ export function CreateBountyPage() {
       .filter(Boolean)
 
   const handleCreateBounty = async () => {
-    if (!company?.id) {
-      setError("Company context is missing")
-      return
-    }
+    // This function is now integrated into handleInitializeEscrow
+    // Keeping for potential future use
+  }
 
-    if (!formData.title || !formData.description || formData.bountyTypes.length === 0 || !formData.requirements) {
-      setError("Please complete all required fields")
+  const handleInitializeEscrow = async () => {
+    if (!program || !publicKey || !company?.id) {
+      setFundingError("Missing required information to fund the bounty.")
       return
     }
 
     try {
-      setCreating(true)
-      setError(null)
+      setFunding(true)
+      setFundingError(null)
 
-      const rewardValue = Number.parseFloat(formData.rewardAmount)
-      if (!Number.isFinite(rewardValue) || rewardValue <= 0) {
-        throw new Error("Reward amount must be a positive number")
-      }
-
-      const trimmedMaxInput = formData.maxSubmissions.trim()
-      const parsedMax = trimmedMaxInput ? Number.parseFloat(trimmedMaxInput) : undefined
-      let normalizedMax: number | undefined
-
-      if (parsedMax !== undefined) {
-        if (!Number.isFinite(parsedMax) || parsedMax < 1) {
-          throw new Error("Maximum payouts must be at least 1")
-        }
-        if (!Number.isInteger(parsedMax)) {
-          throw new Error("Maximum payouts must be a whole number")
-        }
-        normalizedMax = parsedMax
-      }
-
-      const payload: Record<string, unknown> = {
+      // Create bounty first if not already created
+      let bountyId: string
+      const createPayload: Record<string, unknown> = {
         companyId: company.id,
         title: formData.title,
         description: formData.description,
         bountyTypes: formData.bountyTypes,
         targetUrl: formData.targetUrl || undefined,
-        rewardAmount: rewardValue.toString(),
-        maxSubmissions: normalizedMax,
+        rewardAmount: formData.rewardAmount ? Number.parseFloat(formData.rewardAmount).toString() : "0",
+        maxSubmissions: formData.maxSubmissions ? Number.parseFloat(formData.maxSubmissions) : undefined,
         inScope: splitLines(formData.inScope),
         outOfScope: splitLines(formData.outOfScope),
         requirements: formData.requirements,
@@ -189,13 +169,13 @@ export function CreateBountyPage() {
         endsAt: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
       }
 
-      console.log("Submitting bounty payload", payload)
+      console.log("Creating bounty before funding", createPayload)
 
       const createRes = await fetch("/api/bounties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(createPayload),
       })
 
       const createJson = await createRes.json()
@@ -204,51 +184,30 @@ export function CreateBountyPage() {
         throw new Error(createJson?.error ?? "Failed to create bounty")
       }
 
-      const bountyId: string | undefined = createJson?.bounty?.id
+      bountyId = createJson?.bounty?.id
       if (!bountyId) {
         throw new Error("Unexpected response from bounty creation")
       }
-      setCreatedBountyId(bountyId)
 
-      if (company.walletAddress) {
-        const escrowRes = await fetch("/api/blockchain/create-escrow", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            ownerWallet: company.walletAddress,
-            amount: lamportsAmount,
-          }),
-        })
-        const escrowJson = await escrowRes.json()
-        if (!escrowRes.ok) {
-          console.error("Escrow derivation failed", escrowRes.status, escrowJson)
-          throw new Error(escrowJson?.error ?? "Unable to derive escrow address")
-        }
-        setEscrowInfo({
-          escrowAddress: escrowJson?.escrowAddress,
-          expectedAmount: escrowJson?.expectedAmount,
-        })
+      // Derive escrow
+      const escrowRes = await fetch("/api/blockchain/create-escrow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          ownerWallet: company.walletAddress,
+          amount: lamportsAmount,
+        }),
+      })
+      const escrowJson = await escrowRes.json()
+      if (!escrowRes.ok) {
+        console.error("Escrow derivation failed", escrowRes.status, escrowJson)
+        throw new Error(escrowJson?.error ?? "Unable to derive escrow address")
       }
-    } catch (err) {
-      console.error("handleCreateBounty error", err)
-      setCreatedBountyId(null)
-      setEscrowInfo(null)
-      setError(err instanceof Error ? err.message : "Unable to create bounty")
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  const handleInitializeEscrow = async () => {
-    if (!program || !publicKey || !createdBountyId || !escrowInfo?.escrowAddress || !escrowInfo.expectedAmount) {
-      setFundingError("Missing required information to fund the bounty.")
-      return
-    }
-
-    try {
-      setFunding(true)
-      setFundingError(null)
+      const escrowInfoLocal = {
+        escrowAddress: escrowJson?.escrowAddress,
+        expectedAmount: escrowJson?.expectedAmount,
+      }
 
       const [escrowPda] = await PublicKey.findProgramAddress(
         [Buffer.from("bounty-escrow"), publicKey.toBuffer()],
@@ -263,7 +222,7 @@ export function CreateBountyPage() {
         // Account doesn't exist, so initialize it
         console.log("Vault account not found. Initializing...");
         signature = await program.methods
-          .initialize(new BN(escrowInfo.expectedAmount))
+          .initialize(new BN(escrowInfoLocal.expectedAmount))
           .accounts({
             vault: escrowPda,
             owner: publicKey,
@@ -274,7 +233,7 @@ export function CreateBountyPage() {
         // Account exists, so deposit into it
         console.log("Vault account found. Depositing funds...");
         signature = await program.methods
-          .deposit(new BN(escrowInfo.expectedAmount))
+          .deposit(new BN(escrowInfoLocal.expectedAmount))
           .accounts({
             vault: escrowPda,
             owner: publicKey,
@@ -286,7 +245,7 @@ export function CreateBountyPage() {
       console.log("Transaction successful with signature:", signature);
 
       // Verify with backend
-      const fundRes = await fetch(`/api/bounties/${createdBountyId}/fund`, {
+      const fundRes = await fetch(`/api/bounties/${bountyId}/fund`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -302,7 +261,7 @@ export function CreateBountyPage() {
       }
 
       // Redirect on success
-      router.push(`/bounties/${createdBountyId}`)
+      router.push(`/bounties/${bountyId}`)
     } catch (err) {
       console.error("Funding error:", err)
       setFundingError(err instanceof Error ? err.message : "Unable to send funding transaction.")
@@ -360,7 +319,7 @@ export function CreateBountyPage() {
           </p>
           {error ? <p className="text-sm text-red-400">{error}</p> : null}
           <pre className="hidden" data-debug-state>
-            {JSON.stringify({ step, creating, createdBountyId, hasCompany: Boolean(company), formData }, null, 2)}
+            {JSON.stringify({ step, hasCompany: Boolean(company), formData }, null, 2)}
           </pre>
         </div>
       </div>
@@ -370,7 +329,7 @@ export function CreateBountyPage() {
           {steps.map((s, index) => {
             const StepIcon = s.icon
             const reached = step >= s.number
-            const completed = step > s.number || (s.number === 5 && createdBountyId)
+            const completed = step > s.number
             return (
               <div key={s.number} className="flex items-center">
                 <div className="flex flex-col items-center">
@@ -589,114 +548,82 @@ export function CreateBountyPage() {
                   <div className="w-20 h-20 rounded-full bg-yellow-400/10 flex items-center justify-center mx-auto">
                     <Wallet className="w-10 h-10 text-yellow-400" />
                   </div>
-                  <h3 className="text-2xl font-bold">Fund Escrow</h3>
+                  <h3 className="text-2xl font-bold">Fund Bounty</h3>
                   <p className="text-muted-foreground">
-                    Create the bounty, derive the escrow address, then confirm the on-chain transaction.
+                    Review your bounty details and fund the escrow to launch it on the blockchain.
                   </p>
                 </div>
 
-                {createdBountyId ? (
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg bg-card border border-border">
-                      <p className="text-sm font-semibold mb-2">Bounty Created</p>
-                      <p className="text-xs text-muted-foreground">ID: {createdBountyId}</p>
-                    </div>
-                    {escrowInfo ? (
-                      <div className="p-4 rounded-lg bg-yellow-400/10 border border-yellow-400/30 space-y-2">
-                        <p className="text-sm font-semibold text-yellow-400">Escrow Address</p>
-                        <p className="text-xs font-mono break-all">{escrowInfo.escrowAddress}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Expected deposit: {escrowInfo.expectedAmount?.toLocaleString()} lamports
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="p-4 rounded-lg bg-yellow-400/10 border border-yellow-400/30">
-                          <p className="text-sm font-semibold text-yellow-400 mb-2">Wallet Address Required</p>
-                          <p className="text-xs text-muted-foreground mb-4">
-                            Your company needs a wallet address to create and fund bounties on the blockchain.
-                          </p>
-                          <div className="space-y-2">
-                            <Label htmlFor="walletInput">Solana Wallet Address</Label>
-                            <Input
-                              id="walletInput"
-                              placeholder="Enter your Solana wallet address"
-                              value={walletInput}
-                              onChange={(e) => setWalletInput(e.target.value)}
-                            />
-                          </div>
-                          <Button
-                            className="w-full mt-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
-                            onClick={handleSaveWallet}
-                            disabled={savingWallet || !walletInput.trim()}
-                          >
-                            {savingWallet ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin mr-2" />
-                                Saving...
-                              </>
-                            ) : (
-                              "Save Wallet Address"
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                    {fundingError ? <p className="text-xs text-red-400 mt-4">{fundingError}</p> : null}
-                    <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                      <Button
-                        className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
-                        onClick={handleInitializeEscrow}
-                        disabled={funding || !escrowInfo || !publicKey}
-                      >
-                        {funding ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin mr-2" />
-                            Funding...
-                          </>
-                        ) : (
-                          "Fund Bounty"
-                        )}
-                      </Button>
-                      <Button variant="outline" asChild>
-                        <Link href={`/bounties/${createdBountyId}`}>View Bounty</Link>
-                      </Button>
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-card border border-border">
+                    <h4 className="font-semibold mb-2">Bounty Summary</h4>
+                    <div className="space-y-1 text-sm">
+                      <p><strong>Title:</strong> {formData.title || "Not set"}</p>
+                      <p><strong>Description:</strong> {formData.description ? `${formData.description.slice(0, 100)}...` : "Not set"}</p>
+                      <p><strong>Types:</strong> {formData.bountyTypes.join(", ") || "None"}</p>
+                      <p><strong>Reward:</strong> {formData.rewardAmount ? `${formData.rewardAmount} SOL` : "Not set"}</p>
+                      <p><strong>Max Submissions:</strong> {formData.maxSubmissions || "Unlimited"}</p>
                     </div>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg bg-card border border-border text-sm text-muted-foreground">
-                      <p>Finalize the setup to derive the escrow address based on your configured reward pool.</p>
+
+                  {company?.walletAddress ? (
+                    <div className="p-4 rounded-lg bg-yellow-400/10 border border-yellow-400/30 space-y-2">
+                      <p className="text-sm font-semibold text-yellow-400">Ready to Fund</p>
+                      <p className="text-xs text-muted-foreground">
+                        Escrow will be created for {totalEscrowAmount} SOL ({lamportsAmount.toLocaleString()} lamports)
+                      </p>
                     </div>
-                    {error ? (
-                      <div className="rounded-md border border-red-400/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-                        {error}
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-lg bg-yellow-400/10 border border-yellow-400/30">
+                        <p className="text-sm font-semibold text-yellow-400 mb-2">Wallet Address Required</p>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Your company needs a wallet address to create and fund bounties on the blockchain.
+                        </p>
+                        <div className="space-y-2">
+                          <Label htmlFor="walletInput">Solana Wallet Address</Label>
+                          <Input
+                            id="walletInput"
+                            placeholder="Enter your Solana wallet address"
+                            value={walletInput}
+                            onChange={(e) => setWalletInput(e.target.value)}
+                          />
+                        </div>
+                        <Button
+                          className="w-full mt-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
+                          onClick={handleSaveWallet}
+                          disabled={savingWallet || !walletInput.trim()}
+                        >
+                          {savingWallet ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin mr-2" />
+                              Saving...
+                            </>
+                          ) : (
+                            "Save Wallet Address"
+                          )}
+                        </Button>
                       </div>
-                    ) : null}
+                    </div>
+                  )}
+                  {fundingError ? <p className="text-xs text-red-400 mt-4">{fundingError}</p> : null}
+                  <div className="flex flex-col sm:flex-row gap-3 mt-4">
                     <Button
-                      className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
-                      size="lg"
-                      onClick={() => {
-                        console.log("Create bounty clicked", {
-                          hasCompany: Boolean(company?.id),
-                          formData,
-                          lamportsAmount,
-                        })
-                        void handleCreateBounty()
-                      }}
-                      disabled={creating}
+                      className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
+                      onClick={handleInitializeEscrow}
+                      disabled={funding || !company?.walletAddress || !publicKey || !formData.title || !formData.description || formData.bountyTypes.length === 0 || !formData.requirements}
                     >
-                      {creating ? (
+                      {funding ? (
                         <>
                           <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin mr-2" />
-                          Creating...
+                          Creating & Funding...
                         </>
                       ) : (
-                        "Create Bounty"
+                        "Create & Fund Bounty"
                       )}
                     </Button>
                   </div>
-                )}
+                </div>
               </div>
             )}
           </CardContent>

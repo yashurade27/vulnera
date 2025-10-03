@@ -280,19 +280,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const existingForCompany = await prisma.bounty.count({
-      where: {
-        companyId,
-      },
-    })
-
-    if (existingForCompany > 0) {
-      return NextResponse.json(
-        { error: 'A bounty already exists for this company. Multiple bounties per company are not supported.' },
-        { status: 400 },
-      )
-    }
-
     // Create bounty
     const bounty = await prisma.bounty.create({
       data: {
