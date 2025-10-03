@@ -4,6 +4,7 @@ import { Instrument_Serif, JetBrains_Mono } from 'next/font/google';
 import { AppProviders } from '@/components/app-providers'
 import { AppLayout } from '@/components/app-layout'
 import React from 'react'
+import { Toaster } from '@/components/ui/sonner'
 
 export const metadata: Metadata = {
   title: 'Vulnera',
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="antialiased">
         <AppProviders>
           <AppLayout>{children}</AppLayout>
+          <Toaster />
         </AppProviders>
       </body>
     </html>
