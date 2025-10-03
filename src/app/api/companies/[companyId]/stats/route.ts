@@ -23,11 +23,11 @@ export async function GET(
     }
 
     // Get bounty statistics
-    const bountyStats = await prisma.bounty.groupBy({
-      by: ['status', 'bountyType'],
+    const bountyRecords = await prisma.bounty.findMany({
       where: { companyId },
-      _count: { id: true },
-      _sum: {
+      select: {
+        status: true,
+        bountyTypes: true,
         rewardAmount: true,
         totalSubmissions: true,
         validSubmissions: true,
@@ -56,12 +56,13 @@ export async function GET(
     });
 
     // Calculate totals
-    const totalBounties = bountyStats.reduce((sum, stat) => sum + stat._count.id, 0);
-    const activeBounties = bountyStats
-      .filter(stat => stat.status === 'ACTIVE')
-      .reduce((sum, stat) => sum + stat._count.id, 0);
-    const totalBountiesFunded = bountyStats.reduce((sum, stat) => sum + Number(stat._sum.rewardAmount || 0), 0);
-    const totalPaidOut = bountyStats.reduce((sum, stat) => sum + Number(stat._sum.paidOut || 0), 0);
+    const totalBounties = bountyRecords.length;
+    const activeBounties = bountyRecords.filter((stat) => stat.status === 'ACTIVE').length;
+    const totalBountiesFunded = bountyRecords.reduce(
+      (sum, stat) => sum + Number(stat.rewardAmount ?? 0),
+      0,
+    );
+    const totalPaidOut = bountyRecords.reduce((sum, stat) => sum + Number(stat.paidOut ?? 0), 0);
 
     const totalSubmissions = submissionStats.reduce((sum, stat) => sum + stat._count.id, 0);
     const approvedSubmissions = submissionStats
@@ -133,15 +134,53 @@ export async function GET(
         submissionsLast30Days: recentSubmissions,
         paymentsLast30Days: recentPayments,
       },
-      bountyBreakdown: bountyStats.map(stat => ({
-        status: stat.status,
-        type: stat.bountyType,
-        count: stat._count.id,
-        totalReward: Number(stat._sum.rewardAmount || 0),
-        totalSubmissions: stat._sum.totalSubmissions || 0,
-        validSubmissions: stat._sum.validSubmissions || 0,
-        paidOut: Number(stat._sum.paidOut || 0),
-      })),
+      bountyBreakdown: (() => {
+        const breakdownMap = new Map<
+          string,
+          {
+            status: string
+            type: string
+            count: number
+            totalReward: number
+            totalSubmissions: number
+            validSubmissions: number
+            paidOut: number
+          }
+        >();
+
+        for (const bounty of bountyRecords) {
+          const reward = Number(bounty.rewardAmount ?? 0);
+          const submissions = bounty.totalSubmissions ?? 0;
+          const valid = bounty.validSubmissions ?? 0;
+          const paidOutAmount = Number(bounty.paidOut ?? 0);
+          const types = Array.isArray(bounty.bountyTypes) && bounty.bountyTypes.length
+            ? bounty.bountyTypes
+            : ['UNSPECIFIED'];
+
+          for (const type of types) {
+            const key = `${bounty.status}::${type}`;
+            const existing = breakdownMap.get(key) ?? {
+              status: bounty.status,
+              type,
+              count: 0,
+              totalReward: 0,
+              totalSubmissions: 0,
+              validSubmissions: 0,
+              paidOut: 0,
+            };
+
+            existing.count += 1;
+            existing.totalReward += reward;
+            existing.totalSubmissions += submissions;
+            existing.validSubmissions += valid;
+            existing.paidOut += paidOutAmount;
+
+            breakdownMap.set(key, existing);
+          }
+        }
+
+        return Array.from(breakdownMap.values());
+      })(),
       submissionBreakdown: submissionStats.map(stat => ({
         status: stat.status,
         type: stat.bountyType,

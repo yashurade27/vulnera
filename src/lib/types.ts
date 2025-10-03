@@ -135,7 +135,7 @@ export const createBountySchema = z.object({
   companyId: z.string(),
   title: z.string().min(1).max(200),
   description: z.string().min(1).max(5000),
-  bountyType: z.enum(['UI', 'FUNCTIONALITY', 'PERFORMANCE', 'SECURITY']),
+  bountyTypes: z.array(z.enum(['UI', 'FUNCTIONALITY', 'PERFORMANCE', 'SECURITY'])).min(1),
   targetUrl: z.string().url().optional(),
   rewardAmount: z.string().regex(/^\d+(\.\d{1,9})?$/).transform(val => parseFloat(val)),
   maxSubmissions: z.number().int().positive().optional(),
@@ -151,7 +151,7 @@ export const createBountySchema = z.object({
 export const updateBountySchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().min(1).max(5000).optional(),
-  bountyType: z.enum(['UI', 'FUNCTIONALITY', 'PERFORMANCE', 'SECURITY']).optional(),
+  bountyTypes: z.array(z.enum(['UI', 'FUNCTIONALITY', 'PERFORMANCE', 'SECURITY'])).optional(),
   targetUrl: z.string().url().optional(),
   rewardAmount: z.string().regex(/^\d+(\.\d{1,9})?$/).transform(val => parseFloat(val)).optional(),
   maxSubmissions: z.number().int().positive().optional(),

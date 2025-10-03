@@ -20,7 +20,7 @@ interface SubmissionRow {
   title: string
   status: string
   bountyTitle: string
-  bountyType: string
+  bountyTypes: string[]
   submittedAt: string
   reporterName: string
   reporterUsername?: string | null
@@ -107,7 +107,12 @@ export function CompanySubmissionsPage() {
               title: submission?.title ?? "Submission",
               status: submission?.status ?? "PENDING",
               bountyTitle: submission?.bounty?.title ?? "Bounty",
-              bountyType: submission?.bounty?.bountyType ?? submission?.bountyType ?? "UI",
+              bountyTypes:
+                Array.isArray(submission?.bounty?.bountyTypes) && submission.bounty.bountyTypes.length
+                  ? submission.bounty.bountyTypes
+                  : submission?.bountyType
+                  ? [submission.bountyType]
+                  : ["UI"],
               submittedAt: submission?.submittedAt ?? submission?.createdAt ?? new Date().toISOString(),
               reporterName:
                 submission?.user?.fullName ??
@@ -248,7 +253,9 @@ export function CompanySubmissionsPage() {
                       <TableRow key={entry.id} className="border-border/40">
                         <TableCell>
                           <div className="font-medium text-sm text-foreground/90 line-clamp-2">{entry.title}</div>
-                          <div className="text-xs text-muted-foreground">{entry.bountyType}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {entry.bountyTypes.join(", ")}
+                          </div>
                         </TableCell>
                         <TableCell className="text-sm text-foreground/80">{entry.bountyTitle}</TableCell>
                         <TableCell className="text-sm text-foreground/80">
