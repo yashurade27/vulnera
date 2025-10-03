@@ -107,21 +107,33 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
 
   useEffect(() => {
     fetchBountyDetails()
-    // fetch company owner after bounty loaded
+  }, [fetchBountyDetails])
+
+  useEffect(() => {
+    const companyId = currentBounty?.company?.id
+    if (!companyId) return
+
+    let isActive = true
+
     ;(async () => {
-      if (currentBounty?.id) {
-        try {
-          const res = await fetch(`/api/companies/${currentBounty.id}/owner`)
-          if (res.ok) {
-            const data = await res.json()
-            setOwnerId(data.userId)
-          }
-        } catch (e) {
-          console.error('Failed to fetch company owner:', e)
+      try {
+        const response = await fetch(`/api/companies/${companyId}/owner`)
+        if (isActive && response.ok) {
+          const data = await response.json()
+          setOwnerId(data.userId ?? null)
+        }
+      } catch (fetchError) {
+        if (isActive) {
+          console.error('Failed to fetch company owner:', fetchError)
+          setOwnerId(null)
         }
       }
     })()
-  }, [fetchBountyDetails, currentBounty])
+
+    return () => {
+      isActive = false
+    }
+  }, [currentBounty?.company?.id])
 
   useEffect(() => {
     fetchSubmissions()
