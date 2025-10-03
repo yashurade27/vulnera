@@ -13,6 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "next lint",
+    "postinstall": "prisma generate",
     "setup": "npm run anchor keys sync && npm run anchor build && npm run codama:js",
     "start": "next start"
   },
