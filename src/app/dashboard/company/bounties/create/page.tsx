@@ -1,8 +1,13 @@
-'use client'
+"use client"
 
-import { CreateBountyPage } from "@/features/dashboard/company/create-bounty-page"
+import nextDynamic from "next/dynamic"
 
-export const dynamic = 'force-dynamic'
+const CreateBountyPage = nextDynamic(
+  () => import("@/features/dashboard/company/create-bounty-page").then((mod) => mod.CreateBountyPage),
+  { ssr: false }
+)
+
+export const dynamic = "force-dynamic"
 
 export default function CreateBountyRoute() {
   return <CreateBountyPage />

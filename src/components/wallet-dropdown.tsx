@@ -41,6 +41,10 @@ function WalletDropdownItem({ wallet }: { wallet: UiWallet }) {
 
 function WalletDropdown() {
   const { account, connected, copy, disconnect, wallet, wallets } = useWalletUi()
+  
+  // Safety check for wallets array
+  const walletList = wallets || []
+  
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -61,8 +65,8 @@ function WalletDropdown() {
             <DropdownMenuSeparator />
           </>
         ) : null}
-        {wallets.length ? (
-          wallets.map((wallet) => <WalletDropdownItem key={wallet.name} wallet={wallet} />)
+        {walletList.length > 0 ? (
+          walletList.map((wallet) => <WalletDropdownItem key={wallet.name} wallet={wallet} />)
         ) : (
           <DropdownMenuItem className="cursor-pointer" asChild>
             <a href="https://solana.com/solana-wallets" target="_blank" rel="noopener noreferrer">

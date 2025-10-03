@@ -1,9 +1,13 @@
-'use client'
-import { redirect } from 'next/navigation'
-import AccountFeatureIndex from '@/features/account/account-feature-index'
+"use client"
 
-export const dynamic = 'force-dynamic'
+import dynamic from "next/dynamic"
+
+// Disable SSR for the entire account feature
+const AccountFeatureIndex = dynamic(
+  () => import("@/features/account/account-feature-index"),
+  { ssr: false }
+)
 
 export default function Page() {
-  return <AccountFeatureIndex redirect={redirect} />
+  return <AccountFeatureIndex />
 }

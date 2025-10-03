@@ -9,7 +9,7 @@ export function VulneraUiList({ account }: { account: UiWalletAccount }) {
     return <span className="loading loading-spinner loading-lg"></span>
   }
 
-  if (!vulneraAccountsQuery.data?.length) {
+  if (!vulneraAccountsQuery.data || vulneraAccountsQuery.data.length === 0) {
     return (
       <div className="text-center">
         <h2 className={'text-2xl'}>No accounts</h2>
@@ -20,7 +20,7 @@ export function VulneraUiList({ account }: { account: UiWalletAccount }) {
 
   return (
     <div className="grid lg:grid-cols-2 gap-4">
-      {vulneraAccountsQuery.data?.map((vulnera) => (
+      {vulneraAccountsQuery.data.map((vulnera) => (
         <VulneraUiCard account={account} key={vulnera.address} vulnera={vulnera} />
       ))}
     </div>

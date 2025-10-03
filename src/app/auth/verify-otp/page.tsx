@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -32,7 +32,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp"
 
-export default function VerifyOtpPage() {
+function VerifyOtpForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const emailFromQuery = searchParams.get("email") ?? ""
@@ -133,7 +133,7 @@ export default function VerifyOtpPage() {
         setIsSubmitting(false)
       }
     },
-    [email, clearPendingVerification, clearResendCooldown, emailFromQuery, router],
+    [email, clearPendingVerification, clearResendCooldown, router],
   )
 
   const handleResendOtp = useCallback(async () => {
@@ -270,5 +270,17 @@ export default function VerifyOtpPage() {
         </CardFooter>
       </Card>
     </div>
+  )
+}
+
+export default function VerifyOtpPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    }>
+      <VerifyOtpForm />
+    </Suspense>
   )
 }
