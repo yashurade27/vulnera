@@ -28,7 +28,6 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
     useBountiesStore()
   const [isCompanyMember, setIsCompanyMember] = useState(false)
   const [escrowSol, setEscrowSol] = useState<number | null>(null)
-
   const fetchBountyDetails = useCallback(async () => {
     setLoading(true)
     try {
@@ -403,7 +402,7 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                 </div>
               </div>
               <Button variant="outline" className="w-full bg-transparent" asChild>
-                <Link href={`/companies/${currentBounty.company.slug}`}>View Company Profile</Link>
+                <Link href={`/profile/${currentBounty.company.id}`}>View Company Profile</Link>
               </Button>
               {currentBounty.company.walletAddress ? (
                 <p className="mt-4 text-[11px] font-mono break-all text-muted-foreground">

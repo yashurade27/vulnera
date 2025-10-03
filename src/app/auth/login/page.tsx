@@ -86,7 +86,9 @@ function LoginForm() {
             | "ADMIN"
             | undefined
           if (!callbackUrl) {
-            if (role === "COMPANY_ADMIN" || role === "ADMIN") {
+            if (role === "ADMIN") {
+              nextUrl = "/admin"
+            } else if (role === "COMPANY_ADMIN") {
               nextUrl = "/dashboard/company"
             }
           }
