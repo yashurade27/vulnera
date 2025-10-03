@@ -6,7 +6,23 @@ import { Prisma } from '@prisma/client'
 import { createBountySchema, getBountiesQuerySchema, type CreateBountyInput } from '@/lib/types'
 import { solanaService } from '@/lib/solana'
 
-function serializeBounty(bounty: any) {
+type SerializableBounty = Prisma.BountyGetPayload<{
+  include: {
+    company: {
+      select: {
+        id: true
+        name: true
+        slug: true
+        logoUrl: true
+        isVerified: true
+        walletAddress: true
+      }
+    }
+    _count: { select: { submissions: true } }
+  }
+}>
+
+function serializeBounty(bounty: SerializableBounty) {
   return {
     ...bounty,
     rewardAmount: Number(bounty.rewardAmount),

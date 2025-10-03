@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { globalSearchQuerySchema, type GlobalSearchQuery } from '@/lib/types';
+import { globalSearchQuerySchema } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters
-    const query: any = {};
+    const query: Record<string, string | null> = {};
     if (searchParams.get('q')) query.q = searchParams.get('q')!;
     if (searchParams.get('type')) query.type = searchParams.get('type')!;
     if (searchParams.get('limit')) query.limit = searchParams.get('limit')!;
@@ -23,7 +23,11 @@ export async function GET(request: NextRequest) {
     const { q, type, limit = 20 } = parsed.data;
 
     const searchTerm = q.toLowerCase();
-    const results: any = {};
+    const results: {
+      bounties?: Record<string, unknown>[];
+      companies?: Record<string, unknown>[];
+      users?: Record<string, unknown>[];
+    } = {};
 
     // Search bounties if type is not specified or includes bounties
     if (!type || type === 'bounties') {

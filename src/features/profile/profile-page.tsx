@@ -136,9 +136,6 @@ interface CompanyStatsOverview {
   activeMembers: number
 }
 
-interface CompanyStatsPayload {
-  overview: CompanyStatsOverview
-}
 
 interface CompanyBountySummary {
   id: string
@@ -148,6 +145,71 @@ interface CompanyBountySummary {
   status: string
   createdAt?: string
   endsAt?: string | null
+  _count?: {
+    submissions: number
+  }
+}
+
+interface SubmissionApiResponse {
+  id: string
+  title: string
+  status: string
+  submittedAt: string
+  createdAt: string
+  rewardAmount: number
+  bounty: {
+    id: string
+    title: string
+    rewardAmount: number
+  }
+  company?: {
+    id: string
+    name: string
+  }
+}
+
+interface MembershipApiResponse {
+  role: string
+  canCreateBounty: boolean
+  canReviewBounty: boolean
+  canApprovePayment: boolean
+  canManageMembers: boolean
+  invitedAt: string | null
+  joinedAt: string | null
+  company?: {
+    id: string
+    name: string
+    slug: string
+    description: string | null
+    website: string | null
+    logoUrl: string | null
+    walletAddress: string
+    smartContractAddress: string | null
+    industry: string | null
+    companySize: string | null
+    location: string | null
+    isVerified: boolean
+    isActive: boolean
+    totalBountiesFunded: number
+    totalBountiesPaid: number
+    activeBounties: number
+    resolvedVulnerabilities: number
+    createdAt: string
+    _count?: {
+      bounties: number
+      members: number
+    }
+  }
+}
+
+interface BountyApiResponse {
+  id: string
+  title: string
+  bountyType: string
+  rewardAmount: number
+  status: string
+  createdAt: string
+  endsAt: string | null
   _count?: {
     submissions: number
   }
@@ -244,14 +306,14 @@ export function ProfilePage({ userId }: ProfilePageProps) {
           }
 
           const mappedSubmissions: SubmissionSummary[] = Array.isArray(submissionsPayload?.submissions)
-            ? submissionsPayload.submissions.map((submission: any) => ({
+            ? submissionsPayload.submissions.map((submission: SubmissionApiResponse) => ({
                 id: submission?.id,
                 title: submission?.title ?? "Submission",
                 status: submission?.status ?? "PENDING",
                 submittedAt: submission?.submittedAt ?? submission?.createdAt ?? new Date().toISOString(),
                 rewardAmount: Number(submission?.rewardAmount ?? submission?.bounty?.rewardAmount ?? 0),
                 bounty: {
-                  id: submission?.bounty?.id ?? submission?.bountyId ?? "",
+                  id: submission?.bounty?.id ?? "",
                   title: submission?.bounty?.title ?? "Bounty",
                   rewardAmount: Number(submission?.bounty?.rewardAmount ?? 0),
                 },
@@ -280,7 +342,7 @@ export function ProfilePage({ userId }: ProfilePageProps) {
           }
 
           const mappedMemberships: CompanyMembershipSummary[] = Array.isArray(membershipPayload?.memberships)
-            ? membershipPayload.memberships.map((membership: any) => ({
+            ? membershipPayload.memberships.map((membership: MembershipApiResponse) => ({
                 role: membership?.role ?? "COMPANY_ADMIN",
                 canCreateBounty: Boolean(membership?.canCreateBounty),
                 canReviewBounty: Boolean(membership?.canReviewBounty),
@@ -378,7 +440,7 @@ export function ProfilePage({ userId }: ProfilePageProps) {
             setCompanyStats(companyStatsData?.stats?.overview ?? null)
 
             const mappedCompanyBounties: CompanyBountySummary[] = Array.isArray(companyBountiesData?.bounties)
-              ? companyBountiesData.bounties.map((bounty: any) => ({
+              ? companyBountiesData.bounties.map((bounty: BountyApiResponse) => ({
                   id: bounty?.id,
                   title: bounty?.title ?? "Bounty",
                   bountyType: bounty?.bountyType ?? "SECURITY",

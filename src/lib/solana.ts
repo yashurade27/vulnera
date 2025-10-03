@@ -1,10 +1,6 @@
 import {
   Connection,
   PublicKey,
-  Transaction,
-  SystemProgram,
-  LAMPORTS_PER_SOL,
-  sendAndConfirmTransaction,
 } from '@solana/web3.js'
 import * as nacl from 'tweetnacl'
 
@@ -12,8 +8,6 @@ import * as nacl from 'tweetnacl'
 const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com'
 
 // Platform wallet address for fees - should be set in environment
-const PLATFORM_WALLET = process.env.PLATFORM_WALLET || '11111111111111111111111111111112'
-
 // Program ID from the smart contract
 export const PROGRAM_ID = new PublicKey(
   process.env.NEXT_PUBLIC_PROGRAM_ID || 'CZ6kuqEBvfdzM8h3rACEYazp771BFDXDMNgsoNSNvJ5Q',

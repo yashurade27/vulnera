@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge"
 import { useSolana } from "@/components/solana/use-solana"
 import { WalletDropdown } from "@/components/wallet-dropdown"
 import { createCompanySchema } from "@/lib/types"
+import Image from "next/image"
 
 const onboardingSchema = createCompanySchema
   .extend({
@@ -318,7 +319,10 @@ export function CompanyOnboardingPage() {
                             {logoPreview ? (
                               <div className="flex items-center gap-3">
                                 {/* simple preview */}
-                                <img src={logoPreview} alt="Logo preview" className="h-12 w-12 rounded-lg border border-border object-cover" />
+                                <Image
+                                width={65}
+                                height={65}
+                                src={logoPreview} alt="Logo preview" className="h-12 w-12 rounded-lg border border-border object-cover" />
                                 <Button
                                   type="button"
                                   variant="ghost"

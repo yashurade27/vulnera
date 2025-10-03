@@ -82,7 +82,7 @@ export async function POST(
     }
 
     // Retry mechanism to allow RPC node to catch up
-    let escrowData = null;
+    let escrowData: { owner: string; escrowAmount: number; } | null = null;
     for (let i = 0; i < 5; i++) {
       escrowData = await solanaService.getEscrowData(escrowAddress);
       if (escrowData) {

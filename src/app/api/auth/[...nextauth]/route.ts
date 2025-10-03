@@ -10,7 +10,7 @@ declare module "next-auth" {
   interface Session {
     user: ExtendedUser;
   }
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  
   interface User extends ExtendedUser {}
 }
 

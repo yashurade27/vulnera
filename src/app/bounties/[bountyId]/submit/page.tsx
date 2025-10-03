@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { useBountiesStore } from "@/stores/bounties-store"
 import { type RouteParams } from "@/lib/next"
+import Image from "next/image"
 
 const VULNERABILITY_TYPES_BY_CATEGORY: Record<string, readonly string[]> = {
   SECURITY: [
@@ -299,7 +300,9 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
           <div className="flex items-center gap-4 mb-4">
             <div className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center">
               {currentBounty.company.logoUrl ? (
-                <img
+                <Image
+                  width={64}
+                  height={64}
                   src={currentBounty.company.logoUrl || "/placeholder.svg"}
                   alt={currentBounty.company.name}
                   className="w-8 h-8 object-contain"

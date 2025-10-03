@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { updateUserProfileSchema } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
+import Image from "next/image"
 
 const walletSchema = z.object({
   walletAddress: z.string().min(1, "Wallet address is required"),
@@ -115,7 +116,7 @@ export function SettingsPage() {
     }
 
     void fetchProfile()
-  }, [userId, profileForm, walletForm])
+  }, [userId, profileForm, walletForm, generateMessageToSign])
 
   const handleAvatarUpload = async (file: File) => {
     try {
@@ -291,7 +292,9 @@ export function SettingsPage() {
                         <FormLabel>Avatar</FormLabel>
                         <div className="flex items-center gap-4 mt-2">
                           {profileForm.watch("avatarUrl") ? (
-                            <img
+                            <Image
+                              width={64}
+                              height={64}
                               src={profileForm.watch("avatarUrl") ?? ""}
                               alt="Avatar"
                               className="h-16 w-16 rounded-full border border-border object-cover"
@@ -569,7 +572,7 @@ export function SettingsPage() {
                           </FormControl>
                           <FormDescription>
                             1. Enter your wallet address above to generate a message<br/>
-                            2. Sign that message in your Solana wallet (use the "Sign Message" feature)<br/>
+                            2. Sign that message in your Solana wallet (use the &quot;Sign Message&quot; feature)<br/>
                             3. Paste the base58 signature returned by your wallet client
                           </FormDescription>
                           <FormMessage />

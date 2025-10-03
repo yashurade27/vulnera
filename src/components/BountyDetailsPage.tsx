@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { useBountiesStore } from "@/stores/bounties-store"
+import Image from "next/image"
 
 export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: string }> }) {
   const { bountyId } = React.use(params)
@@ -157,7 +158,9 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center">
                   {currentBounty.company.logoUrl ? (
-                    <img
+                    <Image
+                      width={64}
+                      height={64}
                       src={currentBounty.company.logoUrl || "/placeholder.svg"}
                       alt={currentBounty.company.name}
                       className="w-8 h-8 object-contain"
@@ -374,7 +377,9 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center">
                   {currentBounty.company.logoUrl ? (
-                    <img
+                    <Image
+                      width={64}
+                      height={64}
                       src={currentBounty.company.logoUrl || "/placeholder.svg"}
                       alt={currentBounty.company.name}
                       className="w-8 h-8 object-contain"

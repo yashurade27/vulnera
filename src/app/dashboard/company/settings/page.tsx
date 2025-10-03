@@ -22,7 +22,7 @@ interface CompanyProfile {
   location?: string | null
 }
 
-export function CompanySettingsPage() {
+export default function CompanySettingsPage() {
   const router = useRouter()
   const [company, setCompany] = useState<CompanyProfile | null>(null)
   const [formData, setFormData] = useState({
