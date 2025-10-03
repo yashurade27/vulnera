@@ -103,6 +103,7 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [selectedBountyType, setSelectedBountyType] = useState<string | null>(null)
 
   // Form state
   const [title, setTitle] = useState("")
@@ -114,10 +115,10 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
   const [attachments, setAttachments] = useState<File[]>([])
 
   const vulnerabilityOptions = useMemo(() => {
-    const typeKey = currentBounty?.bountyType?.toUpperCase() ?? "DEFAULT"
+    const typeKey = selectedBountyType?.toUpperCase() ?? "DEFAULT"
     const options = VULNERABILITY_TYPES_BY_CATEGORY[typeKey]
     return options ?? VULNERABILITY_TYPES_BY_CATEGORY.DEFAULT
-  }, [currentBounty?.bountyType])
+  }, [selectedBountyType])
 
   const fetchBountyInfo = useCallback(async () => {
     setLoading(true)
@@ -162,6 +163,11 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
   }, [bountyId])
 
   useEffect(() => {
+    const fallbackType = currentBounty?.bountyTypes?.[0] ?? null
+    setSelectedBountyType(fallbackType)
+  }, [currentBounty?.id, currentBounty?.bountyTypes])
+
+  useEffect(() => {
     if (vulnerabilityType && !vulnerabilityOptions.includes(vulnerabilityType)) {
       setVulnerabilityType("")
     }
@@ -187,6 +193,11 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
 
     if (!currentBounty) {
       setFormError("Unable to load bounty details. Please refresh and try again.")
+      return
+    }
+
+    if (!selectedBountyType) {
+      setFormError("Select a bounty category before submitting.")
       return
     }
 
@@ -231,7 +242,7 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bountyId,
-          bountyType: currentBounty.bountyType,
+          bountyType: selectedBountyType,
           title: title.trim(),
           vulnerabilityType,
           description: description.trim(),
@@ -318,9 +329,23 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
           </div>
 
           <div className="flex items-center gap-3">
-            <Badge variant="secondary" className="bg-yellow-400/10 text-yellow-400 border-yellow-400/20">
-              {currentBounty.bountyType}
-            </Badge>
+            <div className="flex flex-wrap gap-2">
+              {currentBounty.bountyTypes.map((type) => {
+                const isSelected = selectedBountyType === type
+                return (
+                  <Button
+                    key={type}
+                    type="button"
+                    variant={isSelected ? "default" : "outline"}
+                    size="sm"
+                    className={isSelected ? "bg-yellow-400 text-gray-900" : "border-yellow-400/30"}
+                    onClick={() => setSelectedBountyType(type)}
+                  >
+                    {type}
+                  </Button>
+                )
+              })}
+            </div>
             <span className="text-sm text-muted-foreground">Reward: ${currentBounty.rewardAmount.toLocaleString()}</span>
           </div>
         </div>
@@ -352,6 +377,24 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
             </div>
 
             {/* Vulnerability Type */}
+            <div className="process-card">
+              <Label htmlFor="bounty-category" className="text-base font-semibold mb-2 block">
+                Bounty Category *
+              </Label>
+              <Select value={selectedBountyType ?? ""} onValueChange={(value) => setSelectedBountyType(value)}>
+                <SelectTrigger id="bounty-category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currentBounty.bountyTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="process-card">
               <Label htmlFor="vulnerability-type" className="text-base font-semibold mb-2 block">
                 Vulnerability Type *

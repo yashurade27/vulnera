@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     // Bounty type filter
     if (type) {
-      where.bountyType = type;
+      where.bountyTypes = { has: type };
     }
 
     // Company filter
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
       id: bounty.id,
       title: bounty.title,
       description: bounty.description,
-      bountyType: bounty.bountyType,
+  bountyTypes: Array.isArray(bounty.bountyTypes) && bounty.bountyTypes.length ? bounty.bountyTypes : ['SECURITY'],
       targetUrl: bounty.targetUrl,
       rewardAmount: bounty.rewardAmount,
       maxSubmissions: bounty.maxSubmissions,

@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         id: bounty.id,
         title: bounty.title,
         description: bounty.description.substring(0, 200) + (bounty.description.length > 200 ? '...' : ''),
-        bountyType: bounty.bountyType,
+        bountyTypes: Array.isArray(bounty.bountyTypes) && bounty.bountyTypes.length ? bounty.bountyTypes : ['SECURITY'],
         rewardAmount: bounty.rewardAmount,
         company: bounty.company,
         submissionsCount: bounty._count.submissions,

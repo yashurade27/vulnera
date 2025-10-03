@@ -144,7 +144,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             id: true
             title: true
             rewardAmount: true
-            bountyType: true
+            bountyTypes: true
             status: true
           }
         }
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
               id: true,
               title: true,
               rewardAmount: true,
-              bountyType: true,
+              bountyTypes: true,
               status: true,
             },
           },
@@ -233,6 +233,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             id: true,
             title: true,
             rewardAmount: true,
+            bountyTypes: true,
             company: {
               select: {
                 id: true,
@@ -264,6 +265,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         ? {
             ...submission.bounty,
             rewardAmount: submission.bounty.rewardAmount ? Number(submission.bounty.rewardAmount) : null,
+            bountyTypes: submission.bounty.bountyTypes ?? [],
           }
         : null,
     }))

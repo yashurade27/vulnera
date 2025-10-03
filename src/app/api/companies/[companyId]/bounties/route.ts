@@ -51,7 +51,7 @@ export async function GET(
     }
 
     if (type) {
-      where.bountyType = type;
+      where.bountyTypes = { has: type };
     }
 
     // Get bounties with pagination
@@ -68,7 +68,7 @@ export async function GET(
           id: true,
           title: true,
           description: true,
-          bountyType: true,
+          bountyTypes: true,
           targetUrl: true,
           rewardAmount: true,
           status: true,
@@ -124,6 +124,9 @@ export async function GET(
         return {
           ...bounty,
           rewardAmount: Number(bounty.rewardAmount),
+          bountyTypes: Array.isArray(bounty.bountyTypes) && bounty.bountyTypes.length
+            ? bounty.bountyTypes
+            : ['SECURITY'],
           escrowBalanceLamports,
         };
       })

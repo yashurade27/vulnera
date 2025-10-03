@@ -41,7 +41,7 @@ interface CompanyStatsData {
 interface BountyItem {
   id: string
   title: string
-  bountyType: string
+  bountyTypes: string[]
   rewardAmount: number
   submissionsCount: number
   endsAt: string | null
@@ -55,7 +55,7 @@ interface SubmissionItem {
   bounty: {
     id: string
     title: string
-    bountyType: string
+    bountyTypes: string[]
   }
   hunter: {
     id: string
@@ -167,7 +167,10 @@ export function CompanyDashboardPage() {
           ? bountiesJson.bounties.map((bounty: any) => ({
               id: bounty?.id,
               title: bounty?.title ?? "Untitled bounty",
-              bountyType: bounty?.bountyType ?? "UI",
+              bountyTypes:
+                Array.isArray(bounty?.bountyTypes) && bounty.bountyTypes.length
+                  ? bounty.bountyTypes
+                  : [bounty?.bountyType ?? "UI"],
               rewardAmount: Number(bounty?.rewardAmount ?? 0),
               submissionsCount: Number(bounty?._count?.submissions ?? 0),
               endsAt: bounty?.endsAt ?? null,
@@ -190,7 +193,12 @@ export function CompanyDashboardPage() {
               bounty: {
                 id: submission?.bounty?.id ?? submission?.bountyId ?? "",
                 title: submission?.bounty?.title ?? "Bounty",
-                bountyType: submission?.bounty?.bountyType ?? submission?.bountyType ?? "UI",
+                bountyTypes:
+                  Array.isArray(submission?.bounty?.bountyTypes) && submission.bounty.bountyTypes.length
+                    ? submission.bounty.bountyTypes
+                    : submission?.bountyType
+                    ? [submission.bountyType]
+                    : ["UI"],
               },
               hunter: {
                 id: submission?.user?.id ?? submission?.hunter?.id ?? "",
@@ -443,9 +451,13 @@ export function CompanyDashboardPage() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="font-semibold text-lg line-clamp-2">{bounty.title}</h3>
-                              <Badge variant="outline" className={BOUNTY_TYPE_COLORS[bounty.bountyType] ?? ""}>
-                                {bounty.bountyType}
-                              </Badge>
+                              <div className="flex flex-wrap gap-2">
+                                {bounty.bountyTypes.map((type) => (
+                                  <Badge key={type} variant="outline" className={BOUNTY_TYPE_COLORS[type] ?? ""}>
+                                    {type}
+                                  </Badge>
+                                ))}
+                              </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">
@@ -514,9 +526,13 @@ export function CompanyDashboardPage() {
                         </div>
                         <p className="text-xs text-muted-foreground mb-2">by @{submission.hunter.username}</p>
                         <div className="flex items-center justify-between text-xs">
-                          <Badge variant="outline" className={BOUNTY_TYPE_COLORS[submission.bounty.bountyType] ?? ""}>
-                            {submission.bounty.bountyType}
-                          </Badge>
+                          <div className="flex flex-wrap gap-2">
+                            {submission.bounty.bountyTypes.map((type) => (
+                              <Badge key={type} variant="outline" className={BOUNTY_TYPE_COLORS[type] ?? ""}>
+                                {type}
+                              </Badge>
+                            ))}
+                          </div>
                           <Button variant="ghost" size="sm" asChild className="h-7 text-xs">
                             <Link href={`/dashboard/company/submissions/${submission.id}`}>Review</Link>
                           </Button>
