@@ -110,23 +110,49 @@ export function CreateBountyPage() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const totalEscrowAmount = useMemo(() => {
+  const lamportsAmount = useMemo(() => {
     const reward = Number.parseFloat(formData.rewardAmount)
     const max = Number.parseFloat(formData.maxSubmissions)
-    const rewardValue = Number.isFinite(reward) && reward > 0 ? reward : 0
-    const maxValue = Number.isFinite(max) && max > 0 ? max : 0
-    if (maxValue === 0) {
-      return rewardValue
-    }
-    return rewardValue * maxValue
-  }, [formData.rewardAmount, formData.maxSubmissions])
 
-  const lamportsAmount = useMemo(() => {
-    const raw = totalEscrowAmount * 1_000_000_000
-    if (!Number.isFinite(raw) || raw <= 0) {
+    const rewardLamports = Number.isFinite(reward) && reward > 0 ? Math.round(reward * LAMPORTS_PER_SOL) : 0
+    const maxValue = Number.isFinite(max) && max > 0 ? Math.floor(max) : 0
+
+    if (rewardLamports === 0) {
       return 0
     }
-    return Math.round(raw)
+
+    if (maxValue === 0) {
+      return rewardLamports
+    }
+
+    const product = rewardLamports * maxValue
+    if (!Number.isSafeInteger(product)) {
+      return Number.MAX_SAFE_INTEGER
+    }
+
+    return product
+  }, [formData.rewardAmount, formData.maxSubmissions])
+
+  const totalEscrowAmount = useMemo(() => {
+    if (lamportsAmount === Number.MAX_SAFE_INTEGER) {
+      return Number.MAX_SAFE_INTEGER
+    }
+    return lamportsAmount / LAMPORTS_PER_SOL
+  }, [lamportsAmount])
+
+  const totalEscrowDisplay = useMemo(() => {
+    if (totalEscrowAmount === Number.MAX_SAFE_INTEGER) {
+      return "∞"
+    }
+
+    if (totalEscrowAmount === 0) {
+      return "0"
+    }
+
+    return totalEscrowAmount.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 9,
+    })
   }, [totalEscrowAmount])
 
   const minEscrowSol = MIN_ESCROW_AMOUNT / LAMPORTS_PER_SOL
@@ -145,12 +171,15 @@ export function CreateBountyPage() {
 
   const meetsMinimumEscrow = lamportsAmount >= MIN_ESCROW_AMOUNT
 
+  const exceedsSafeAmount = lamportsAmount === Number.MAX_SAFE_INTEGER
+
   const canFundBounty = Boolean(
     !funding &&
       company?.walletAddress &&
       publicKey &&
       hasRequiredFields &&
-      meetsMinimumEscrow
+      meetsMinimumEscrow &&
+      !exceedsSafeAmount
   )
 
   const splitLines = (value: string) =>
@@ -170,8 +199,23 @@ export function CreateBountyPage() {
       return
     }
 
+    if (company.walletAddress && company.walletAddress !== publicKey.toBase58()) {
+      setFundingError("Connected wallet does not match the company wallet on file.")
+      return
+    }
+
     if (!meetsMinimumEscrow) {
       setFundingError(`Minimum escrow is ${minEscrowDisplay} SOL. Increase the reward or max payouts.`)
+      return
+    }
+
+    if (exceedsSafeAmount || !Number.isSafeInteger(lamportsAmount)) {
+      setFundingError("Escrow amount exceeds the supported numeric range. Reduce the reward or max payouts.")
+      return
+    }
+
+    if (lamportsAmount <= 0) {
+      setFundingError("Escrow amount must be greater than zero.")
       return
     }
 
@@ -243,6 +287,10 @@ export function CreateBountyPage() {
         throw new Error(`Escrow amount must be at least ${minEscrowDisplay} SOL`)
       }
 
+      if (expectedAmount !== lamportsAmount) {
+        console.warn("Expected escrow amount mismatch", { expectedAmount, lamportsAmount })
+      }
+
       const [escrowPda] = await PublicKey.findProgramAddress(
         [Buffer.from("bounty-escrow"), publicKey.toBuffer()],
         program.programId
@@ -252,11 +300,14 @@ export function CreateBountyPage() {
       const accountInfo = await connection.getAccountInfo(escrowPda);
 
       let signature: string;
-      const amountBn = new BN(expectedAmount.toString())
+      const amountBn = new BN(lamportsAmount.toString())
 
       if (accountInfo === null) {
         // Account doesn't exist, so initialize it
-        console.log("Vault account not found. Initializing...");
+        console.log("Vault account not found. Initializing...", {
+          escrowPda: escrowPda.toBase58(),
+          lamportsAmount,
+        })
         signature = await program.methods
           .initialize(amountBn)
           .accounts({
@@ -267,7 +318,10 @@ export function CreateBountyPage() {
           .rpc();
       } else {
         // Account exists, so deposit into it
-        console.log("Vault account found. Depositing funds...");
+        console.log("Vault account found. Depositing funds...", {
+          escrowPda: escrowPda.toBase58(),
+          lamportsAmount,
+        })
         signature = await program.methods
           .deposit(amountBn)
           .accounts({
@@ -548,12 +602,19 @@ export function CreateBountyPage() {
                 </div>
                 <div className="p-4 rounded-lg bg-yellow-400/10 border border-yellow-400/30">
                   <p className="text-sm font-semibold text-yellow-400">
-                    Escrow Required: {totalEscrowAmount ? `${totalEscrowAmount} SOL` : "0 SOL"}
+                    Escrow Required: {totalEscrowDisplay === "0" ? "0 SOL" : `${totalEscrowDisplay} SOL`}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">Converted to {lamportsAmount.toLocaleString()} lamports</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Converted to {exceedsSafeAmount ? "an unsafe amount" : lamportsAmount.toLocaleString()} lamports
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Minimum escrow: {minEscrowDisplay} SOL ({MIN_ESCROW_AMOUNT.toLocaleString()} lamports)
                   </p>
+                  {exceedsSafeAmount ? (
+                    <p className="text-xs text-red-400 mt-1">
+                      The calculated escrow exceeds the supported limit. Please lower the reward or number of payouts.
+                    </p>
+                  ) : null}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -609,7 +670,8 @@ export function CreateBountyPage() {
                     <div className="p-4 rounded-lg bg-yellow-400/10 border border-yellow-400/30 space-y-2">
                       <p className="text-sm font-semibold text-yellow-400">Ready to Fund</p>
                       <p className="text-xs text-muted-foreground">
-                        Escrow will be created for {totalEscrowAmount} SOL ({lamportsAmount.toLocaleString()} lamports)
+                        Escrow will be created for {totalEscrowDisplay === "0" ? "0 SOL" : `${totalEscrowDisplay} SOL`} ({
+                        exceedsSafeAmount ? "an unsafe amount" : `${lamportsAmount.toLocaleString()} lamports`})
                       </p>
                       {!meetsMinimumEscrow ? (
                         <p className="text-xs text-red-400">
@@ -619,6 +681,11 @@ export function CreateBountyPage() {
                       {!publicKey ? (
                         <p className="text-xs text-yellow-300">
                           Connect your Solana wallet to authorize the escrow transaction.
+                        </p>
+                      ) : null}
+                      {exceedsSafeAmount ? (
+                        <p className="text-xs text-red-400">
+                          Reduce the reward or maximum payouts until the escrow amount is within limits.
                         </p>
                       ) : null}
                     </div>

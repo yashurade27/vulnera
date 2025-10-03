@@ -345,9 +345,9 @@ export function CompanyDashboardPage() {
                   </Link>
                 </Button>
                 <Button variant="outline" asChild>
-                  <Link href="/dashboard/company/bounties">
+                  <Link href="/dashboard/company">
                     <Eye className="w-4 h-4 mr-2" />
-                    View All Bounties
+                    View Bounty Summary
                   </Link>
                 </Button>
                 <Button
@@ -418,7 +418,7 @@ export function CompanyDashboardPage() {
                     <CardDescription>Your currently running bug bounty programs</CardDescription>
                   </div>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href="/dashboard/company/bounties">View All</Link>
+                    <Link href="/dashboard/company">View Summary</Link>
                   </Button>
                 </div>
               </CardHeader>
