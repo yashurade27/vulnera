@@ -8,12 +8,18 @@ export function useProgram() {
   const wallet = useWallet()
 
   const provider = useMemo(() => {
-  return new AnchorProvider(connection, wallet as AnchorWallet, {
+    if (!wallet || !wallet.publicKey || typeof wallet.signTransaction !== 'function' || typeof wallet.signAllTransactions !== 'function') {
+      return null
+    }
+
+    return new AnchorProvider(connection, wallet as AnchorWallet, {
       commitment: 'confirmed',
     })
   }, [connection, wallet])
 
   const program = useMemo(() => {
+    if (!provider) return null
+
     const programId =
       (idl as { metadata?: { address?: string } }).metadata?.address ??
       (idl as { address?: string }).address ??

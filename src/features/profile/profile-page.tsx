@@ -658,6 +658,13 @@ export function ProfilePage({ userId }: ProfilePageProps) {
                   </Link>
                 </Button>
               ) : null}
+              {user.role === "BOUNTY_HUNTER" && (
+                <Button asChild>
+                  <Link href={`/users/${user.id}/submissions`}>
+                    View Submissions
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>

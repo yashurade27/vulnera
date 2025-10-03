@@ -6,7 +6,6 @@ import {
   createSubmissionSchema,
   getSubmissionsQuerySchema,
   type CreateSubmissionInput,
-  type GetSubmissionsQuery
 } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
@@ -59,22 +58,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Check if user has already submitted to this bounty
-    const existingSubmission = await prisma.submission.findFirst({
-      where: {
-        bountyId,
-        userId: session.user.id,
-      },
-    });
-
-    if (existingSubmission) {
-      return NextResponse.json(
-        { error: 'You have already submitted to this bounty' },
-        { status: 400 }
-      );
-    }
-
     // Check max submissions limit
     if (bounty.maxSubmissions) {
       const submissionCount = await prisma.submission.count({
