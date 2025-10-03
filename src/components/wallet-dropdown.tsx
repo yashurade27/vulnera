@@ -25,13 +25,34 @@ function WalletAvatar({ className, wallet }: { className?: string; wallet: UiWal
 function WalletDropdownItem({ wallet }: { wallet: UiWallet }) {
   const { connect } = useWalletUiWallet({ wallet })
 
+  const handleConnect = async () => {
+    try {
+      console.log('[WalletDropdown] Attempting to connect to:', wallet.name)
+      await connect()
+      console.log('[WalletDropdown] Successfully connected to:', wallet.name)
+    } catch (error) {
+      // Ignore user rejections and plugin closed errors
+      const ignoredMessages = ['user rejected', 'plugin closed', 'cancelled']
+      const isIgnored = ignoredMessages.some(msg => 
+        error instanceof Error && error.message?.toLowerCase().includes(msg)
+      )
+      
+      if (!isIgnored) {
+        console.error('[WalletDropdown] Connection error:', {
+          wallet: wallet.name,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      } else {
+        console.log('[WalletDropdown] User cancelled connection to:', wallet.name)
+      }
+    }
+  }
+
   return (
     <DropdownMenuItem
       className="cursor-pointer"
       key={wallet.name}
-      onClick={() => {
-        return connect()
-      }}
+      onClick={handleConnect}
     >
       {wallet.icon ? <WalletAvatar wallet={wallet} /> : null}
       {wallet.name}
@@ -45,6 +66,15 @@ function WalletDropdown() {
   // Safety check for wallets array
   const walletList = wallets || []
   
+  React.useEffect(() => {
+    console.log('[WalletDropdown] State:', {
+      connected,
+      hasAccount: !!account,
+      walletName: wallet?.name || 'none',
+      availableWallets: walletList.length
+    })
+  }, [connected, account, wallet, walletList.length])
+  
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -56,10 +86,31 @@ function WalletDropdown() {
       <DropdownMenuContent>
         {account ? (
           <>
-            <DropdownMenuItem className="cursor-pointer" onClick={copy}>
+            <DropdownMenuItem 
+              className="cursor-pointer" 
+              onClick={() => {
+                try {
+                  console.log('[WalletDropdown] Copying address:', account.address)
+                  copy()
+                } catch (error) {
+                  console.error('[WalletDropdown] Copy error:', error)
+                }
+              }}
+            >
               Copy address
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer" onClick={disconnect}>
+            <DropdownMenuItem 
+              className="cursor-pointer" 
+              onClick={async () => {
+                try {
+                  console.log('[WalletDropdown] Disconnecting wallet')
+                  await disconnect()
+                  console.log('[WalletDropdown] Successfully disconnected')
+                } catch (error) {
+                  console.error('[WalletDropdown] Disconnect error:', error)
+                }
+              }}
+            >
               Disconnect
             </DropdownMenuItem>
             <DropdownMenuSeparator />

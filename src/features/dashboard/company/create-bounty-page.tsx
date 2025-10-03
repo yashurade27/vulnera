@@ -84,6 +84,16 @@ export function CreateBountyPage() {
   const [walletInput, setWalletInput] = useState("")
   const [savingWallet, setSavingWallet] = useState(false)
 
+  // Track wallet connection state changes
+  useEffect(() => {
+    console.log('[CreateBounty] Wallet state changed:', {
+      connected,
+      publicKey: publicKey?.toBase58(),
+      hasProgram: !!program,
+      sessionStatus
+    })
+  }, [connected, publicKey, program, sessionStatus])
+
   useEffect(() => {
     // Wait for session to be ready before loading company
     if (sessionStatus === "loading") {
@@ -208,23 +218,47 @@ export function CreateBountyPage() {
   }
 
   const handleInitializeEscrow = async () => {
+    console.log('[CreateBounty] Starting escrow initialization', {
+      sessionStatus,
+      connected,
+      hasPublicKey: !!publicKey,
+      hasProgram: !!program,
+      companyId: company?.id,
+      companyWallet: company?.walletAddress,
+      connectedWallet: publicKey?.toBase58()
+    })
+
     if (sessionStatus !== "authenticated") {
-      setFundingError("Please ensure you are logged in before funding the bounty.")
+      const errorMsg = "Please ensure you are logged in before funding the bounty."
+      console.error('[CreateBounty] Auth error:', errorMsg)
+      setFundingError(errorMsg)
       return
     }
 
     if (!connected || !publicKey) {
-      setFundingError("Please connect your Solana wallet before funding the bounty.")
+      const errorMsg = "Please connect your Solana wallet before funding the bounty."
+      console.error('[CreateBounty] Wallet error:', { connected, hasPublicKey: !!publicKey })
+      setFundingError(errorMsg)
       return
     }
 
     if (!program || !company?.id) {
-      setFundingError("Missing required information to fund the bounty.")
+      const errorMsg = "Missing required information to fund the bounty."
+      console.error('[CreateBounty] Missing requirements:', { 
+        hasProgram: !!program, 
+        companyId: company?.id 
+      })
+      setFundingError(errorMsg)
       return
     }
 
     if (company.walletAddress && company.walletAddress !== publicKey.toBase58()) {
-      setFundingError("Connected wallet does not match the company wallet on file.")
+      const errorMsg = "Connected wallet does not match the company wallet on file."
+      console.error('[CreateBounty] Wallet mismatch:', {
+        companyWallet: company.walletAddress,
+        connectedWallet: publicKey.toBase58()
+      })
+      setFundingError(errorMsg)
       return
     }
 

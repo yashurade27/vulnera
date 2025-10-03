@@ -5,6 +5,7 @@ import { AppProviders } from '@/components/app-providers'
 import { AppLayout } from '@/components/app-layout'
 import React from 'react'
 import { Toaster } from '@/components/ui/sonner'
+import '@/lib/suppress-warnings' // Import warning suppression
 
 export const metadata: Metadata = {
   title: 'Vulnera',
