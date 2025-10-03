@@ -1,10 +1,9 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useConnection, useWallet } from "@solana/wallet-adapter-react"
-import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from "@solana/web3.js"
+import { LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js"
 import {
   ArrowLeft,
   ArrowRight,
@@ -49,6 +48,7 @@ const BOUNTY_TYPES = [
 
 import { useProgram } from "@/lib/use-program"
 import { BN } from "@coral-xyz/anchor"
+import { MIN_ESCROW_AMOUNT } from "@/lib/solana"
 
 interface EscrowInfo {
   escrowAddress: string
@@ -58,7 +58,7 @@ interface EscrowInfo {
 export function CreateBountyPage() {
   const router = useRouter()
   const { connection } = useConnection()
-  const { publicKey, sendTransaction } = useWallet()
+  const { publicKey } = useWallet()
   const { program } = useProgram()
 
   const [step, setStep] = useState(1)
@@ -76,7 +76,6 @@ export function CreateBountyPage() {
     startDate: "",
     endDate: "",
   })
-  const [txSignature, setTxSignature] = useState("")
   const [funding, setFunding] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fundingError, setFundingError] = useState<string | null>(null)
@@ -130,6 +129,30 @@ export function CreateBountyPage() {
     return Math.round(raw)
   }, [totalEscrowAmount])
 
+  const minEscrowSol = MIN_ESCROW_AMOUNT / LAMPORTS_PER_SOL
+
+  const minEscrowDisplay = useMemo(
+    () => minEscrowSol.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    [minEscrowSol]
+  )
+
+  const hasRequiredFields = Boolean(
+    formData.title.trim() &&
+      formData.description.trim() &&
+      formData.requirements.trim() &&
+      formData.bountyTypes.length > 0
+  )
+
+  const meetsMinimumEscrow = lamportsAmount >= MIN_ESCROW_AMOUNT
+
+  const canFundBounty = Boolean(
+    !funding &&
+      company?.walletAddress &&
+      publicKey &&
+      hasRequiredFields &&
+      meetsMinimumEscrow
+  )
+
   const splitLines = (value: string) =>
     value
       .split("\n")
@@ -147,6 +170,11 @@ export function CreateBountyPage() {
       return
     }
 
+    if (!meetsMinimumEscrow) {
+      setFundingError(`Minimum escrow is ${minEscrowDisplay} SOL. Increase the reward or max payouts.`)
+      return
+    }
+
     try {
       setFunding(true)
       setFundingError(null)
@@ -155,16 +183,16 @@ export function CreateBountyPage() {
       let bountyId: string
       const createPayload: Record<string, unknown> = {
         companyId: company.id,
-        title: formData.title,
-        description: formData.description,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
         bountyTypes: formData.bountyTypes,
         targetUrl: formData.targetUrl || undefined,
         rewardAmount: formData.rewardAmount ? Number.parseFloat(formData.rewardAmount).toString() : "0",
         maxSubmissions: formData.maxSubmissions ? Number.parseFloat(formData.maxSubmissions) : undefined,
         inScope: splitLines(formData.inScope),
         outOfScope: splitLines(formData.outOfScope),
-        requirements: formData.requirements,
-        guidelines: formData.requirements,
+        requirements: formData.requirements.trim(),
+        guidelines: undefined,
         startsAt: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
         endsAt: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
       }
@@ -204,9 +232,15 @@ export function CreateBountyPage() {
         console.error("Escrow derivation failed", escrowRes.status, escrowJson)
         throw new Error(escrowJson?.error ?? "Unable to derive escrow address")
       }
-      const escrowInfoLocal = {
-        escrowAddress: escrowJson?.escrowAddress,
-        expectedAmount: escrowJson?.expectedAmount,
+      const escrowAddress = typeof escrowJson?.escrowAddress === "string" ? escrowJson.escrowAddress : ""
+      const expectedAmount = Number(escrowJson?.expectedAmount ?? 0)
+
+      if (!escrowAddress) {
+        throw new Error("Escrow address was not returned by the server")
+      }
+
+      if (!Number.isFinite(expectedAmount) || expectedAmount < MIN_ESCROW_AMOUNT) {
+        throw new Error(`Escrow amount must be at least ${minEscrowDisplay} SOL`)
       }
 
       const [escrowPda] = await PublicKey.findProgramAddress(
@@ -218,11 +252,13 @@ export function CreateBountyPage() {
       const accountInfo = await connection.getAccountInfo(escrowPda);
 
       let signature: string;
+      const amountBn = new BN(expectedAmount.toString())
+
       if (accountInfo === null) {
         // Account doesn't exist, so initialize it
         console.log("Vault account not found. Initializing...");
         signature = await program.methods
-          .initialize(new BN(escrowInfoLocal.expectedAmount))
+          .initialize(amountBn)
           .accounts({
             vault: escrowPda,
             owner: publicKey,
@@ -233,7 +269,7 @@ export function CreateBountyPage() {
         // Account exists, so deposit into it
         console.log("Vault account found. Depositing funds...");
         signature = await program.methods
-          .deposit(new BN(escrowInfoLocal.expectedAmount))
+          .deposit(amountBn)
           .accounts({
             vault: escrowPda,
             owner: publicKey,
@@ -515,6 +551,9 @@ export function CreateBountyPage() {
                     Escrow Required: {totalEscrowAmount ? `${totalEscrowAmount} SOL` : "0 SOL"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">Converted to {lamportsAmount.toLocaleString()} lamports</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Minimum escrow: {minEscrowDisplay} SOL ({MIN_ESCROW_AMOUNT.toLocaleString()} lamports)
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -572,6 +611,16 @@ export function CreateBountyPage() {
                       <p className="text-xs text-muted-foreground">
                         Escrow will be created for {totalEscrowAmount} SOL ({lamportsAmount.toLocaleString()} lamports)
                       </p>
+                      {!meetsMinimumEscrow ? (
+                        <p className="text-xs text-red-400">
+                          Increase the reward or max payouts so the total escrow meets the minimum of {minEscrowDisplay} SOL.
+                        </p>
+                      ) : null}
+                      {!publicKey ? (
+                        <p className="text-xs text-yellow-300">
+                          Connect your Solana wallet to authorize the escrow transaction.
+                        </p>
+                      ) : null}
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -609,9 +658,9 @@ export function CreateBountyPage() {
                   {fundingError ? <p className="text-xs text-red-400 mt-4">{fundingError}</p> : null}
                   <div className="flex flex-col sm:flex-row gap-3 mt-4">
                     <Button
-                      className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
+                      className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400 disabled:opacity-70"
                       onClick={handleInitializeEscrow}
-                      disabled={funding || !company?.walletAddress || !publicKey || !formData.title || !formData.description || formData.bountyTypes.length === 0 || !formData.requirements}
+                      disabled={!canFundBounty}
                     >
                       {funding ? (
                         <>

@@ -96,7 +96,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
         return [
           { id: "home", href: "/", label: "Home" },
           { id: "company-dashboard", href: "/dashboard/company", label: "Dashboard" },
-          { id: "company-bounties", href: "/dashboard/company/bounties", label: "Bounties" },
+          { id: "company-create-bounty", href: "/dashboard/company/bounties/create", label: "Create Bounty" },
           { id: "company-submissions", href: "/dashboard/company/submissions", label: "Submissions" },
           { id: "company-settings", href: "/dashboard/company/settings", label: "Settings" },
         ]
