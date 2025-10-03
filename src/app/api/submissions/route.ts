@@ -6,7 +6,6 @@ import {
   createSubmissionSchema,
   getSubmissionsQuerySchema,
   type CreateSubmissionInput,
-  type GetSubmissionsQuery
 } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
