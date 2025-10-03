@@ -71,42 +71,42 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
   const closeMobileMenu = () => setIsMobileMenuOpen(false)
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/' })
+    await signOut({ callbackUrl: "/" })
   }
 
   const navLinks = useMemo<NavItem[]>(() => {
     const baseLinks: NavItem[] = [
-      { id: 'home', href: '/', label: 'Home' },
-      { id: 'bounties', href: '/bounties', label: 'Bounties' },
-      { id: 'leaderboard', href: '/leaderboard', label: 'Leaderboard' },
+      { id: "home", href: "/", label: "Home" },
+      { id: "bounties", href: "/bounties", label: "Bounties" },
+      { id: "leaderboard", href: "/leaderboard", label: "Leaderboard" },
     ]
 
     if (!user) return baseLinks
 
     switch (user.role) {
-      case 'ADMIN':
+      case "ADMIN":
         return [
-          { id: 'home', href: '/', label: 'Home' },
-          { id: 'admin-dashboard', href: '/admin', label: 'Admin' },
-          { id: 'admin-users', href: '/admin/users', label: 'Users' },
-          { id: 'admin-companies', href: '/admin/companies', label: 'Companies' },
-          { id: 'admin-reports', href: '/admin/reports', label: 'Reports' },
+          { id: "home", href: "/", label: "Home" },
+          { id: "admin-dashboard", href: "/admin", label: "Admin" },
+          { id: "admin-users", href: "/admin/users", label: "Users" },
+          { id: "admin-companies", href: "/admin/companies", label: "Companies" },
+          { id: "admin-reports", href: "/admin/reports", label: "Reports" },
         ]
-      case 'COMPANY_ADMIN':
+      case "COMPANY_ADMIN":
         return [
-          { id: 'home', href: '/', label: 'Home' },
-          { id: 'company-dashboard', href: '/dashboard/company', label: 'Dashboard' },
-          { id: 'company-bounties', href: '/dashboard/company/bounties', label: 'Bounties' },
-          { id: 'company-submissions', href: '/dashboard/company/submissions', label: 'Submissions' },
-          { id: 'company-settings', href: '/dashboard/company/settings', label: 'Settings' },
+          { id: "home", href: "/", label: "Home" },
+          { id: "company-dashboard", href: "/dashboard/company", label: "Dashboard" },
+          { id: "company-bounties", href: "/dashboard/company/bounties", label: "Bounties" },
+          { id: "company-submissions", href: "/dashboard/company/submissions", label: "Submissions" },
+          { id: "company-settings", href: "/dashboard/company/settings", label: "Settings" },
         ]
-      case 'BOUNTY_HUNTER':
+      case "BOUNTY_HUNTER":
       default:
         return [
-          { id: 'home', href: '/', label: 'Home' },
-          { id: 'bounties', href: '/bounties', label: 'Bounties' },
-          { id: 'hunter-dashboard', href: '/dashboard/hunter', label: 'Dashboard' },
-          { id: 'leaderboard', href: '/leaderboard', label: 'Leaderboard' },
+          { id: "home", href: "/", label: "Home" },
+          { id: "bounties", href: "/bounties", label: "Bounties" },
+          { id: "hunter-dashboard", href: "/dashboard/hunter", label: "Dashboard" },
+          { id: "leaderboard", href: "/leaderboard", label: "Leaderboard" },
         ]
     }
   }, [user])
