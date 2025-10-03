@@ -175,13 +175,29 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // 24 hours
   },
   pages: {
     signIn: '/auth/login',
     error: '/auth/login',
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV !== 'production',
+  debug: false, // Disable debug in production to prevent verbose logging
+  logger: {
+    error: (code, metadata) => {
+      // Only log critical errors, not common auth issues
+      if (code !== 'CLIENT_FETCH_ERROR') {
+        console.error('[NextAuth Error]', code, metadata);
+      }
+    },
+    warn: (code) => {
+      // Suppress warnings in production
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[NextAuth Warning]', code);
+      }
+    },
+    debug: () => {}, // Disable debug logging
+  },
 };
 
 const handler = NextAuth(authOptions);

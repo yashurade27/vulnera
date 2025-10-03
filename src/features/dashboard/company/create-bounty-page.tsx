@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { useConnection, useWallet } from "@solana/wallet-adapter-react"
 import { LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js"
 import {
@@ -57,8 +58,9 @@ interface EscrowInfo {
 
 export function CreateBountyPage() {
   const router = useRouter()
+  const { data: session, status: sessionStatus } = useSession()
   const { connection } = useConnection()
-  const { publicKey } = useWallet()
+  const { publicKey, connected } = useWallet()
   const { program } = useProgram()
 
   const [step, setStep] = useState(1)
@@ -83,6 +85,16 @@ export function CreateBountyPage() {
   const [savingWallet, setSavingWallet] = useState(false)
 
   useEffect(() => {
+    // Wait for session to be ready before loading company
+    if (sessionStatus === "loading") {
+      return
+    }
+
+    if (sessionStatus === "unauthenticated") {
+      router.push("/auth/login")
+      return
+    }
+
     let active = true
     const loadCompany = async () => {
       try {
@@ -104,7 +116,7 @@ export function CreateBountyPage() {
     return () => {
       active = false
     }
-  }, [])
+  }, [sessionStatus, router])
 
   const updateFormData = <K extends keyof BountyFormData>(field: K, value: BountyFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -175,8 +187,10 @@ export function CreateBountyPage() {
 
   const canFundBounty = Boolean(
     !funding &&
+      sessionStatus === "authenticated" &&
       company?.walletAddress &&
       publicKey &&
+      connected &&
       hasRequiredFields &&
       meetsMinimumEscrow &&
       !exceedsSafeAmount
@@ -194,7 +208,17 @@ export function CreateBountyPage() {
   }
 
   const handleInitializeEscrow = async () => {
-    if (!program || !publicKey || !company?.id) {
+    if (sessionStatus !== "authenticated") {
+      setFundingError("Please ensure you are logged in before funding the bounty.")
+      return
+    }
+
+    if (!connected || !publicKey) {
+      setFundingError("Please connect your Solana wallet before funding the bounty.")
+      return
+    }
+
+    if (!program || !company?.id) {
       setFundingError("Missing required information to fund the bounty.")
       return
     }
@@ -398,6 +422,18 @@ export function CreateBountyPage() {
     { number: 4, title: "Reward & Timeline", icon: DollarSign },
     { number: 5, title: "Fund Bounty", icon: Wallet },
   ]
+
+  // Show loading state while session is being fetched
+  if (sessionStatus === "loading") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">

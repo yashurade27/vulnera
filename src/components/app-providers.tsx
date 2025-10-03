@@ -9,7 +9,7 @@ import { ClusterProvider } from '@/features/cluster/cluster-context'
 
 export function AppProviders({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <SessionProvider basePath="/api/auth" refetchInterval={0} refetchOnWindowFocus={true}>
+    <SessionProvider basePath="/api/auth" refetchInterval={5 * 60}>
       <ReactQueryProvider>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ClusterProvider>
