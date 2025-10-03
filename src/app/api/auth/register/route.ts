@@ -42,12 +42,7 @@ export async function POST(request: NextRequest) {
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
     // Send OTP email
-    let emailSent = true;
-    if (process.env.NODE_ENV === 'production') {
-      emailSent = await sendOTPEmail(email, otp);
-    } else {
-      console.log(`DEV MODE: OTP for ${email} is ${otp}`);
-    }
+    const emailSent = await sendOTPEmail(email, otp);
     if (!emailSent) {
       return NextResponse.json(
         { error: 'Failed to send verification email' },

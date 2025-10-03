@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import { SolanaClusterId, useWalletUi, useWalletUiCluster } from '@wallet-ui/react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -10,25 +9,32 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useCluster } from '@/features/cluster/cluster-context'
 
 export function ClusterDropdown() {
-  const { cluster } = useWalletUi()
-  const { clusters, setCluster } = useWalletUiCluster()
+  const { cluster, clusters, setCluster } = useCluster()
+
+  if (!cluster) {
+    return null
+  }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline">{cluster.label}</Button>
+        <Button variant="outline" className="capitalize">
+          {cluster.name}
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56">
-        <DropdownMenuRadioGroup value={cluster.id} onValueChange={(cluster) => setCluster(cluster as SolanaClusterId)}>
-          {clusters.map((cluster) => {
-            return (
-              <DropdownMenuRadioItem key={cluster.id} value={cluster.id}>
-                {cluster.label}
-              </DropdownMenuRadioItem>
-            )
-          })}
+        <DropdownMenuRadioGroup
+          value={cluster.name}
+          onValueChange={(value) => setCluster(value as any)}
+        >
+          {clusters.map((c) => (
+            <DropdownMenuRadioItem key={c.name} value={c.name} className="capitalize">
+              {c.name}
+            </DropdownMenuRadioItem>
+          ))}
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>

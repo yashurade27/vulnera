@@ -22,7 +22,7 @@ export function AccountUiBalanceCheck({ address }: { address: Address }) {
           </Button>
         }
       >
-        You are connected to <strong>{cluster.label}</strong> but your account is not found on this cluster.
+        You are connected to <strong>{cluster?.label}</strong> but your account is not found on this cluster.
       </AppAlert>
     )
   }

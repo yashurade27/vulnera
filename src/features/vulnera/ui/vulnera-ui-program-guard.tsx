@@ -14,7 +14,7 @@ export function VulneraUiProgramGuard({ children }: { children: ReactNode }) {
 
   if (!programAccountQuery.data?.value) {
     return (
-      <AppAlert>Program account not found on {cluster.label}. Be sure to deploy your program and try again.</AppAlert>
+      <AppAlert>Program account not found on {cluster?.label}. Be sure to deploy your program and try again.</AppAlert>
     )
   }
 

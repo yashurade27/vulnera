@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     const encodedToken = await encode({ token, secret, maxAge });
 
     // Return user data (without sensitive info)
-    const { passwordHash, otp, otpExpiry, resetToken, resetTokenExpiry, ...userData } = user;
+    const { passwordHash: _passwordHash, otp: _otp, otpExpiry: _otpExpiry, resetToken: _resetToken, resetTokenExpiry: _resetTokenExpiry, ...userData } = user;
 
     const response = NextResponse.json(
       {

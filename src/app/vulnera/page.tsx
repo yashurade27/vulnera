@@ -1,6 +1,8 @@
-'use client'
-import VulneraFeature from '@/features/vulnera/vulnera-feature'
+// 'use client'
+// import VulneraFeature from '@/features/vulnera/vulnera-feature'
 
 export default function Page() {
-  return <VulneraFeature />
+  return <h1>
+      hello vulnera
+  </h1>
 }

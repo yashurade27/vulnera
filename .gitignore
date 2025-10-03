@@ -52,3 +52,7 @@ test-ledger
 **/*.rs.bk
 
 /generated/prisma
+
+/wallet-keypair.json
+# scripts
+scripts/

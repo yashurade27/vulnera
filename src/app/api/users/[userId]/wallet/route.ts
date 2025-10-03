@@ -3,10 +3,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 import { updateWalletSchema, type UpdateWalletInput } from '@/lib/types';
+import { type RouteParams } from '@/lib/next';
+import nacl from 'tweetnacl';
+import { PublicKey } from '@solana/web3.js';
+import bs58 from 'bs58';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: RouteParams<{ userId: string }>
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +22,7 @@ export async function PATCH(
       );
     }
 
-    const { userId } = params;
+  const { userId } = await params;
 
     // Only allow users to update their own wallet or admins
     if (session.user.id !== userId && session.user.role !== 'ADMIN') {
@@ -38,10 +42,29 @@ export async function PATCH(
       );
     }
 
-    const { walletAddress, signature } = parsed.data;
+    const { walletAddress, signature, message } = parsed.data;
 
-    // TODO: Verify signature against wallet address
-    // For now, just update if authorized
+    // Verify signature against wallet address
+    try {
+      const publicKey = new PublicKey(walletAddress);
+      const signatureBytes = bs58.decode(signature);
+      const messageBytes = new TextEncoder().encode(message);
+
+      const isValid = nacl.sign.detached.verify(messageBytes, signatureBytes, publicKey.toBytes());
+
+      if (!isValid) {
+        return NextResponse.json(
+          { error: 'Invalid signature. Please sign the exact message shown.' },
+          { status: 400 }
+        );
+      }
+    } catch (error) {
+      console.error('Signature verification error:', error);
+      return NextResponse.json(
+        { error: 'Failed to verify signature. Please ensure you signed the correct message.' },
+        { status: 400 }
+      );
+    }
 
     // Check if wallet is already taken by another user
     const existingUser = await prisma.user.findUnique({

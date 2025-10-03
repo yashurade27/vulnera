@@ -1,145 +1,206 @@
-import {
-  Blockhash,
-  createSolanaClient,
-  createTransaction,
-  generateKeyPairSigner,
-  Instruction,
-  isSolanaError,
-  KeyPairSigner,
-  signTransactionMessageWithSigners,
-} from 'gill'
-import {
-  fetchVulnera,
-  getCloseInstruction,
-  getDecrementInstruction,
-  getIncrementInstruction,
-  getInitializeInstruction,
-  getSetInstruction,
-} from '../src'
-// @ts-ignore error TS2307 suggest setting `moduleResolution` but this is already configured
-import { loadKeypairSignerFromFile } from 'gill/node'
+import * as anchor from '@coral-xyz/anchor'
+import { Program } from '@coral-xyz/anchor'
+import { VulneraBounty } from '../target/types/vulnera_bounty'
+import { assert } from 'chai'
 
-const { rpc, sendAndConfirmTransaction } = createSolanaClient({ urlOrMoniker: process.env.ANCHOR_PROVIDER_URL! })
+describe('vulnera_bounty', () => {
+  // Configure the client to use the local cluster.
+  const provider = anchor.AnchorProvider.env()
+  anchor.setProvider(provider)
 
-describe('vulnera', () => {
-  let payer: KeyPairSigner
-  let vulnera: KeyPairSigner
+  const program = anchor.workspace.VulneraBounty as Program<VulneraBounty>
+  const owner = provider.wallet.publicKey
+  let hunter: anchor.web3.PublicKey
+  let platformWallet: anchor.web3.PublicKey
 
-  beforeAll(async () => {
-    vulnera = await generateKeyPairSigner()
-    payer = await loadKeypairSignerFromFile(process.env.ANCHOR_WALLET!)
+  hunter = anchor.web3.Keypair.generate().publicKey
+  platformWallet = anchor.web3.Keypair.generate().publicKey
+
+  // Helper function to airdrop and confirm
+  const fundAccount = async (provider: anchor.AnchorProvider, account: anchor.web3.PublicKey, amount: number) => {
+    const airdropSignature = await provider.connection.requestAirdrop(account, amount)
+    await provider.connection.confirmTransaction(airdropSignature)
+  }
+
+  // before(async () => {
+  //   // Create test accounts
+  //   hunter = anchor.web3.Keypair.generate().publicKey
+  //   platformWallet = anchor.web3.Keypair.generate().publicKey
+  // })
+
+  const [vaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from('bounty-escrow'), owner.toBuffer()],
+    program.programId,
+  )
+
+  it('Initializes a bounty escrow', async () => {
+    const escrowAmount = new anchor.BN(anchor.web3.LAMPORTS_PER_SOL) // 1 SOL
+
+    await program.methods
+      .initialize(escrowAmount)
+      .accounts({
+        owner,
+      })
+      .rpc()
+
+    const vaultAccount = await program.account.bountyEscrow.fetch(vaultPda)
+    assert.ok(vaultAccount.owner.equals(owner))
+    assert.ok(vaultAccount.escrowAmount.eq(escrowAmount))
   })
 
-  it('Initialize Vulnera', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getInitializeInstruction({ payer: payer, vulnera: vulnera })
+  it('Processes a payment', async () => {
+    const rewardPerSubmission = new anchor.BN(0.1 * anchor.web3.LAMPORTS_PER_SOL) // 0.1 SOL
+    const maxSubmissions = 5
+    const currentPaidSubmissions = 0
+    const bountyId = 'test-bounty'
+    const submissionId = 'test-submission'
 
-    // ACT
-    await sendAndConfirm({ ix, payer })
+    const hunterBalanceBefore = await provider.connection.getBalance(hunter)
+    const platformBalanceBefore = await provider.connection.getBalance(platformWallet)
 
-    // ASSER
-    const currentVulnera = await fetchVulnera(rpc, vulnera.address)
-    expect(currentVulnera.data.count).toEqual(0)
+    await program.methods
+      .processPayment(
+        bountyId,
+        submissionId,
+        null, // custom_amount
+        rewardPerSubmission,
+        maxSubmissions,
+        currentPaidSubmissions,
+      )
+      .accounts({
+        hunterWallet: hunter,
+        platformWallet,
+      })
+      .rpc()
+
+    const vaultAccount = await program.account.bountyEscrow.fetch(vaultPda)
+    const expectedPlatformFee = rewardPerSubmission.mul(new anchor.BN(200)).div(new anchor.BN(10000)) // 2%
+    const expectedHunterAmount = rewardPerSubmission.sub(expectedPlatformFee)
+
+    assert.ok(vaultAccount.escrowAmount.eq(new anchor.BN(anchor.web3.LAMPORTS_PER_SOL).sub(rewardPerSubmission)))
+
+    const hunterBalanceAfter = await provider.connection.getBalance(hunter)
+    const platformBalanceAfter = await provider.connection.getBalance(platformWallet)
+
+    assert.ok(hunterBalanceAfter === hunterBalanceBefore + expectedHunterAmount.toNumber())
+    assert.ok(platformBalanceAfter === platformBalanceBefore + expectedPlatformFee.toNumber())
   })
 
-  it('Increment Vulnera', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getIncrementInstruction({
-      vulnera: vulnera.address,
-    })
+  it('Closes the bounty', async () => {
+    const bountyId = 'test-bounty'
+    const ownerBalanceBefore = await provider.connection.getBalance(owner)
 
-    // ACT
-    await sendAndConfirm({ ix, payer })
+    await program.methods
+      .closeBounty(bountyId)
+      .accounts({
+        vault: vaultPda,
+        owner,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc()
 
-    // ASSERT
-    const currentCount = await fetchVulnera(rpc, vulnera.address)
-    expect(currentCount.data.count).toEqual(1)
+    const ownerBalanceAfter = await provider.connection.getBalance(owner)
+    // Remaining should be 1 SOL - 0.1 SOL = 0.9 SOL
+    assert.ok(ownerBalanceAfter > ownerBalanceBefore + 0.8 * anchor.web3.LAMPORTS_PER_SOL)
   })
 
-  it('Increment Vulnera Again', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getIncrementInstruction({ vulnera: vulnera.address })
+  it('Fails to initialize with insufficient escrow amount', async () => {
+    // 1. Create a brand new, unique owner for this test
+    const testOwner = anchor.web3.Keypair.generate()
 
-    // ACT
-    await sendAndConfirm({ ix, payer })
+    // 2. Fund this new wallet so it can pay for the transaction
+    await fundAccount(provider, testOwner.publicKey, anchor.web3.LAMPORTS_PER_SOL)
 
-    // ASSERT
-    const currentCount = await fetchVulnera(rpc, vulnera.address)
-    expect(currentCount.data.count).toEqual(2)
-  })
+    const invalidAmount = new anchor.BN(50000) // Less than MIN_ESCROW_AMOUNT
 
-  it('Decrement Vulnera', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getDecrementInstruction({
-      vulnera: vulnera.address,
-    })
-
-    // ACT
-    await sendAndConfirm({ ix, payer })
-
-    // ASSERT
-    const currentCount = await fetchVulnera(rpc, vulnera.address)
-    expect(currentCount.data.count).toEqual(1)
-  })
-
-  it('Set vulnera value', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getSetInstruction({ vulnera: vulnera.address, value: 42 })
-
-    // ACT
-    await sendAndConfirm({ ix, payer })
-
-    // ASSERT
-    const currentCount = await fetchVulnera(rpc, vulnera.address)
-    expect(currentCount.data.count).toEqual(42)
-  })
-
-  it('Set close the vulnera account', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getCloseInstruction({
-      payer: payer,
-      vulnera: vulnera.address,
-    })
-
-    // ACT
-    await sendAndConfirm({ ix, payer })
-
-    // ASSERT
     try {
-      await fetchVulnera(rpc, vulnera.address)
-    } catch (e) {
-      if (!isSolanaError(e)) {
-        throw new Error(`Unexpected error: ${e}`)
-      }
-      expect(e.message).toEqual(`Account not found at address: ${vulnera.address}`)
+      // 3. Call the instruction with the new owner
+      await program.methods
+        .initialize(invalidAmount)
+        .accounts({
+          owner: testOwner.publicKey, // Use the new owner's public key
+        })
+        .signers([testOwner]) // The new owner must sign to approve the transaction
+        .rpc()
+      assert.fail('Should have thrown an error')
+    } catch (error) {
+      // 4. Now the test will correctly catch your custom program error!
+      assert.include(error.toString(), 'InvalidEscrowAmount')
+    }
+  })
+
+  it('Fails to process payment when max submissions reached', async () => {
+    // First, need to initialize again or use a new PDA
+    const newOwner = anchor.web3.Keypair.generate()
+
+    // ✅ FIX: Use the helper function to airdrop AND wait for confirmation
+    await fundAccount(provider, newOwner.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL)
+
+    const [newVaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from('bounty-escrow'), newOwner.publicKey.toBuffer()],
+      program.programId,
+    )
+
+    // This will now succeed because the newOwner wallet has funds
+    await program.methods
+      .initialize(new anchor.BN(anchor.web3.LAMPORTS_PER_SOL))
+      .accounts({
+        owner: newOwner.publicKey,
+      })
+      .signers([newOwner])
+      .rpc()
+
+    const rewardPerSubmission = new anchor.BN(0.1 * anchor.web3.LAMPORTS_PER_SOL)
+    const maxSubmissions = 1
+    const currentPaidSubmissions = 1 // Already at max
+
+    try {
+      await program.methods
+        .processPayment('test', 'test', null, rewardPerSubmission, maxSubmissions, currentPaidSubmissions)
+        .accounts({
+          hunterWallet: hunter,
+          platformWallet,
+        })
+        .rpc()
+      assert.fail('Should have thrown an error')
+    } catch (error) {
+      assert.include(error.toString(), 'MaxSubmissionsReached')
+    }
+  })
+
+  it('Fails to process payment with insufficient funds', async () => {
+    const newOwner = anchor.web3.Keypair.generate()
+    await fundAccount(provider, newOwner.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL)
+
+    const [newVaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from('bounty-escrow'), newOwner.publicKey.toBuffer()],
+      program.programId,
+    )
+
+    // 1. Initialize with a VALID amount that is small (e.g., 0.5 SOL)
+    await program.methods
+      .initialize(new anchor.BN(0.5 * anchor.web3.LAMPORTS_PER_SOL))
+      .accounts({
+        owner: newOwner.publicKey,
+      })
+      .signers([newOwner])
+      .rpc()
+
+    // 2. Now, try to pay a reward that is LARGER than the escrow balance
+    const rewardPerSubmission = new anchor.BN(1 * anchor.web3.LAMPORTS_PER_SOL) // 1 SOL > 0.5 SOL
+
+    try {
+      await program.methods
+        .processPayment('test', 'test', null, rewardPerSubmission, 5, 0)
+        .accounts({
+          hunterWallet: hunter,
+          platformWallet,
+        })
+        .rpc()
+      assert.fail('Should have thrown an error')
+    } catch (error) {
+      // 3. The test will now correctly catch the 'InsufficientFunds' error
+      assert.include(error.toString(), 'InsufficientFunds')
     }
   })
 })
-
-// Helper function to keep the tests DRY
-let latestBlockhash: Awaited<ReturnType<typeof getLatestBlockhash>> | undefined
-async function getLatestBlockhash(): Promise<Readonly<{ blockhash: Blockhash; lastValidBlockHeight: bigint }>> {
-  if (latestBlockhash) {
-    return latestBlockhash
-  }
-  return await rpc
-    .getLatestBlockhash()
-    .send()
-    .then(({ value }) => value)
-}
-async function sendAndConfirm({ ix, payer }: { ix: Instruction; payer: KeyPairSigner }) {
-  const tx = createTransaction({
-    feePayer: payer,
-    instructions: [ix],
-    version: 'legacy',
-    latestBlockhash: await getLatestBlockhash(),
-  })
-  const signedTransaction = await signTransactionMessageWithSigners(tx)
-  return await sendAndConfirmTransaction(signedTransaction)
-}

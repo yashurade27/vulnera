@@ -44,6 +44,11 @@
 /**
  * GET /api/auth/me
  * Get current authenticated user
+ */
+
+/**
+ * GET /api/auth/session
+ * Get current session (returns session object or null)
  */ -->
 
 // ==================== USER PROFILE ====================
@@ -81,7 +86,7 @@
  * Update wallet address
  * Body: { walletAddress, signature }
  */ -->
-
+<!-- 
 // ==================== COMPANY MANAGEMENT ====================
 
 /**
@@ -99,6 +104,11 @@
 /**
  * GET /api/companies/[companyId]
  * Get company details
+ */
+
+/**
+ * GET /api/companies/my-company
+ * Get current user's company details
  */
 
 /**
@@ -121,8 +131,8 @@
  * GET /api/companies/[companyId]/bounties
  * Get all bounties for a company
  * Query: { status?, type?, limit?, offset? }
- */
-
+ */ -->
+<!-- 
 // ==================== COMPANY MEMBERS ====================
 
 /**
@@ -145,8 +155,8 @@
 /**
  * DELETE /api/companies/[companyId]/members/[memberId]
  * Remove member from company
- */
-
+ */ -->
+<!-- 
 // ==================== BOUNTY MANAGEMENT ====================
 
 /**
@@ -191,6 +201,12 @@
  */
 
 /**
+ * PATCH /api/bounties/[bountyId]/status
+ * Update bounty status independently (DRAFT, ACTIVE, CLOSED, EXPIRED)
+ * Body: { status }
+ */
+
+/**
  * GET /api/bounties/[bountyId]/submissions
  * Get all submissions for a bounty
  * Query: { status?, limit?, offset? }
@@ -199,8 +215,8 @@
 /**
  * GET /api/bounties/[bountyId]/stats
  * Get bounty statistics
- */
-
+ */ -->
+<!-- 
 // ==================== SUBMISSION MANAGEMENT ====================
 
 /**
@@ -260,9 +276,9 @@
  * POST /api/submissions/[submissionId]/ai-analyze
  * Trigger AI analysis for spam/duplicate detection
  * Returns: { aiSpamScore, aiDuplicateScore, aiAnalysisResult }
- */
+ */ -->
 
-// ==================== COMMENTS ====================
+<!-- // ==================== COMMENTS ====================
 
 /**
  * POST /api/submissions/[submissionId]/comments
@@ -285,9 +301,9 @@
 /**
  * DELETE /api/comments/[commentId]
  * Delete comment
- */
+ */ -->
 
-// ==================== PAYMENT MANAGEMENT ====================
+<!-- // ==================== PAYMENT MANAGEMENT ====================
 
 /**
  * POST /api/payments
@@ -320,8 +336,8 @@
 /**
  * GET /api/payments/company/[companyId]
  * Get company's payment history
- */
-
+ */ -->
+<!-- 
 // ==================== REPORTS & ACCOUNTABILITY ====================
 
 /**
@@ -357,8 +373,8 @@
 /**
  * GET /api/reports/submission/[submissionId]
  * Get reports related to a submission
- */
-
+ */ -->
+<!-- 
 // ==================== NOTIFICATIONS ====================
 
 /**
@@ -385,8 +401,8 @@
 /**
  * DELETE /api/notifications/[notificationId]
  * Delete notification
- */
-
+ */ -->
+<!-- 
 // ==================== BLOCKCHAIN INTEGRATION ====================
 
 /**
@@ -426,8 +442,8 @@
  * Verify transaction on Solana
  * Body: { signature }
  * Returns: { confirmed, blockTime, status }
- */
-
+ */ -->
+<!-- 
 // ==================== ADMIN ROUTES ====================
 
 /**
@@ -468,9 +484,9 @@
  * GET /api/admin/audit-logs
  * Get audit logs
  * Query: { userId?, entityType?, action?, startDate?, endDate?, limit?, offset? }
- */
+ */ -->
 
-// ==================== ANALYTICS & STATISTICS ====================
+<!-- // ==================== ANALYTICS & STATISTICS ====================
 
 /**
  * GET /api/stats/platform
@@ -492,9 +508,9 @@
 /**
  * GET /api/stats/trending
  * Get trending bounties and top performers
- */
+ */ -->
 
-// ==================== SEARCH & DISCOVERY ====================
+<!-- // ==================== SEARCH & DISCOVERY ====================
 
 /**
  * GET /api/search
@@ -512,8 +528,8 @@
  * GET /api/search/companies
  * Search companies
  * Query: { q?, industry?, verified? }
- */
-
+ */ -->
+<!-- 
 // ==================== FILE UPLOADS ====================
 //uploadthing
 /**
@@ -533,9 +549,9 @@
 /**
  * DELETE /api/upload/[fileId]
  * Delete uploaded file
- */
+ */ -->
 
-// ==================== WEBHOOKS ====================
+<!-- // ==================== WEBHOOKS ====================
 
 /**
  * POST /api/webhooks/solana
@@ -560,7 +576,7 @@
  * GET /api/config
  * Get public configuration
  * Returns: { platformFee, minBountyAmount, maxResponseDays }
- */
+ */ -->
 
 // ==================== TOTAL ROUTES SUMMARY ====================
 /**
@@ -568,7 +584,7 @@
  * User Management: 7 routes
  * Company Management: 7 routes
  * Company Members: 4 routes
- * Bounty Management: 9 routes
+ * Bounty Management: 10 routes
  * Submission Management: 9 routes
  * Comments: 4 routes
  * Payment Management: 7 routes
@@ -582,5 +598,5 @@
  * Webhooks: 2 routes
  * Utilities: 2 routes
  *
- * TOTAL: ~92 API endpoints
+ * TOTAL: ~93 API endpoints
  */

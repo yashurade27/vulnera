@@ -148,6 +148,7 @@ model Company {
   totalBountiesPaid     Decimal @default(0) @db.Decimal(20, 9)
   activeBounties        Int     @default(0)
   resolvedVulnerabilities Int   @default(0)
+  reputation            Float  @default(100)
   
   // Status
   isVerified      Boolean  @default(false)

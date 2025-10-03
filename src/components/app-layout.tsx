@@ -10,16 +10,14 @@ import { AppFooter } from './app-footer'
 
 export function AppLayout({
   children,
-  links,
 }: {
   children: React.ReactNode
-  links: { label: string; path: string }[]
 }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <div className="flex flex-col min-h-screen">
-        <AppHeader links={links} />
-        <main className="flex-grow container mx-auto p-4">
+        <AppHeader />
+        <main className="flex-grow container mx-auto px-4 pt-24 pb-12">
           <ClusterUiChecker>
             <AccountUiChecker />
           </ClusterUiChecker>
