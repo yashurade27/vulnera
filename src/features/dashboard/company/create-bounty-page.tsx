@@ -60,7 +60,8 @@ export function CreateBountyPage() {
   const router = useRouter()
   const { data: session, status: sessionStatus } = useSession()
   const { connection } = useConnection()
-  const { publicKey, connected } = useWallet()
+  const wallet = useWallet()
+  const { publicKey, connected } = wallet
   const { program } = useProgram()
 
   const [step, setStep] = useState(1)
@@ -83,16 +84,30 @@ export function CreateBountyPage() {
   const [fundingError, setFundingError] = useState<string | null>(null)
   const [walletInput, setWalletInput] = useState("")
   const [savingWallet, setSavingWallet] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<any[]>([])
+  
+  // Add debug logging helper
+  const addDebugLog = (step: string, data: any) => {
+    const logEntry = { timestamp: new Date().toISOString(), step, data }
+    console.log('[CreateBounty Debug]', logEntry)
+    setDebugInfo(prev => [...prev, logEntry])
+  }
 
   // Track wallet connection state changes
   useEffect(() => {
-    console.log('[CreateBounty] Wallet state changed:', {
+    const walletStateData = {
       connected,
       publicKey: publicKey?.toBase58(),
       hasProgram: !!program,
-      sessionStatus
-    })
-  }, [connected, publicKey, program, sessionStatus])
+      sessionStatus,
+      walletReady: (wallet as any)?.readyState,
+      walletName: (wallet as any)?.adapter?.name,
+      programId: program?.programId?.toBase58()
+    }
+    
+    addDebugLog('WALLET_STATE_CHANGE', walletStateData)
+    console.log('[CreateBounty] Wallet state changed:', walletStateData)
+  }, [connected, publicKey, program, sessionStatus, wallet])
 
   useEffect(() => {
     // Wait for session to be ready before loading company
@@ -218,46 +233,69 @@ export function CreateBountyPage() {
   }
 
   const handleInitializeEscrow = async () => {
-    console.log('[CreateBounty] Starting escrow initialization', {
+    const initData = {
       sessionStatus,
       connected,
       hasPublicKey: !!publicKey,
       hasProgram: !!program,
       companyId: company?.id,
       companyWallet: company?.walletAddress,
-      connectedWallet: publicKey?.toBase58()
-    })
+      connectedWallet: publicKey?.toBase58(),
+      lamportsAmount,
+      minEscrowDisplay,
+      canFundBounty,
+      formDataValid: {
+        title: !!formData.title.trim(),
+        description: !!formData.description.trim(),
+        bountyTypes: formData.bountyTypes.length > 0,
+        requirements: !!formData.requirements.trim()
+      }
+    }
+    
+    addDebugLog('INITIALIZATION_START', initData)
+    console.log('[CreateBounty] Starting escrow initialization', initData)
 
     if (sessionStatus !== "authenticated") {
       const errorMsg = "Please ensure you are logged in before funding the bounty."
-      console.error('[CreateBounty] Auth error:', errorMsg)
+      const errorData = { sessionStatus, hasSession: !!session }
+      addDebugLog('AUTH_ERROR', errorData)
+      console.error('[CreateBounty] Auth error:', errorMsg, errorData)
       setFundingError(errorMsg)
       return
     }
 
     if (!connected || !publicKey) {
       const errorMsg = "Please connect your Solana wallet before funding the bounty."
-      console.error('[CreateBounty] Wallet error:', { connected, hasPublicKey: !!publicKey })
+      const errorData = { connected, hasPublicKey: !!publicKey, walletStatus: (wallet as any)?.adapter?.name }
+      addDebugLog('WALLET_ERROR', errorData)
+      console.error('[CreateBounty] Wallet error:', errorMsg, errorData)
       setFundingError(errorMsg)
       return
     }
 
     if (!program || !company?.id) {
       const errorMsg = "Missing required information to fund the bounty."
-      console.error('[CreateBounty] Missing requirements:', { 
+      const errorData = { 
         hasProgram: !!program, 
-        companyId: company?.id 
-      })
+        companyId: company?.id,
+        programId: program?.programId?.toBase58(),
+        providerWallet: program?.provider?.wallet?.publicKey?.toBase58()
+      }
+      addDebugLog('PROGRAM_ERROR', errorData)
+      console.error('[CreateBounty] Missing requirements:', errorMsg, errorData)
       setFundingError(errorMsg)
       return
     }
 
     if (company.walletAddress && company.walletAddress !== publicKey.toBase58()) {
       const errorMsg = "Connected wallet does not match the company wallet on file."
-      console.error('[CreateBounty] Wallet mismatch:', {
+      const errorData = {
         companyWallet: company.walletAddress,
-        connectedWallet: publicKey.toBase58()
-      })
+        connectedWallet: publicKey.toBase58(),
+        walletName: (wallet as any)?.adapter?.name
+      }
+      addDebugLog('WALLET_MISMATCH', errorData)
+      console.error('[CreateBounty] Wallet mismatch:', errorMsg, errorData)
       setFundingError(errorMsg)
       return
     }
@@ -299,6 +337,7 @@ export function CreateBountyPage() {
         endsAt: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
       }
 
+      addDebugLog('BOUNTY_CREATION_START', createPayload)
       console.log("Creating bounty before funding", createPayload)
 
       const createRes = await fetch("/api/bounties", {
@@ -309,6 +348,13 @@ export function CreateBountyPage() {
       })
 
       const createJson = await createRes.json()
+      
+      addDebugLog('BOUNTY_CREATION_RESPONSE', { 
+        status: createRes.status, 
+        ok: createRes.ok, 
+        response: createJson 
+      })
+      
       if (!createRes.ok) {
         console.error("Bounty creation failed", createRes.status, createJson)
         throw new Error(createJson?.error ?? "Failed to create bounty")
@@ -320,16 +366,28 @@ export function CreateBountyPage() {
       }
 
       // Derive escrow
+      const escrowPayload = {
+        ownerWallet: company.walletAddress,
+        amount: lamportsAmount,
+      }
+      
+      addDebugLog('ESCROW_DERIVATION_START', escrowPayload)
+      
       const escrowRes = await fetch("/api/blockchain/create-escrow", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          ownerWallet: company.walletAddress,
-          amount: lamportsAmount,
-        }),
+        body: JSON.stringify(escrowPayload),
       })
+      
       const escrowJson = await escrowRes.json()
+      
+      addDebugLog('ESCROW_DERIVATION_RESPONSE', {
+        status: escrowRes.status,
+        ok: escrowRes.ok,
+        response: escrowJson
+      })
+      
       if (!escrowRes.ok) {
         console.error("Escrow derivation failed", escrowRes.status, escrowJson)
         throw new Error(escrowJson?.error ?? "Unable to derive escrow address")
@@ -354,65 +412,138 @@ export function CreateBountyPage() {
         program.programId
       );
 
+      addDebugLog('PDA_DERIVATION', {
+        escrowPda: escrowPda.toBase58(),
+        programId: program.programId.toBase58(),
+        owner: publicKey.toBase58()
+      })
+
       // Check if the account already exists
       const accountInfo = await connection.getAccountInfo(escrowPda);
+
+      addDebugLog('ACCOUNT_INFO_CHECK', {
+        escrowPda: escrowPda.toBase58(),
+        accountExists: !!accountInfo,
+        accountOwner: accountInfo?.owner?.toBase58(),
+        accountLamports: accountInfo?.lamports,
+        accountDataLength: accountInfo?.data?.length
+      })
 
       let signature: string;
       const amountBn = new BN(lamportsAmount.toString())
 
-      if (accountInfo === null) {
-        // Account doesn't exist, so initialize it
-        console.log("Vault account not found. Initializing...", {
-          escrowPda: escrowPda.toBase58(),
-          lamportsAmount,
+      try {
+        if (accountInfo === null) {
+          // Account doesn't exist, so initialize it
+          const initData = {
+            escrowPda: escrowPda.toBase58(),
+            lamportsAmount,
+            amountBn: amountBn.toString()
+          }
+          addDebugLog('INITIALIZING_VAULT', initData)
+          console.log("Vault account not found. Initializing...", initData)
+          
+          signature = await program.methods
+            .initialize(amountBn)
+            .accounts({
+              vault: escrowPda,
+              owner: publicKey,
+              systemProgram: SystemProgram.programId,
+            })
+            .rpc();
+            
+          addDebugLog('INITIALIZE_SUCCESS', { signature })
+        } else {
+          // Account exists, so deposit into it
+          const depositData = {
+            escrowPda: escrowPda.toBase58(),
+            lamportsAmount,
+            amountBn: amountBn.toString(),
+            existingLamports: accountInfo.lamports
+          }
+          addDebugLog('DEPOSITING_TO_VAULT', depositData)
+          console.log("Vault account found. Depositing funds...", depositData)
+          
+          signature = await program.methods
+            .deposit(amountBn)
+            .accounts({
+              vault: escrowPda,
+              owner: publicKey,
+              systemProgram: SystemProgram.programId,
+            })
+            .rpc();
+            
+          addDebugLog('DEPOSIT_SUCCESS', { signature })
+        }
+
+        addDebugLog('TRANSACTION_SUCCESS', { signature })
+        console.log("Transaction successful with signature:", signature);
+      } catch (txError) {
+        addDebugLog('TRANSACTION_ERROR', {
+          error: txError instanceof Error ? txError.message : String(txError),
+          stack: txError instanceof Error ? txError.stack : undefined,
+          amountBn: amountBn.toString(),
+          escrowPda: escrowPda.toBase58()
         })
-        signature = await program.methods
-          .initialize(amountBn)
-          .accounts({
-            vault: escrowPda,
-            owner: publicKey,
-            systemProgram: SystemProgram.programId,
-          })
-          .rpc();
-      } else {
-        // Account exists, so deposit into it
-        console.log("Vault account found. Depositing funds...", {
-          escrowPda: escrowPda.toBase58(),
-          lamportsAmount,
-        })
-        signature = await program.methods
-          .deposit(amountBn)
-          .accounts({
-            vault: escrowPda,
-            owner: publicKey,
-            systemProgram: SystemProgram.programId,
-          })
-          .rpc();
+        throw txError
       }
 
-      console.log("Transaction successful with signature:", signature);
-
       // Verify with backend
+      const fundPayload = {
+        txSignature: signature,
+        escrowAddress: escrowPda.toBase58(),
+      }
+      
+      addDebugLog('FUNDING_VERIFICATION_START', fundPayload)
+      
       const fundRes = await fetch(`/api/bounties/${bountyId}/fund`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          txSignature: signature,
-          escrowAddress: escrowPda.toBase58(),
-        }),
+        body: JSON.stringify(fundPayload),
       })
 
       const fundJson = await fundRes.json()
+      
+      addDebugLog('FUNDING_VERIFICATION_RESPONSE', {
+        status: fundRes.status,
+        ok: fundRes.ok,
+        response: fundJson
+      })
+      
       if (!fundRes.ok) {
         throw new Error(fundJson?.error ?? "Funding verification failed")
       }
 
+      addDebugLog('FUNDING_SUCCESS', { bountyId, redirecting: true })
       // Redirect on success
       router.push(`/bounties/${bountyId}`)
     } catch (err) {
-      console.error("Funding error:", err)
-      setFundingError(err instanceof Error ? err.message : "Unable to send funding transaction.")
+      const errorData = {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+        name: err instanceof Error ? err.name : 'UnknownError',
+        debugInfo: debugInfo.slice(-5) // Last 5 debug entries
+      }
+      
+      addDebugLog('FUNDING_ERROR', errorData)
+      console.error("Funding error:", err, errorData)
+      
+      // Set user-friendly error message
+      let userMessage = "Unable to send funding transaction."
+      if (err instanceof Error) {
+        if (err.message.includes('User rejected')) {
+          userMessage = "Transaction was cancelled by user."
+        } else if (err.message.includes('Insufficient funds')) {
+          userMessage = "Insufficient funds in your wallet."
+        } else if (err.message.includes('Blockhash not found')) {
+          userMessage = "Transaction timeout. Please try again."
+        } else {
+          userMessage = err.message
+        }
+      }
+      
+      setFundingError(userMessage)
     } finally {
       setFunding(false)
     }
@@ -830,6 +961,54 @@ export function CreateBountyPage() {
             ) : null}
           </div>
         </Card>
+        
+        {/* Debug Panel - Only show if there are debug entries */}
+        {debugInfo.length > 0 && (
+          <Card className="mt-6 border-orange-500/20">
+            <CardContent className="p-4">
+              <details className="space-y-2">
+                <summary className="cursor-pointer text-sm font-medium text-orange-400 hover:text-orange-300">
+                  Debug Information ({debugInfo.length} entries) - Click to expand
+                </summary>
+                <div className="mt-4 space-y-2 max-h-64 overflow-y-auto">
+                  {debugInfo.map((entry, index) => (
+                    <div key={index} className="text-xs bg-gray-900/50 p-2 rounded border border-gray-700">
+                      <div className="text-orange-400 font-mono">
+                        [{entry.timestamp}] {entry.step}
+                      </div>
+                      <pre className="text-gray-300 mt-1 whitespace-pre-wrap break-all">
+                        {JSON.stringify(entry.data, null, 2)}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setDebugInfo([])}
+                    className="text-xs"
+                  >
+                    Clear Debug Log
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const debugText = debugInfo.map(entry => 
+                        `[${entry.timestamp}] ${entry.step}\n${JSON.stringify(entry.data, null, 2)}`
+                      ).join('\n\n')
+                      navigator.clipboard.writeText(debugText)
+                    }}
+                    className="text-xs"
+                  >
+                    Copy Debug Log
+                  </Button>
+                </div>
+              </details>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

@@ -128,12 +128,29 @@ export class SolanaService {
    * This method returns the expected escrow PDA address
    */
   async createEscrow(ownerWallet: string, amount: number): Promise<{ escrowAddress: string; expectedAmount: number }> {
-    const owner = new PublicKey(ownerWallet)
-    const [escrowPDA, bump] = await this.deriveEscrowAddress(owner)
+    try {
+      console.log('[SolanaService] Creating escrow', { ownerWallet, amount })
+      
+      const owner = new PublicKey(ownerWallet)
+      console.log('[SolanaService] Owner PublicKey created:', owner.toBase58())
+      
+      const [escrowPDA, bump] = await this.deriveEscrowAddress(owner)
+      console.log('[SolanaService] Escrow PDA derived:', { 
+        escrowPDA: escrowPDA.toBase58(), 
+        bump, 
+        programId: PROGRAM_ID.toBase58() 
+      })
 
-    return {
-      escrowAddress: escrowPDA.toString(),
-      expectedAmount: amount,
+      const result = {
+        escrowAddress: escrowPDA.toString(),
+        expectedAmount: amount,
+      }
+      
+      console.log('[SolanaService] Escrow creation result:', result)
+      return result
+    } catch (error) {
+      console.error('[SolanaService] Error creating escrow:', error)
+      throw error
     }
   }
 

@@ -20,10 +20,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if owner has sufficient balance
+    console.log('[CreateEscrow] Checking wallet balance for:', ownerWallet)
     const balance = await solanaService.getBalance(ownerWallet)
+    console.log('[CreateEscrow] Wallet balance:', { balance, required: amount, sufficient: balance >= amount })
+    
     if (balance < amount) {
       return NextResponse.json(
-        { error: 'Insufficient balance in wallet' },
+        { 
+          error: 'Insufficient balance in wallet',
+          details: `Wallet has ${balance} lamports, but ${amount} lamports required`
+        },
         { status: 400 }
       )
     }
@@ -39,6 +45,11 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Create escrow error:', error)
+    console.error('Full error details:', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -48,7 +59,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     )
   }
