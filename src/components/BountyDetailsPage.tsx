@@ -28,6 +28,8 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
     useBountiesStore()
   const [isCompanyMember, setIsCompanyMember] = useState(false)
   const [escrowSol, setEscrowSol] = useState<number | null>(null)
+  const [ownerId, setOwnerId] = useState<string | null>(null)
+
   const fetchBountyDetails = useCallback(async () => {
     setLoading(true)
     try {
@@ -105,7 +107,21 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
 
   useEffect(() => {
     fetchBountyDetails()
-  }, [fetchBountyDetails])
+    // fetch company owner after bounty loaded
+    ;(async () => {
+      if (currentBounty?.id) {
+        try {
+          const res = await fetch(`/api/companies/${currentBounty.id}/owner`)
+          if (res.ok) {
+            const data = await res.json()
+            setOwnerId(data.userId)
+          }
+        } catch (e) {
+          console.error('Failed to fetch company owner:', e)
+        }
+      }
+    })()
+  }, [fetchBountyDetails, currentBounty])
 
   useEffect(() => {
     fetchSubmissions()
@@ -402,7 +418,7 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                 </div>
               </div>
               <Button variant="outline" className="w-full bg-transparent" asChild>
-                <Link href={`/profile/${currentBounty.company.id}`}>View Company Profile</Link>
+                <Link href={ownerId ? `/profile/${ownerId}` : '#'}>View Company Profile</Link>
               </Button>
               {currentBounty.company.walletAddress ? (
                 <p className="mt-4 text-[11px] font-mono break-all text-muted-foreground">
