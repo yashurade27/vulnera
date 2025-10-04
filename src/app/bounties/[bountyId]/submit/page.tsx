@@ -210,10 +210,10 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
       return
     }
 
-    if (!selectedBountyType) {
-      setFormError("Select a bounty category before submitting.")
-      return
-    }
+    // if (!selectedBountyType) {
+    //   setFormError("Select a bounty category before submitting.")
+    //   return
+    // }
 
     if (
       !title.trim() ||
@@ -391,7 +391,7 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
             </div>
 
             {/* Vulnerability Type */}
-            <div className="process-card">
+            {/* <div className="process-card">
               <Label htmlFor="bounty-category" className="text-base font-semibold mb-2 block">
                 Bounty Category *
               </Label>
@@ -407,7 +407,7 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </div> */}
 
             <div className="process-card">
               <Label htmlFor="vulnerability-type" className="text-base font-semibold mb-2 block">
