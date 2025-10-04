@@ -448,6 +448,44 @@ export function CreateBountyPage() {
       return
     }
 
+    let walletPublicKeyBase58: string
+    try {
+      walletPublicKeyBase58 = publicKey.toBase58()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown wallet key error'
+      addDebugLog('PUBLIC_KEY_SNAPSHOT_FAILURE', {
+        error: message,
+        hasPublicKey: !!publicKey,
+        typeofPublicKey: typeof publicKey,
+      })
+      setFundingError('Unable to access the connected wallet public key. Please reconnect your wallet.')
+      return
+    }
+
+    const walletPublicKey = publicKey
+
+    if (!walletPublicKey || typeof walletPublicKey !== 'object') {
+      addDebugLog('PUBLIC_KEY_SNAPSHOT_INVALID', {
+        hasPublicKey: !!walletPublicKey,
+        type: typeof walletPublicKey,
+      })
+      setFundingError('Wallet connection became unavailable. Please reconnect your wallet and try again.')
+      return
+    }
+
+    if (!company?.walletAddress) {
+      const errorMsg = "Please save your company wallet address before funding."
+      const errorData = {
+        companyId: company?.id,
+        hasWalletOnFile: !!company?.walletAddress,
+        connectedWallet: walletPublicKeyBase58,
+      }
+      addDebugLog('COMPANY_WALLET_MISSING', errorData)
+      console.error('[CreateBounty] Missing company wallet:', errorMsg, errorData)
+      setFundingError(errorMsg)
+      return
+    }
+
     if (!program || !company?.id) {
       const errorMsg = "Missing required information to fund the bounty."
       const errorData = { 
@@ -542,7 +580,8 @@ export function CreateBountyPage() {
 
       // Derive escrow
       const escrowPayload = {
-        ownerWallet: company.walletAddress,
+        ownerWallet: walletPublicKeyBase58,
+        companyWalletOnFile: company.walletAddress,
         amount: lamportsAmount,
       }
       
@@ -582,23 +621,14 @@ export function CreateBountyPage() {
         console.warn("Expected escrow amount mismatch", { expectedAmount, lamportsAmount })
       }
 
-      let ownerPublicKey: PublicKey
-      try {
-        ownerPublicKey = new PublicKey(publicKeyBase58)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown public key error'
-        addDebugLog('OWNER_PUBLIC_KEY_CONSTRUCTION_FAILURE', {
-          error: message,
-          base58: publicKeyBase58,
-        })
-        throw new Error(`Unable to parse wallet public key: ${message}`)
-      }
+      const ownerPublicKey = walletPublicKey
 
       addDebugLog('PUBLIC_KEY_VALIDATION', {
         originalEqualsRebuilt: publicKeyBase58 === ownerPublicKey.toBase58(),
         originalHasBn: (publicKey as any)?._bn !== undefined,
         rebuiltHasBn: (ownerPublicKey as any)?._bn !== undefined,
         base58Available: !!publicKeyBase58,
+        snapshotBase58: walletPublicKeyBase58,
       })
 
       const [escrowPda] = await PublicKey.findProgramAddress(
