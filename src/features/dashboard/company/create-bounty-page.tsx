@@ -338,6 +338,11 @@ export function CreateBountyPage() {
         setFundingError(`Invalid escrow amount: ${lamportsAmount}. Please check your reward and submission values.`)
         return
       }
+
+      if (!Number.isSafeInteger(lamportsAmount) || lamportsAmount === Number.MAX_SAFE_INTEGER) {
+        setFundingError("Escrow amount exceeds supported range. Please reduce your reward or max submissions.")
+        return
+      }
       
       // Test BN creation early to catch any issues
       new BN(lamportsAmount.toString())
@@ -520,15 +525,23 @@ export function CreateBountyPage() {
         console.warn("Expected escrow amount mismatch", { expectedAmount, lamportsAmount })
       }
 
+      const ownerPublicKey = new PublicKey(publicKey.toBase58())
+
+      addDebugLog('PUBLIC_KEY_VALIDATION', {
+        originalEqualsRebuilt: publicKey.toBase58() === ownerPublicKey.toBase58(),
+        originalHasBn: (publicKey as any)?._bn !== undefined,
+        rebuiltHasBn: (ownerPublicKey as any)?._bn !== undefined
+      })
+
       const [escrowPda] = await PublicKey.findProgramAddress(
-        [Buffer.from("bounty-escrow"), publicKey.toBuffer()],
+        [Buffer.from("bounty-escrow"), ownerPublicKey.toBuffer()],
         program.programId
       );
 
       addDebugLog('PDA_DERIVATION', {
         escrowPda: escrowPda.toBase58(),
         programId: program.programId.toBase58(),
-        owner: publicKey.toBase58()
+  owner: ownerPublicKey.toBase58()
       })
 
       // Check if the account already exists
@@ -549,7 +562,7 @@ export function CreateBountyPage() {
         throw new Error(`Invalid escrow amount: ${lamportsAmount}`)
       }
       
-      if (lamportsAmount > Number.MAX_SAFE_INTEGER) {
+      if (!Number.isSafeInteger(lamportsAmount) || lamportsAmount === Number.MAX_SAFE_INTEGER) {
         throw new Error(`Escrow amount too large: ${lamportsAmount}`)
       }
       
@@ -577,7 +590,7 @@ export function CreateBountyPage() {
             .initialize(amountBn)
             .accounts({
               vault: escrowPda,
-              owner: publicKey,
+              owner: ownerPublicKey,
               systemProgram: SystemProgram.programId,
             })
             .rpc();
@@ -598,7 +611,7 @@ export function CreateBountyPage() {
             .deposit(amountBn)
             .accounts({
               vault: escrowPda,
-              owner: publicKey,
+              owner: ownerPublicKey,
               systemProgram: SystemProgram.programId,
             })
             .rpc();
