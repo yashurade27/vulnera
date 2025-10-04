@@ -33,7 +33,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({
       hasError: true,
       error,
-      errorInfo: errorInfo.componentStack
+      errorInfo: errorInfo.componentStack || null
     })
 
     // Log to external service if needed
