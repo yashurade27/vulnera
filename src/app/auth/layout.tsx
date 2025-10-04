@@ -10,9 +10,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="flex-grow container mx-auto px-25 py-10 flex items-center justify-center">
-        {children}
-      </main>
+      <main className="flex-grow container mx-auto px-25 py-10 flex items-center justify-center">{children}</main>
       <Footer />
     </div>
   )
