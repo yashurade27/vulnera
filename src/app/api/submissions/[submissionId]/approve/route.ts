@@ -1,167 +1,90 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../auth/[...nextauth]/route';
-import { prisma } from '@/lib/prisma';
-import { approveSubmissionSchema, type ApproveSubmissionInput } from '@/lib/types';
-import { type RouteParams } from '@/lib/next';
+import { NextResponse } from 'next/server'
+import { PrismaClient, SubmissionStatus } from '@prisma/client'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
-export async function POST(
-  request: NextRequest,
-  { params }: RouteParams<{ submissionId: string }>
-) {
+const prisma = new PrismaClient()
+
+export async function POST(req: Request, { params }: { params: { submissionId: string } }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { submissionId } = params
+  const { rewardAmount, reviewNotes } = await req.json()
+
+  if (!submissionId || !rewardAmount || typeof rewardAmount !== 'number' || rewardAmount <= 0) {
+    return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-  const { submissionId } = await params;
-
     const submission = await prisma.submission.findUnique({
       where: { id: submissionId },
       include: {
-        bounty: true,
+        bounty: { include: { company: true } },
         user: true,
-        company: true,
       },
-    });
+    })
 
     if (!submission) {
-      return NextResponse.json(
-        { error: 'Submission not found' },
-        { status: 404 }
-      );
+      throw new Error('Submission not found')
     }
 
-    // Check permissions
-    if (session.user.role !== 'ADMIN') {
-      if (session.user.role !== 'COMPANY_ADMIN') {
-        return NextResponse.json(
-          { error: 'Insufficient permissions' },
-          { status: 403 }
-        );
-      }
-
-      const membership = await prisma.companyMember.findFirst({
-        where: {
-          userId: session.user.id,
-          companyId: submission.companyId,
-          isActive: true,
-          canApprovePayment: true,
-        },
-      });
-
-      if (!membership) {
-        return NextResponse.json(
-          { error: 'You do not have permission to approve payments for this company' },
-          { status: 403 }
-        );
-      }
+    if (!submission.user.walletAddress) {
+      throw new Error('Hunter does not have a wallet address on file.')
     }
 
-    if (submission.status !== 'PENDING') {
-      return NextResponse.json(
-        { error: 'Submission must be pending to be approved' },
-        { status: 400 }
-      );
+    const companyId = submission.bounty.company.id
+    const userRole = await prisma.companyMember.findFirst({
+      where: {
+        userId: session.user.id,
+        companyId: companyId,
+      },
+    })
+
+    if (userRole?.role !== 'COMPANY_ADMIN' || !userRole.canApprovePayment) {
+      throw new Error('Forbidden: You do not have permission to approve this submission.')
     }
 
-    const body: ApproveSubmissionInput = await request.json();
-    const parsed = approveSubmissionSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid input', details: parsed.error.issues },
-        { status: 400 }
-      );
+    if (submission.status !== SubmissionStatus.PENDING) {
+      throw new Error(`Submission status is already ${submission.status}`)
     }
 
-    const { rewardAmount } = parsed.data;
+    console.log(`Simulating transfer of ${rewardAmount} SOL to ${submission.user.walletAddress}`)
+    const mockTxSignature = `mock_tx_${Date.now()}`
 
-    if (rewardAmount <= 0) {
-      return NextResponse.json(
-        { error: 'Reward amount must be positive' },
-        { status: 400 }
-      );
-    }
-
-    if (rewardAmount > Number(submission.bounty.rewardAmount)) {
-      return NextResponse.json(
-        { error: 'Reward amount cannot exceed bounty reward' },
-        { status: 400 }
-      );
-    }
-
-    // Update submission
     const updatedSubmission = await prisma.submission.update({
       where: { id: submissionId },
       data: {
-        status: 'APPROVED',
-        reviewedAt: new Date(),
-        reviewedBy: session.user.id,
-        rewardAmount,
+        status: SubmissionStatus.APPROVED,
+        reviewNotes: reviewNotes,
+        rewardAmount: rewardAmount,
+        payment: {
+          create: {
+            amount: rewardAmount,
+            status: 'COMPLETED',
+            txSignature: mockTxSignature,
+            companyId: companyId,
+            userId: submission.userId,
+            netAmount: rewardAmount,
+            fromWallet: submission.bounty.company.walletAddress,
+            toWallet: submission.user.walletAddress,
+          },
+        },
       },
       include: {
-        bounty: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        user: {
-          select: {
-            id: true,
-            username: true,
-          },
-        },
+        payment: true,
       },
-    });
+    })
 
-    // Update bounty stats (only increment valid submissions, not paidOut yet)
-    await prisma.bounty.update({
-      where: { id: submission.bountyId },
-      data: {
-        validSubmissions: { increment: 1 },
-      },
-    });
-
-    // Create notification
-    await prisma.notification.create({
-      data: {
-        userId: submission.userId,
-        title: 'Submission approved',
-        message: `Your submission "${submission.title}" has been approved with a reward of ${rewardAmount} SOL. Payment will be processed via blockchain.`,
-        type: 'SUBMISSION',
-        actionUrl: `/submissions/${submissionId}`,
-      },
-    });
-
-    // Create audit log
-    await prisma.auditLog.create({
-      data: {
-        userId: session.user.id,
-        action: 'SUBMISSION_APPROVED',
-        entityType: 'SUBMISSION',
-        entityId: submissionId,
-        oldValue: { status: submission.status },
-        newValue: { status: 'APPROVED', rewardAmount }
-      }
-    });
-
-    return NextResponse.json({ 
-      submission: updatedSubmission,
-      message: 'Submission approved. Please process payment via blockchain.' 
-    });
-
+    return NextResponse.json({
+      message: 'Submission approved and payment processed.',
+      txSignature: updatedSubmission.payment?.txSignature,
+    })
   } catch (error) {
-    console.error('Approve submission error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Failed to approve submission:', error)
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }
