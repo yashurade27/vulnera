@@ -47,52 +47,61 @@ export function LeaderboardPage() {
 
     const loadLeaderboard = async () => {
       try {
-        setLoading(true)
-        setError(null)
+        setLoading(true);
+        setError(null);
 
-        const response = await fetch(
-          `/api/users/leaderboard?limit=50&timeframe=${timeframe === "all" ? "all" : timeframe === "week" ? "week" : "month"}`,
-          { credentials: "include" },
-        )
+        // Simulate API call
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
-        if (!response.ok) {
-          throw new Error("Unable to load leaderboard")
-        }
+        const sampleLeaderboard: LeaderboardEntry[] = [
+          {
+            id: "1",
+            username: "bounty_hunter_1",
+            fullName: "John Doe",
+            avatarUrl: null,
+            country: "USA",
+            totalEarnings: 1500,
+            totalBounties: 5,
+            reputation: 100,
+            rank: 1,
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: "2",
+            username: "bounty_hunter_2",
+            fullName: "Jane Smith",
+            avatarUrl: null,
+            country: "Canada",
+            totalEarnings: 1200,
+            totalBounties: 4,
+            reputation: 80,
+            rank: 2,
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: "3",
+            username: "bounty_hunter_3",
+            fullName: "Peter Jones",
+            avatarUrl: null,
+            country: "UK",
+            totalEarnings: 1000,
+            totalBounties: 3,
+            reputation: 60,
+            rank: 3,
+            createdAt: new Date().toISOString(),
+          },
+        ];
 
-        const payload = await response.json()
-        if (cancelled) {
-          return
-        }
-
-        const mapped: LeaderboardEntry[] = Array.isArray(payload?.leaderboard)
-          ? payload.leaderboard.map((entry: any) => ({
-              id: entry?.id,
-              username: entry?.username ?? "hunter",
-              fullName: entry?.fullName ?? null,
-              avatarUrl: entry?.avatarUrl ?? null,
-              country: entry?.country ?? null,
-              totalEarnings: Number(entry?.totalEarnings ?? 0),
-              totalBounties: Number(entry?.totalBounties ?? 0),
-              reputation: Number(entry?.reputation ?? 0),
-              rank: entry?.rank ?? null,
-              createdAt: entry?.createdAt ?? new Date().toISOString(),
-            }))
-          : []
-
-        setEntries(mapped)
+        setEntries(sampleLeaderboard);
       } catch (err) {
-        console.error(err)
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Unexpected error loading leaderboard")
-        }
+        console.error(err);
+        setError(err instanceof Error ? err.message : "Unexpected error loading leaderboard");
       } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
+        setLoading(false);
       }
-    }
+    };
 
-    void loadLeaderboard()
+    void loadLeaderboard();
 
     return () => {
       cancelled = true

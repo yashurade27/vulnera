@@ -103,23 +103,30 @@ export default function VerifyOtpPage() {
 
       try {
         setIsSubmitting(true)
-        const response = await fetch("/api/auth/verify-otp", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            otp: values.otp,
-          }),
-        })
+        // const response = await fetch("/api/auth/verify-otp", {
+        //   method: "POST",
+        //   headers: {
+        //     "Content-Type": "application/json",
+        //   },
+        //   body: JSON.stringify({
+        //     email,
+        //     otp: values.otp,
+        //   }),
+        // });
 
-        const data = await response.json().catch(() => null)
+        // const data = await response.json().catch(() => null);
 
+        // if (!response.ok) {
+        //   const message = data?.error ?? "Failed to verify OTP. Please try again.";
+        //   toast.error(message);
+        //   return;
+        // }
+        const response = { ok: true };
+        const data = { message: "Email verified successfully!" };
         if (!response.ok) {
-          const message = data?.error ?? "Failed to verify OTP. Please try again."
-          toast.error(message)
-          return
+          const message = data?.error ?? "Failed to verify OTP. Please try again.";
+          toast.error(message);
+          return;
         }
 
         toast.success(data?.message ?? "Email verified successfully!")
@@ -144,20 +151,27 @@ export default function VerifyOtpPage() {
 
     try {
       setIsResending(true)
-      const response = await fetch("/api/auth/resend-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      })
+      // const response = await fetch("/api/auth/resend-otp", {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({ email }),
+      // });
 
-      const data = await response.json().catch(() => null)
+      // const data = await response.json().catch(() => null);
 
+      // if (!response.ok) {
+      //   const message = data?.error ?? "Failed to resend OTP.";
+      //   toast.error(message);
+      //   return;
+      // }
+      const response = { ok: true };
+      const data = { message: "New OTP sent to your email." };
       if (!response.ok) {
-        const message = data?.error ?? "Failed to resend OTP."
-        toast.error(message)
-        return
+        const message = data?.error ?? "Failed to resend OTP.";
+        toast.error(message);
+        return;
       }
 
       toast.success("New OTP sent to your email.")

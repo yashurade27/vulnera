@@ -56,27 +56,45 @@ export function HunterDashboardPage() {
   useEffect(() => {
     const loadDashboard = async () => {
       if (!session?.user?.id) {
-        setLoading(false)
-        return
+        setLoading(false);
+        return;
       }
       try {
-        setLoading(true)
-        setError(null)
+        setLoading(true);
+        setError(null);
 
-        const [statsRes, submissionsRes] = await Promise.all([
-          fetch(`/api/users/${session.user.id}/stats`, { credentials: "include" }),
-          fetch(`/api/users/${session.user.id}/submissions?status=PENDING&limit=5`, { credentials: "include" }),
-        ])
+        // Simulate API call
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
-        if (!statsRes.ok) {
-          throw new Error("Unable to load stats")
-        }
-        if (!submissionsRes.ok) {
-          throw new Error("Unable to load submissions")
-        }
-
-        const statsPayload = await statsRes.json()
-        const submissionsPayload = await submissionsRes.json()
+        const statsPayload = {
+          stats: {
+            totalEarnings: 1500,
+            approvedSubmissions: 5,
+            totalBounties: 10,
+            averageReward: 300,
+            reputation: 100,
+          },
+        };
+        const submissionsPayload = {
+          submissions: [
+            {
+              id: "sub_1",
+              title: "XSS in Profile Page",
+              status: "PENDING",
+              submittedAt: new Date().toISOString(),
+              bounty: { title: "Harden Profile Security" },
+              company: { name: "TechCorp" },
+            },
+            {
+              id: "sub_2",
+              title: "CSRF in Settings",
+              status: "PENDING",
+              submittedAt: new Date().toISOString(),
+              bounty: { title: "Secure User Settings" },
+              company: { name: "Innovate LLC" },
+            },
+          ],
+        };
 
         setStats({
           totalEarnings: Number(statsPayload?.stats?.totalEarnings ?? 0),
@@ -84,7 +102,7 @@ export function HunterDashboardPage() {
           totalBounties: Number(statsPayload?.stats?.totalBounties ?? 0),
           averageReward: Number(statsPayload?.stats?.averageReward ?? 0),
           reputation: Number(statsPayload?.stats?.reputation ?? 0),
-        })
+        });
 
         const mappedSubmissions: PendingSubmission[] = Array.isArray(submissionsPayload?.submissions)
           ? submissionsPayload.submissions.map((submission: any) => ({
@@ -95,18 +113,18 @@ export function HunterDashboardPage() {
               bountyTitle: submission?.bounty?.title ?? "Bounty",
               companyName: submission?.company?.name ?? undefined,
             }))
-          : []
+          : [];
 
-        setPendingSubmissions(mappedSubmissions)
+        setPendingSubmissions(mappedSubmissions);
       } catch (err) {
-        console.error(err)
-        setError(err instanceof Error ? err.message : "Unexpected error loading dashboard")
+        console.error(err);
+        setError(err instanceof Error ? err.message : "Unexpected error loading dashboard");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    void loadDashboard()
+    void loadDashboard();
   }, [session?.user?.id])
 
   if (status === "loading") {

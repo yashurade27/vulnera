@@ -57,15 +57,55 @@ export interface AdminReportDetailResponse {
 }
 
 async function fetchAdminReportDetail(reportId: string): Promise<AdminReportDetailResponse> {
-  const response = await fetch(`/api/reports/${reportId}`, {
-    credentials: 'include',
-  })
+  // Simulate API call
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
-  if (!response.ok) {
-    throw new Error('Failed to load report details')
-  }
-
-  return response.json() as Promise<AdminReportDetailResponse>
+  return {
+    report: {
+      id: reportId,
+      title: "Unfair Rejection of Submission",
+      description: "My submission was unfairly rejected without proper explanation.",
+      type: "UNFAIR_REJECTION",
+      status: "OPEN",
+      evidence: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      resolvedAt: null,
+      resolution: null,
+      actionTaken: null,
+      reporter: {
+        id: "user_123",
+        username: "bounty_hunter_1",
+        email: "hunter@example.com",
+        fullName: "John Doe",
+        role: "BOUNTY_HUNTER",
+      },
+      submission: {
+        id: "sub_789",
+        title: "XSS Vulnerability in Dashboard",
+        description: "A cross-site scripting vulnerability exists in the main dashboard.",
+        status: "REJECTED",
+        submittedAt: new Date().toISOString(),
+        bounty: {
+          id: "bounty_456",
+          title: "Harden Dashboard Security",
+          company: {
+            id: "comp_789",
+            name: "TechCorp",
+            slug: "techcorp",
+          },
+        },
+      },
+      reportedUser: null,
+      reportedCompany: {
+        id: "comp_789",
+        name: "TechCorp",
+        slug: "techcorp",
+        isVerified: true,
+        isActive: true,
+      },
+    },
+  };
 }
 
 export function useAdminReportDetail(reportId?: string) {

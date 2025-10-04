@@ -63,44 +63,56 @@ export function CompanySubmissionsPage() {
   const [error, setError] = useState<string | null>(null)
 
   const loadCompany = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
     try {
-      const response = await fetch("/api/companies/my-company", {
-        credentials: "include",
-      })
-      const payload = await response.json()
-      if (!response.ok) {
-        throw new Error(payload?.error ?? "Unable to load company context")
-      }
-      const companyRecord: CompanySummary | undefined = payload?.company
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const payload = {
+        company: {
+          id: "comp_123",
+          name: "Vulnera Inc.",
+        },
+      };
+      const companyRecord: CompanySummary | undefined = payload?.company;
       if (!companyRecord?.id) {
-        throw new Error("No company is linked to this account")
+        throw new Error("No company is linked to this account");
       }
-      setCompany(companyRecord)
+      setCompany(companyRecord);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unexpected error")
+      setError(err instanceof Error ? err.message : "Unexpected error");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [])
+  }, []);
 
   const loadSubmissions = useCallback(
     async (companyId: string, status: string) => {
-      setIsRefreshing(true)
-      setError(null)
+      setIsRefreshing(true);
+      setError(null);
       try {
-        const params = new URLSearchParams({ companyId, limit: "100" })
-        if (status !== "ALL") {
-          params.set("status", status)
-        }
-        const response = await fetch(`/api/submissions?${params.toString()}`, {
-          credentials: "include",
-        })
-        const payload = await response.json()
-        if (!response.ok) {
-          throw new Error(payload?.error ?? "Unable to load submissions")
-        }
+        // Simulate API call
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const payload = {
+          submissions: [
+            {
+              id: "sub_1",
+              title: "XSS in Profile Page",
+              status: "PENDING",
+              bounty: { title: "Harden Profile Security", bountyType: "SECURITY" },
+              submittedAt: new Date().toISOString(),
+              user: { fullName: "John Doe", username: "hunter1" },
+            },
+            {
+              id: "sub_2",
+              title: "CSRF in Settings",
+              status: "APPROVED",
+              bounty: { title: "Secure User Settings", bountyType: "SECURITY" },
+              submittedAt: new Date().toISOString(),
+              user: { fullName: "Jane Smith", username: "hunter2" },
+            },
+          ],
+        };
         const mapped: SubmissionRow[] = Array.isArray(payload?.submissions)
           ? payload.submissions.map((submission: any) => ({
               id: submission?.id,
@@ -116,16 +128,16 @@ export function CompanySubmissionsPage() {
                 "Anonymous Hunter",
               reporterUsername: submission?.user?.username ?? submission?.hunter?.username ?? null,
             }))
-          : []
-        setEntries(mapped)
+          : [];
+        setEntries(mapped);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unexpected error")
+        setError(err instanceof Error ? err.message : "Unexpected error");
       } finally {
-        setIsRefreshing(false)
+        setIsRefreshing(false);
       }
     },
     []
-  )
+  );
 
   useEffect(() => {
     void loadCompany()

@@ -32,110 +32,90 @@ export function NotificationsPage() {
 
   const loadNotifications = async (selectedFilter: NotificationFilter) => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
-      const params = new URLSearchParams({ limit: "50" })
-      if (selectedFilter === "unread") {
-        params.set("isRead", "false")
-      }
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      const response = await fetch(`/api/notifications?${params.toString()}`, { credentials: "include" })
-      if (!response.ok) {
-        throw new Error("Unable to load notifications")
-      }
+      const sampleNotifications: NotificationItem[] = [
+        {
+          id: "1",
+          title: "New Submission Received",
+          message: "A new submission has been received for your bounty 'Harden Profile Security'.",
+          type: "SUBMISSION",
+          actionUrl: "/dashboard/company/submissions/sub_1",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: "2",
+          title: "Payment Sent",
+          message: "A payment of 500 SOL has been sent for your approved submission.",
+          type: "PAYMENT",
+          actionUrl: "/submissions/sub_2",
+          isRead: true,
+          createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          readAt: new Date().toISOString(),
+        },
+      ];
 
-      const payload = await response.json()
-      const mapped: NotificationItem[] = Array.isArray(payload?.notifications)
-        ? payload.notifications.map((item: any) => ({
-            id: item?.id,
-            title: item?.title ?? "Notification",
-            message: item?.message ?? "",
-            type: item?.type ?? "GENERAL",
-            actionUrl: item?.actionUrl ?? null,
-            isRead: Boolean(item?.isRead),
-            createdAt: item?.createdAt ?? new Date().toISOString(),
-            readAt: item?.readAt ?? null,
-          }))
-        : []
-
-      setItems(mapped)
+      setItems(sampleNotifications.filter((item) => selectedFilter === "all" || !item.isRead));
     } catch (err) {
-      console.error(err)
-      setError(err instanceof Error ? err.message : "Unexpected error loading notifications")
+      console.error(err);
+      setError(err instanceof Error ? err.message : "Unexpected error loading notifications");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    void loadNotifications(filter)
-  }, [filter])
+    void loadNotifications(filter);
+  }, [filter]);
 
   const markRead = async (id: string) => {
     try {
-      setProcessingIds((prev) => ({ ...prev, [id]: true }))
-      const response = await fetch(`/api/notifications/${id}`, {
-        method: "PATCH",
-        credentials: "include",
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to mark notification as read")
-      }
-
-      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, isRead: true, readAt: new Date().toISOString() } : item)))
+      setProcessingIds((prev) => ({ ...prev, [id]: true }));
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, isRead: true, readAt: new Date().toISOString() } : item)));
     } catch (error) {
-      console.error(error)
-      toast.error(error instanceof Error ? error.message : "Unable to mark as read")
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to mark as read");
     } finally {
-      setProcessingIds((prev) => ({ ...prev, [id]: false }))
+      setProcessingIds((prev) => ({ ...prev, [id]: false }));
     }
-  }
+  };
 
   const deleteNotification = async (id: string) => {
     try {
-      setProcessingIds((prev) => ({ ...prev, [id]: true }))
-      const response = await fetch(`/api/notifications/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to delete notification")
-      }
-
-      setItems((prev) => prev.filter((item) => item.id !== id))
-      toast.success("Notification removed")
+      setProcessingIds((prev) => ({ ...prev, [id]: true }));
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      toast.success("Notification removed");
     } catch (error) {
-      console.error(error)
-      toast.error(error instanceof Error ? error.message : "Unable to delete notification")
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to delete notification");
     } finally {
-      setProcessingIds((prev) => ({ ...prev, [id]: false }))
+      setProcessingIds((prev) => ({ ...prev, [id]: false }));
     }
-  }
+  };
 
   const markAllRead = async () => {
     try {
-      setMarkingAll(true)
-      const response = await fetch("/api/notifications/mark-all-read", {
-        method: "POST",
-        credentials: "include",
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to mark notifications")
-      }
-
-      setItems((prev) => prev.map((item) => ({ ...item, isRead: true, readAt: new Date().toISOString() })))
-      toast.success("All notifications marked as read")
+      setMarkingAll(true);
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setItems((prev) => prev.map((item) => ({ ...item, isRead: true, readAt: new Date().toISOString() })));
+      toast.success("All notifications marked as read");
     } catch (error) {
-      console.error(error)
-      toast.error(error instanceof Error ? error.message : "Unable to mark notifications")
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to mark notifications");
     } finally {
-      setMarkingAll(false)
+      setMarkingAll(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-background">

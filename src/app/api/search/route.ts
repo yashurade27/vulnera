@@ -1,29 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { globalSearchQuerySchema, type GlobalSearchQuery } from '@/lib/types';
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { globalSearchQuerySchema, type GlobalSearchQuery } from '@/lib/types'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(request.url)
 
     // Parse query parameters
-    const query: any = {};
-    if (searchParams.get('q')) query.q = searchParams.get('q')!;
-    if (searchParams.get('type')) query.type = searchParams.get('type')!;
-    if (searchParams.get('limit')) query.limit = searchParams.get('limit')!;
+    const query: any = {}
+    if (searchParams.get('q')) query.q = searchParams.get('q')!
+    if (searchParams.get('type')) query.type = searchParams.get('type')!
+    if (searchParams.get('limit')) query.limit = searchParams.get('limit')!
 
-    const parsed = globalSearchQuerySchema.safeParse(query);
+    const parsed = globalSearchQuerySchema.safeParse(query)
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid query parameters', details: parsed.error.issues },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid query parameters', details: parsed.error.issues }, { status: 400 })
     }
 
-    const { q, type, limit = 20 } = parsed.data;
+    const { q, type, limit = 20 } = parsed.data
 
-    const searchTerm = q.toLowerCase();
-    const results: any = {};
+    const searchTerm = q.toLowerCase()
+    const results: any = {}
 
     // Search bounties if type is not specified or includes bounties
     if (!type || type === 'bounties') {
@@ -55,19 +52,19 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: 'desc' },
         take: limit,
-      });
+      })
 
-      results.bounties = bounties.map(bounty => ({
+      results.bounties = bounties.map((bounty) => ({
         id: bounty.id,
         title: bounty.title,
         description: bounty.description.substring(0, 200) + (bounty.description.length > 200 ? '...' : ''),
         bountyType: bounty.bountyType,
         rewardAmount: bounty.rewardAmount,
         company: bounty.company,
-        submissionsCount: bounty._count.submissions,
+        submissionsCount: bounty._count?.submissions,
         createdAt: bounty.createdAt,
         endsAt: bounty.endsAt,
-      }));
+      }))
     }
 
     // Search companies if type is not specified or includes companies
@@ -97,13 +94,15 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: 'desc' },
         take: limit,
-      });
+      })
 
-      results.companies = companies.map(company => ({
+      results.companies = companies.map((company) => ({
         id: company.id,
         name: company.name,
         slug: company.slug,
-        description: company.description?.substring(0, 200) + (company.description && company.description.length > 200 ? '...' : ''),
+        description:
+          company.description?.substring(0, 200) +
+          (company.description && company.description.length > 200 ? '...' : ''),
         logoUrl: company.logoUrl,
         industry: company.industry,
         companySize: company.companySize,
@@ -112,7 +111,7 @@ export async function GET(request: NextRequest) {
         activeBounties: company.activeBounties,
         resolvedVulnerabilities: company.resolvedVulnerabilities,
         createdAt: company.createdAt,
-      }));
+      }))
     }
 
     // Search users if type is not specified or includes users
@@ -143,9 +142,9 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { reputation: 'desc' },
         take: limit,
-      });
+      })
 
-      results.users = users.map(user => ({
+      results.users = users.map((user) => ({
         id: user.id,
         username: user.username,
         fullName: user.fullName,
@@ -158,7 +157,7 @@ export async function GET(request: NextRequest) {
         reputation: user.reputation,
         rank: user.rank,
         createdAt: user.createdAt,
-      }));
+      }))
     }
 
     return NextResponse.json({
@@ -170,13 +169,9 @@ export async function GET(request: NextRequest) {
         companies: results.companies?.length || 0,
         users: results.users?.length || 0,
       },
-    });
-
+    })
   } catch (error) {
-    console.error('Global search error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Global search error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

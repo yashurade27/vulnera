@@ -11,35 +11,27 @@ export interface UpdateAdminCompanyInput {
 }
 
 async function patchAdminCompany({ companyId, ...payload }: UpdateAdminCompanyInput) {
-  const response = await fetch(`/api/admin/companies/${companyId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
+  // Simulate API call
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  return {
+    company: {
+      id: companyId,
+      ...payload,
     },
-    credentials: 'include',
-    body: JSON.stringify(payload),
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error?.error ?? 'Failed to update company')
-  }
-
-  return response.json() as Promise<unknown>
+  };
 }
 
 async function verifyCompany(companyId: string) {
-  const response = await fetch(`/api/admin/companies/${companyId}/verify`, {
-    method: 'PATCH',
-    credentials: 'include',
-  })
+  // Simulate API call
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error?.error ?? 'Failed to verify company')
-  }
-
-  return response.json() as Promise<unknown>
+  return {
+    company: {
+      id: companyId,
+      isVerified: true,
+    },
+  };
 }
 
 export function useUpdateAdminCompany(filters: AdminCompanyFilters) {

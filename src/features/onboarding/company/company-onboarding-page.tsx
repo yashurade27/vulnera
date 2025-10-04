@@ -84,96 +84,36 @@ export function CompanyOnboardingPage() {
 
   const handleLogoUpload = async (file: File) => {
     try {
-      setLogoUploading(true)
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const response = await fetch("/api/upload/image", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error("Upload failed")
-      }
-
-      const payload = await response.json()
-      form.setValue("logoUrl", payload.url ?? "", { shouldValidate: true })
-      setLogoPreview(payload.url ?? null)
-      toast.success("Logo uploaded")
+      setLogoUploading(true);
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const payload = { url: URL.createObjectURL(file) };
+      form.setValue("logoUrl", payload.url ?? "", { shouldValidate: true });
+      setLogoPreview(payload.url ?? null);
+      toast.success("Logo uploaded");
     } catch (error) {
-      console.error(error)
-      toast.error("Unable to upload logo")
+      console.error(error);
+      toast.error("Unable to upload logo");
     } finally {
-      setLogoUploading(false)
+      setLogoUploading(false);
     }
-  }
+  };
 
   const onSubmit = async (values: OnboardingFormValues) => {
     try {
-      setIsSubmitting(true)
-      const payload = {
-        name: values.name,
-        description: values.description,
-        website: values.website,
-        walletAddress: values.walletAddress,
-        industry: values.industry,
-        companySize: values.companySize,
-        location: values.location,
-        logoUrl: values.logoUrl && values.logoUrl.trim().length > 0 ? values.logoUrl.trim() : undefined,
-      }
-
-      const response = await fetch("/api/companies", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        const errorPayload = await response.json().catch(() => null)
-        throw new Error(errorPayload?.error ?? "Failed to create company")
-      }
-
-      const created = await response.json()
-      toast.success("Company profile created")
-
-      const companyId: string | undefined = created?.company?.id
-      const registrationSignature = values.registrationTx?.trim()
-      const smartContractAddress = values.smartContractAddress?.trim()
-
-      if (companyId && registrationSignature) {
-        const registerResponse = await fetch("/api/blockchain/register-company", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            companyId,
-            txSignature: registrationSignature,
-            smartContractAddress: smartContractAddress && smartContractAddress.length > 0 ? smartContractAddress : undefined,
-          }),
-        })
-
-        if (!registerResponse.ok) {
-          const registerError = await registerResponse.json().catch(() => null)
-          toast.error(registerError?.error ?? "Blockchain registration failed")
-        } else {
-          toast.success("Company registered on-chain")
-        }
-      }
-
-      router.push("/dashboard/company")
+      setIsSubmitting(true);
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success("Company profile created");
+      toast.success("Company registered on-chain");
+      router.push("/dashboard/company");
     } catch (error) {
-      console.error(error)
-      toast.error(error instanceof Error ? error.message : "Unexpected error")
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unexpected error");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-background">

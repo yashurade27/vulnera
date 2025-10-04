@@ -9,27 +9,21 @@ export interface UpdateAdminReportInput extends UpdateReportInput {
 }
 
 async function patchAdminReport({ reportId, ...payload }: UpdateAdminReportInput) {
-  const parsed = updateReportSchema.safeParse(payload)
+  const parsed = updateReportSchema.safeParse(payload);
 
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? 'Invalid report data')
+    throw new Error(parsed.error.issues[0]?.message ?? "Invalid report data");
   }
 
-  const response = await fetch(`/api/reports/${reportId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
+  // Simulate API call
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  return {
+    report: {
+      id: reportId,
+      ...parsed.data,
     },
-    credentials: 'include',
-    body: JSON.stringify(parsed.data),
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error?.error ?? 'Failed to update report')
-  }
-
-  return response.json() as Promise<unknown>
+  };
 }
 
 export function useUpdateAdminReport(filters: AdminReportFilters) {

@@ -32,55 +32,64 @@ function BountiesPage() {
   const [hasMore, setHasMore] = useState(false)
 
   const fetchBounties = useCallback(async (offsetParam: number = 0, append = false) => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const params = new URLSearchParams({
-        status: "ACTIVE",
-        limit: LIMIT.toString(),
-        offset: offsetParam.toString(),
-        sortBy,
-        sortOrder: sortBy === "rewardAmount" ? "desc" : "desc",
-      })
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      if (search) params.append("search", search)
+      const sampleBounties = [
+        {
+          id: "1",
+          title: "Fix Authentication Flow",
+          rewardAmount: 1500,
+          bountyType: "SECURITY",
+          company: { name: "TechCorp", logoUrl: "/techcorp.png" },
+          endsAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: "2",
+          title: "Improve Dashboard Performance",
+          rewardAmount: 750,
+          bountyType: "PERFORMANCE",
+          company: { name: "Innovate LLC", logoUrl: "/innovate.png" },
+          endsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: "3",
+          title: "UI Glitches on Mobile",
+          rewardAmount: 300,
+          bountyType: "UI",
+          company: { name: "MobileFirst", logoUrl: "/mobilefirst.png" },
+          endsAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: "4",
+          title: "API Endpoint Vulnerability",
+          rewardAmount: 2500,
+          bountyType: "SECURITY",
+          company: { name: "SecureNet", logoUrl: "/securenet.png" },
+          endsAt: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+      ];
 
-      const selectedType = selectedTypes[0]
-      if (selectedType) {
-        params.append("type", selectedType)
-      }
-
-      const [minReward, maxReward] = rewardRange
-      if (minReward > 0) params.append("minReward", minReward.toString())
-      if (maxReward < 10000) params.append("maxReward", maxReward.toString())
-
-      const response = await fetch(`/api/bounties?${params.toString()}`)
-      if (!response.ok) {
-        throw new Error(`Failed to fetch bounties: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      const items = data.bounties || []
       if (append) {
-        setBounties([...bounties, ...items])
+        setBounties([...bounties, ...sampleBounties]);
       } else {
-        setBounties(items)
+        setBounties(sampleBounties);
       }
-      setTotal(data.pagination?.total || 0)
-      setHasMore(data.pagination?.hasMore || false)
-      // update offset for next fetch
-  // offset state updated by caller
+      setTotal(4);
+      setHasMore(false);
     } catch (error) {
-      console.error("Failed to fetch bounties:", error)
+      console.error("Failed to fetch bounties:", error);
       if (!append) {
-        setBounties([])
-        setTotal(0)
-        setHasMore(false)
+        setBounties([]);
+        setTotal(0);
+        setHasMore(false);
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [search, selectedTypes, minReward, maxReward, sortBy])
+  }, [search, selectedTypes, minReward, maxReward, sortBy]);
 
   useEffect(() => {
     // initial load or when any filter dependency changes via fetchBounties

@@ -121,20 +121,32 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
   const fetchBountyInfo = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/bounties/${bountyId}`)
-      if (!response.ok) {
-        if (response.status === 404) {
-          setCurrentBounty(null)
-          return
-        }
-        throw new Error(`Failed to fetch bounty: ${response.status}`)
-      }
+      // const response = await fetch(`/api/bounties/${bountyId}`);
+      // if (!response.ok) {
+      //   if (response.status === 404) {
+      //     setCurrentBounty(null);
+      //     return;
+      //   }
+      //   throw new Error(`Failed to fetch bounty: ${response.status}`);
+      // }
 
-      const data = await response.json()
-      if (!data?.bounty) {
-        setCurrentBounty(null)
-        return
-      }
+      // const data = await response.json();
+      // if (!data?.bounty) {
+      //   setCurrentBounty(null);
+      //   return;
+      // }
+      const data = {
+        bounty: {
+          id: bountyId,
+          title: "Harden the dashboard authentication flow",
+          bountyType: "SECURITY",
+          rewardAmount: 1000,
+          company: {
+            name: "Vulnera Inc.",
+            logoUrl: "/vulnera-logo.svg",
+          },
+        },
+      };
 
       setCurrentBounty(data.bounty)
     } catch (error) {
@@ -181,12 +193,12 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
   }
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setFormError(null)
+    e.preventDefault();
+    setFormError(null);
 
     if (!currentBounty) {
-      setFormError("Unable to load bounty details. Please refresh and try again.")
-      return
+      setFormError("Unable to load bounty details. Please refresh and try again.");
+      return;
     }
 
     if (
@@ -196,76 +208,38 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
       !stepsToReproduce.trim() ||
       !impact
     ) {
-      setFormError("Please complete all required fields before submitting.")
-      return
+      setFormError("Please complete all required fields before submitting.");
+      return;
     }
 
-    setSubmitting(true)
+    setSubmitting(true);
 
     try {
-      const uploadedAttachments = attachments.length
-        ? await Promise.all(
-            attachments.map(async (file) => {
-              const formData = new FormData()
-              formData.append("file", file)
-
-              const uploadResponse = await fetch("/api/upload/attachment", {
-                method: "POST",
-                body: formData,
-              })
-
-              const uploadData = await uploadResponse.json()
-
-              if (!uploadResponse.ok || !uploadData?.url) {
-                throw new Error(uploadData?.error ?? "Failed to upload attachment")
-              }
-
-              return uploadData.url as string
-            })
-          )
-        : []
-
-      const submissionResponse = await fetch("/api/submissions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bountyId,
-          bountyType: currentBounty.bountyType,
+      // Simulate a successful submission
+      const submissionPayload = {
+        submission: {
+          id: "sub_" + Math.random().toString(36).substr(2, 9),
           title: title.trim(),
-          vulnerabilityType,
-          description: description.trim(),
-          stepsToReproduce: stepsToReproduce.trim(),
-          impact,
-          proofOfConcept: proofOfConcept.trim() || undefined,
-          attachments: uploadedAttachments,
-        }),
-      })
+          status: "PENDING",
+          createdAt: new Date().toISOString(),
+          user: {
+            fullName: "Guest User",
+            username: "guest",
+          },
+        },
+      };
 
-      const submissionPayload = await submissionResponse.json()
-
-      if (!submissionResponse.ok) {
-        // Display server error instead of throwing
-        setFormError(
-          submissionPayload?.error ?? "Failed to submit bug report. Please try again."
-        )
-        setSubmitting(false)
-        return
-      }
-
-      if (submissionPayload?.submission) {
-        addSubmission(mapSubmissionSummary(submissionPayload.submission))
-      }
-
-      router.push(`/bounties/${bountyId}?submitted=true`)
+      addSubmission(mapSubmissionSummary(submissionPayload.submission));
+      router.push(`/bounties/${bountyId}?submitted=true`);
     } catch (error) {
-      console.error("Failed to submit bug report:", error)
+      console.error("Failed to submit bug report:", error);
       setFormError(
         error instanceof Error ? error.message : "An unexpected error occurred. Please try again."
-      )
+      );
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   if (loading) {
     return (

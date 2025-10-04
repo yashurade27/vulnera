@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import React, { useCallback, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import React, { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   ArrowLeft,
   Building2,
@@ -13,47 +13,60 @@ import {
   Target,
   Shield,
   TrendingUp,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import Link from "next/link"
-import { useBountiesStore } from "@/stores/bounties-store"
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
+import { useBountiesStore } from '@/stores/bounties-store'
 
 export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: string }> }) {
   const { bountyId } = React.use(params)
   const router = useRouter()
-  const {
-    currentBounty,
-    setCurrentBounty,
-    submissions,
-    setSubmissions,
-    loading,
-    setLoading,
-    clearSubmissions,
-  } = useBountiesStore()
+  const { currentBounty, setCurrentBounty, submissions, setSubmissions, loading, setLoading, clearSubmissions } =
+    useBountiesStore()
   const [isCompanyMember, setIsCompanyMember] = useState(false)
 
   const fetchBountyDetails = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/bounties/${bountyId}`)
-      if (!response.ok) {
-        if (response.status === 404) {
-          setCurrentBounty(null)
-          return
-        }
-        throw new Error(`Failed to fetch bounty details: ${response.status}`)
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      const data = {
+        bounty: {
+          id: bountyId,
+          title: 'Harden the dashboard authentication flow',
+          description: "This bounty focuses on improving the security of our dashboard's authentication flow.",
+          requirements: 'A detailed report with a proof of concept is required.',
+          inScope: 'The dashboard login and session management.',
+          outOfScope: 'The marketing website.',
+          guidelines: 'Please follow our responsible disclosure policy.',
+          rewardAmount: 1500,
+          bountyType: 'SECURITY',
+          status: 'ACTIVE',
+          endsAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+          escrowBalanceLamports: 1500000000000,
+          escrowAddress: 'So11111111111111111111111111111111111111112',
+          txSignature: 'mock_tx_signature',
+          company: {
+            name: 'Vulnera Inc.',
+            slug: 'vulnera-inc',
+            logoUrl: '/vulnera-logo.svg',
+            isVerified: true,
+            walletAddress: 'So22222222222222222222222222222222222222222',
+          },
+          stats: {
+            totalSubmissions: 10,
+            paidSubmissions: 2,
+            pendingSubmissions: 3,
+          },
+          _count: {
+            submissions: 10,
+          },
+        },
       }
-
-      const data = await response.json()
-      if (!data?.bounty) {
-        setCurrentBounty(null)
-        return
-      }
-
       setCurrentBounty(data.bounty)
     } catch (error) {
-      console.error("Failed to fetch bounty details:", error)
+      console.error('Failed to fetch bounty details:', error)
     } finally {
       setLoading(false)
     }
@@ -61,30 +74,38 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
 
   const fetchSubmissions = useCallback(async () => {
     try {
-      const response = await fetch(`/api/bounties/${bountyId}/submissions`)
-      if (response.status === 403) {
-        setIsCompanyMember(false)
-        clearSubmissions()
-        return
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      const data = {
+        submissions: [
+          {
+            id: 'sub_1',
+            title: 'XSS in Profile Page',
+            status: 'APPROVED',
+            createdAt: new Date().toISOString(),
+            user: { fullName: 'John Doe', username: 'hunter1' },
+          },
+          {
+            id: 'sub_2',
+            title: 'CSRF in Settings',
+            status: 'PENDING',
+            createdAt: new Date().toISOString(),
+            user: { fullName: 'Jane Smith', username: 'hunter2' },
+          },
+        ],
       }
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch submissions: ${response.status}`)
-      }
-
-      const data = await response.json()
       const normalized = Array.isArray(data?.submissions)
         ? data.submissions.map((submission: any) => ({
             id: submission?.id,
-            title: submission?.title ?? "Submission",
-            status: submission?.status ?? "PENDING",
+            title: submission?.title ?? 'Submission',
+            status: submission?.status ?? 'PENDING',
             createdAt: submission?.createdAt ?? submission?.submittedAt ?? new Date().toISOString(),
             reporter: {
               displayName:
                 submission?.user?.fullName ??
                 submission?.user?.username ??
                 submission?.hunter?.name ??
-                "Anonymous Hunter",
+                'Anonymous Hunter',
               username: submission?.user?.username ?? submission?.hunter?.username ?? null,
             },
           }))
@@ -92,7 +113,7 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
       setSubmissions(normalized)
       setIsCompanyMember(true)
     } catch (error) {
-      console.error("Failed to fetch submissions:", error)
+      console.error('Failed to fetch submissions:', error)
     }
   }, [bountyId, clearSubmissions, setSubmissions])
 
@@ -123,7 +144,7 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
         <div className="text-center">
           <h2 className="text-2xl font-semibold mb-2">Bounty not found</h2>
           <p className="text-muted-foreground mb-4">The bounty you're looking for doesn't exist</p>
-          <Button onClick={() => router.push("/bounties")}>Back to Bounties</Button>
+          <Button onClick={() => router.push('/bounties')}>Back to Bounties</Button>
         </div>
       </div>
     )
@@ -132,9 +153,7 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
   const daysLeft = currentBounty.endsAt
     ? Math.ceil((new Date(currentBounty.endsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : null
-  const escrowSol = currentBounty.escrowBalanceLamports
-    ? currentBounty.escrowBalanceLamports / 1_000_000_000
-    : 0
+  const escrowSol = currentBounty.escrowBalanceLamports ? currentBounty.escrowBalanceLamports / 1_000_000_000 : 0
   const escrowExplorerUrl = currentBounty.escrowAddress
     ? `https://explorer.solana.com/address/${currentBounty.escrowAddress}?cluster=devnet`
     : null
@@ -147,7 +166,7 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
       {/* Header */}
       <div className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container-custom py-6">
-          <Button variant="ghost" onClick={() => router.push("/bounties")} className="mb-4 -ml-4">
+          <Button variant="ghost" onClick={() => router.push('/bounties')} className="mb-4 -ml-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Bounties
           </Button>
@@ -158,7 +177,7 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                 <div className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center">
                   {currentBounty.company.logoUrl ? (
                     <img
-                      src={currentBounty.company.logoUrl || "/placeholder.svg"}
+                      src={currentBounty.company.logoUrl || '/placeholder.svg'}
                       alt={currentBounty.company.name}
                       className="w-8 h-8 object-contain"
                     />
@@ -169,9 +188,7 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold">{currentBounty.company.name}</h3>
-                    {currentBounty.company.isVerified && (
-                      <CheckCircle2 className="w-4 h-4 text-yellow-400" />
-                    )}
+                    {currentBounty.company.isVerified && <CheckCircle2 className="w-4 h-4 text-yellow-400" />}
                   </div>
                   <p className="text-sm text-muted-foreground">@{currentBounty.company.slug}</p>
                 </div>
@@ -187,7 +204,7 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                 {daysLeft !== null && (
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4" />
-                    {daysLeft > 0 ? `${daysLeft} days left` : "Expired"}
+                    {daysLeft > 0 ? `${daysLeft} days left` : 'Expired'}
                   </div>
                 )}
               </div>
@@ -260,7 +277,9 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                   <h2 className="text-xl font-semibold">Requirements</h2>
                 </div>
                 <div className="prose prose-invert max-w-none">
-                  <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{currentBounty.requirements}</p>
+                  <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                    {currentBounty.requirements}
+                  </p>
                 </div>
               </section>
             )}
@@ -287,7 +306,9 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                       <AlertCircle className="w-4 h-4" />
                       Out of Scope
                     </h3>
-                    <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{currentBounty.outOfScope}</p>
+                    <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                      {currentBounty.outOfScope}
+                    </p>
                   </div>
                 )}
               </div>
@@ -301,7 +322,9 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                   <h2 className="text-xl font-semibold">Guidelines</h2>
                 </div>
                 <div className="prose prose-invert max-w-none">
-                  <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{currentBounty.guidelines}</p>
+                  <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                    {currentBounty.guidelines}
+                  </p>
                 </div>
               </section>
             )}
@@ -321,14 +344,13 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                     >
                       <div className="flex items-start justify-between mb-2">
                         <h3 className="font-semibold">{submission.title}</h3>
-                        <Badge variant={submission.status === "APPROVED" ? "default" : "secondary"}>
+                        <Badge variant={submission.status === 'APPROVED' ? 'default' : 'secondary'}>
                           {submission.status}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
                         By {submission.reporter.displayName}
-                        {submission.reporter.username ? ` (@${submission.reporter.username})` : ""} •
-                        {" "}
+                        {submission.reporter.username ? ` (@${submission.reporter.username})` : ''} •{' '}
                         {new Date(submission.createdAt).toLocaleDateString()}
                       </p>
                     </div>
@@ -349,7 +371,9 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                     <Users className="w-4 h-4" />
                     <span className="text-sm">Total Submissions</span>
                   </div>
-                  <span className="font-semibold">{currentBounty.stats?.totalSubmissions || currentBounty._count.submissions}</span>
+                  <span className="font-semibold">
+                    {currentBounty.stats?.totalSubmissions || currentBounty._count?.submissions}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -375,7 +399,7 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                 <div className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center">
                   {currentBounty.company.logoUrl ? (
                     <img
-                      src={currentBounty.company.logoUrl || "/placeholder.svg"}
+                      src={currentBounty.company.logoUrl || '/placeholder.svg'}
                       alt={currentBounty.company.name}
                       className="w-8 h-8 object-contain"
                     />

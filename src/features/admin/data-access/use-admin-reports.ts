@@ -57,26 +57,50 @@ export interface AdminReportsResponse {
 }
 
 async function fetchAdminReports(filters: AdminReportFilters = {}): Promise<AdminReportsResponse> {
-  const { page = 1, limit = 20, status, type, reporterId, sortBy, sortOrder } = filters
-  const params = new URLSearchParams()
+  // Simulate API call
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
-  params.set('limit', limit.toString())
-  params.set('offset', ((page - 1) * limit).toString())
-  if (status) params.set('status', status)
-  if (type) params.set('type', type)
-  if (reporterId) params.set('reporterId', reporterId)
-  if (sortBy) params.set('sortBy', sortBy)
-  if (sortOrder) params.set('sortOrder', sortOrder)
+  const sampleReports: AdminReportSummary[] = [
+    {
+      id: "1",
+      title: "Unfair Rejection of Submission",
+      description: "My submission was unfairly rejected without proper explanation.",
+      type: "UNFAIR_REJECTION",
+      status: "OPEN",
+      evidence: [],
+      reporter: {
+        id: "user_123",
+        username: "bounty_hunter_1",
+        email: "hunter@example.com",
+      },
+      reportedUser: null,
+      reportedCompany: {
+        id: "comp_456",
+        name: "TechCorp",
+        slug: "techcorp",
+      },
+      submission: {
+        id: "sub_789",
+        title: "XSS Vulnerability in Dashboard",
+        status: "REJECTED",
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      resolvedAt: null,
+      resolution: null,
+      actionTaken: null,
+    },
+  ];
 
-  const response = await fetch(`/api/admin/reports?${params.toString()}`, {
-    credentials: 'include',
-  })
-
-  if (!response.ok) {
-    throw new Error('Failed to load reports')
-  }
-
-  return response.json() as Promise<AdminReportsResponse>
+  return {
+    reports: sampleReports,
+    pagination: {
+      total: 1,
+      limit: 20,
+      offset: 0,
+      hasMore: false,
+    },
+  };
 }
 
 export function useAdminReports(filters: AdminReportFilters) {

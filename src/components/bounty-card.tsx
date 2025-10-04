@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import { Calendar, DollarSign, Building2, CheckCircle2, Users } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+import { Calendar, DollarSign, Building2, CheckCircle2, Users } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 interface BountyCardProps {
   bounty: {
@@ -32,17 +32,17 @@ interface BountyCardProps {
 }
 
 const BOUNTY_TYPE_COLORS: Record<string, string> = {
-  UI: "bg-blue-500/10 text-blue-400 border-blue-500/30",
-  FUNCTIONALITY: "bg-green-500/10 text-green-400 border-green-500/30",
-  PERFORMANCE: "bg-purple-500/10 text-purple-400 border-purple-500/30",
-  SECURITY: "bg-red-500/10 text-red-400 border-red-500/30",
+  UI: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+  FUNCTIONALITY: 'bg-green-500/10 text-green-400 border-green-500/30',
+  PERFORMANCE: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+  SECURITY: 'bg-red-500/10 text-red-400 border-red-500/30',
 }
 
 export function BountyCard({ bounty }: BountyCardProps) {
   const formatDate = (date: string | null) => {
-    if (!date) return "No deadline"
+    if (!date) return 'No deadline'
     const d = new Date(date)
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
   const escrowSol = bounty.escrowBalanceLamports ? bounty.escrowBalanceLamports / 1_000_000_000 : 0
@@ -76,7 +76,7 @@ export function BountyCard({ bounty }: BountyCardProps) {
               <p className="text-xs text-muted-foreground">@{bounty.company.slug}</p>
             </div>
           </div>
-          <Badge variant="outline" className={BOUNTY_TYPE_COLORS[bounty.bountyType] || ""}>
+          <Badge variant="outline" className={BOUNTY_TYPE_COLORS[bounty.bountyType] || ''}>
             {bounty.bountyType}
           </Badge>
         </div>
@@ -99,13 +99,15 @@ export function BountyCard({ bounty }: BountyCardProps) {
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="w-4 h-4" />
-              <span>{bounty._count.submissions} submissions</span>
+              <span>{bounty._count?.submissions} submissions</span>
             </div>
           </div>
           <div className="flex items-center justify-between rounded border border-yellow-400/30 bg-yellow-500/10 px-3 py-2">
             <div className="flex flex-col">
               <span className="text-xs uppercase text-muted-foreground">Escrow Balance</span>
-              <span className="text-sm font-semibold text-yellow-200">{escrowSol.toLocaleString(undefined, { maximumFractionDigits: 4 })} SOL</span>
+              <span className="text-sm font-semibold text-yellow-200">
+                {escrowSol.toLocaleString(undefined, { maximumFractionDigits: 4 })} SOL
+              </span>
             </div>
             {explorerUrl ? (
               <Button size="sm" variant="outline" className="text-xs" asChild>

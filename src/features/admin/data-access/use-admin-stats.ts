@@ -45,16 +45,50 @@ export interface AdminStatsResponse {
 }
 
 async function fetchAdminStats(): Promise<AdminStatsResponse> {
-  const response = await fetch('/api/admin/stats', {
-    credentials: 'include',
-  })
+  // Simulate API call
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
-  if (!response.ok) {
-    throw new Error('Failed to load admin stats')
-  }
-
-  const data = (await response.json()) as { stats: AdminStatsResponse }
-  return data.stats
+  return {
+    overview: {
+      totalUsers: 100,
+      totalCompanies: 20,
+      totalBounties: 50,
+      activeBounties: 15,
+      totalSubmissions: 200,
+      resolvedVulnerabilities: 150,
+      totalPayments: 100,
+      totalBountyRewards: 50000,
+    },
+    userBreakdown: {
+      bountyHunters: 80,
+      companyAdmins: 15,
+      admins: 5,
+    },
+    companyBreakdown: {
+      verified: 10,
+      unverified: 10,
+    },
+    bountyBreakdown: {
+      active: 15,
+      closed: 30,
+      expired: 5,
+    },
+    submissionBreakdown: {
+      pending: 20,
+      approved: 150,
+      rejected: 20,
+      duplicate: 5,
+      spam: 5,
+      needsMoreInfo: 0,
+    },
+    paymentBreakdown: {
+      pending: 5,
+      processing: 2,
+      completed: 90,
+      failed: 3,
+      refunded: 0,
+    },
+  };
 }
 
 export function useAdminStats() {
