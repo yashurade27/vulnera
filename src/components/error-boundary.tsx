@@ -95,10 +95,10 @@ export class ErrorBoundary extends Component<Props, State> {
                 </Button>
               </div>
 
-              {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
+              {this.state.errorInfo && (
                 <details className="bg-muted/30 p-4 rounded-lg text-xs">
                   <summary className="cursor-pointer font-medium mb-2">
-                    Component Stack (Development Only)
+                    Component Stack (Debug Info)
                   </summary>
                   <pre className="whitespace-pre-wrap text-muted-foreground overflow-auto">
                     {this.state.errorInfo}

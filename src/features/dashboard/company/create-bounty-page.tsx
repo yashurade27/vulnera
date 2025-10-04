@@ -939,7 +939,6 @@ export function CreateBountyPage() {
                   {/* Wallet Connection Status */}
                   <WalletConnectionGuide 
                     companyWallet={company?.walletAddress || undefined}
-                    showMismatchWarning={connected && publicKey && company?.walletAddress ? publicKey.toBase58() !== company.walletAddress : false}
                   />
 
                   {company?.walletAddress ? (
