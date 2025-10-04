@@ -50,6 +50,7 @@ const BOUNTY_TYPES = [
 import { useProgram } from "@/lib/use-program"
 import { BN } from "@coral-xyz/anchor"
 import { MIN_ESCROW_AMOUNT } from "@/lib/solana"
+import { WalletConnectionCard } from "@/components/wallet-connection-card"
 
 interface EscrowInfo {
   escrowAddress: string
@@ -93,21 +94,35 @@ export function CreateBountyPage() {
     setDebugInfo(prev => [...prev, logEntry])
   }
 
-  // Track wallet connection state changes
+  // Track wallet connection state changes with error handling
   useEffect(() => {
-    const walletStateData = {
-      connected,
-      publicKey: publicKey?.toBase58(),
-      hasProgram: !!program,
-      sessionStatus,
-      walletReady: (wallet as any)?.readyState,
-      walletName: (wallet as any)?.adapter?.name,
-      programId: program?.programId?.toBase58()
+    try {
+      const walletStateData = {
+        connected: !!connected,
+        publicKey: publicKey?.toBase58() || null,
+        hasProgram: !!program,
+        sessionStatus: sessionStatus || 'unknown',
+        walletReady: (wallet as any)?.readyState || 'unknown',
+        walletName: (wallet as any)?.adapter?.name || 'unknown',
+        programId: program?.programId?.toBase58() || null,
+        walletError: (wallet as any)?.adapter?.lastError?.message || null
+      }
+      
+      addDebugLog('WALLET_STATE_CHANGE', walletStateData)
+      console.log('[CreateBounty] Wallet state changed:', walletStateData)
+      
+      // Clear previous errors if wallet is now connected
+      if (connected && fundingError?.includes('wallet')) {
+        setFundingError(null)
+      }
+    } catch (error) {
+      console.error('[CreateBounty] Error tracking wallet state:', error)
+      addDebugLog('WALLET_STATE_ERROR', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : null
+      })
     }
-    
-    addDebugLog('WALLET_STATE_CHANGE', walletStateData)
-    console.log('[CreateBounty] Wallet state changed:', walletStateData)
-  }, [connected, publicKey, program, sessionStatus, wallet])
+  }, [connected, publicKey, program, sessionStatus, wallet, fundingError])
 
   useEffect(() => {
     // Wait for session to be ready before loading company
@@ -145,6 +160,28 @@ export function CreateBountyPage() {
 
   const updateFormData = <K extends keyof BountyFormData>(field: K, value: BountyFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  // Wallet connection helper with error handling
+  const handleWalletConnection = async () => {
+    try {
+      addDebugLog('WALLET_CONNECT_ATTEMPT', { 
+        walletReady: (wallet as any)?.readyState,
+        adapter: (wallet as any)?.adapter?.name 
+      })
+      
+      if (!(wallet as any)?.connect) {
+        throw new Error('Wallet adapter not available')
+      }
+      
+      await (wallet as any).connect()
+      addDebugLog('WALLET_CONNECT_SUCCESS', { connected: true })
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown wallet error'
+      console.error('[CreateBounty] Wallet connection failed:', error)
+      addDebugLog('WALLET_CONNECT_ERROR', { error: errorMsg })
+      setFundingError(`Wallet connection failed: ${errorMsg}`)
+    }
   }
 
   const lamportsAmount = useMemo(() => {
@@ -867,26 +904,34 @@ export function CreateBountyPage() {
                     </div>
                   </div>
 
+                  {/* Wallet Connection Status */}
+                  <WalletConnectionCard 
+                    companyWallet={company?.walletAddress || undefined}
+                    showMismatchWarning={connected && publicKey && company?.walletAddress ? publicKey.toBase58() !== company.walletAddress : false}
+                  />
+
                   {company?.walletAddress ? (
                     <div className="p-4 rounded-lg bg-yellow-400/10 border border-yellow-400/30 space-y-2">
-                      <p className="text-sm font-semibold text-yellow-400">Ready to Fund</p>
+                      <p className="text-sm font-semibold text-yellow-400">Escrow Summary</p>
                       <p className="text-xs text-muted-foreground">
-                        Escrow will be created for {totalEscrowDisplay === "0" ? "0 SOL" : `${totalEscrowDisplay} SOL`} ({
-                        exceedsSafeAmount ? "an unsafe amount" : `${lamportsAmount.toLocaleString()} lamports`})
+                        Total escrow amount: {totalEscrowDisplay === "0" ? "0 SOL" : `${totalEscrowDisplay} SOL`} ({
+                        exceedsSafeAmount ? "unsafe amount" : `${lamportsAmount.toLocaleString()} lamports`})
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Minimum required: {minEscrowDisplay} SOL
                       </p>
                       {!meetsMinimumEscrow ? (
                         <p className="text-xs text-red-400">
-                          Increase the reward or max payouts so the total escrow meets the minimum of {minEscrowDisplay} SOL.
+                          ⚠️ Increase the reward or max payouts to meet minimum escrow requirement.
                         </p>
-                      ) : null}
-                      {!publicKey ? (
-                        <p className="text-xs text-yellow-300">
-                          Connect your Solana wallet to authorize the escrow transaction.
+                      ) : (
+                        <p className="text-xs text-green-400">
+                          ✅ Escrow meets minimum requirement
                         </p>
-                      ) : null}
+                      )}
                       {exceedsSafeAmount ? (
                         <p className="text-xs text-red-400">
-                          Reduce the reward or maximum payouts until the escrow amount is within limits.
+                          ⚠️ Amount exceeds safe limits. Please reduce reward or maximum payouts.
                         </p>
                       ) : null}
                     </div>
@@ -923,23 +968,80 @@ export function CreateBountyPage() {
                       </div>
                     </div>
                   )}
-                  {fundingError ? <p className="text-xs text-red-400 mt-4">{fundingError}</p> : null}
+                  {/* Error Display with Recovery Options */}
+                  {fundingError ? (
+                    <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                      <p className="text-sm text-red-400 font-medium mb-2">Funding Error</p>
+                      <p className="text-xs text-red-300 mb-3">{fundingError}</p>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setFundingError(null)}
+                          className="text-xs"
+                        >
+                          Dismiss
+                        </Button>
+                        {fundingError.includes('wallet') && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleWalletConnection}
+                            className="text-xs"
+                          >
+                            Retry Connection
+                          </Button>
+                        )}
+                        {fundingError.includes('network') && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => window.location.reload()}
+                            className="text-xs"
+                          >
+                            Refresh Page
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="flex flex-col sm:flex-row gap-3 mt-4">
                     <Button
-                      className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400 disabled:opacity-70"
+                      className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={handleInitializeEscrow}
-                      disabled={!canFundBounty}
+                      disabled={!canFundBounty || funding}
                     >
                       {funding ? (
                         <>
                           <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin mr-2" />
                           Creating & Funding...
                         </>
-                      ) : (
+                      ) : canFundBounty ? (
                         "Create & Fund Bounty"
+                      ) : (
+                        "Complete Requirements Above"
                       )}
                     </Button>
                   </div>
+                  
+                  {/* Validation Messages */}
+                  {!canFundBounty && !funding && (
+                    <div className="text-xs text-muted-foreground mt-2 p-3 bg-muted/30 rounded-lg">
+                      <p className="font-medium mb-2">Complete the following to enable funding:</p>
+                      <ul className="space-y-1">
+                        {!company?.walletAddress && <li>• Set up company wallet address</li>}
+                        {!connected && <li>• Connect your Solana wallet</li>}
+                        {connected && publicKey && company?.walletAddress && publicKey.toBase58() !== company.walletAddress && <li>• Connect the correct wallet ({company.walletAddress.slice(0, 8)}...)</li>}
+                        {!formData.title && <li>• Add bounty title</li>}
+                        {!formData.description && <li>• Add bounty description</li>}
+                        {formData.bountyTypes.length === 0 && <li>• Select at least one bounty type</li>}
+                        {!formData.rewardAmount && <li>• Set reward amount</li>}
+                        {!formData.maxSubmissions && <li>• Set maximum submissions</li>}
+                        {!meetsMinimumEscrow && <li>• Increase escrow to meet {minEscrowDisplay} SOL minimum</li>}
+                        {exceedsSafeAmount && <li>• Reduce escrow amount to safe limits</li>}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

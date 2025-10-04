@@ -6,6 +6,7 @@ import { SolanaProvider } from '@/components/solana/solana-provider'
 import { SessionProvider } from 'next-auth/react'
 import React, { useEffect } from 'react'
 import { ClusterProvider } from '@/features/cluster/cluster-context'
+import { ErrorBoundary } from '@/components/error-boundary'
 
 export function AppProviders({ children }: Readonly<{ children: React.ReactNode }>) {
   useEffect(() => {
@@ -31,18 +32,22 @@ export function AppProviders({ children }: Readonly<{ children: React.ReactNode 
   }, [])
 
   return (
-    <SessionProvider 
-      basePath="/api/auth" 
-      refetchInterval={0}
-      refetchOnWindowFocus={false}
-    >
-      <ReactQueryProvider>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <ClusterProvider>
-            <SolanaProvider>{children}</SolanaProvider>
-          </ClusterProvider>
-        </ThemeProvider>
-      </ReactQueryProvider>
-    </SessionProvider>
+    <ErrorBoundary>
+      <SessionProvider 
+        basePath="/api/auth" 
+        refetchInterval={0}
+        refetchOnWindowFocus={false}
+      >
+        <ReactQueryProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <ClusterProvider>
+              <ErrorBoundary>
+                <SolanaProvider>{children}</SolanaProvider>
+              </ErrorBoundary>
+            </ClusterProvider>
+          </ThemeProvider>
+        </ReactQueryProvider>
+      </SessionProvider>
+    </ErrorBoundary>
   )
 }
