@@ -72,13 +72,9 @@ export default function LoginPage() {
           return
         }
 
-        // const profileResponse = await fetch("/api/auth/me", {
-        //   cache: "no-store",
-        // });
-        const profileResponse = {
-          ok: true,
-          json: () => Promise.resolve({ user: { role: "COMPANY_ADMIN" } }),
-        };
+        const profileResponse = await fetch("/api/auth/me", {
+          cache: "no-store",
+        });
 
         let nextUrl = callbackUrl ?? "/dashboard/hunter"
         if (profileResponse.ok) {

@@ -12,15 +12,21 @@ export interface UpdateAdminUserInput {
 }
 
 async function patchAdminUser({ userId, ...payload }: UpdateAdminUserInput) {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  return {
-    user: {
-      id: userId,
-      ...payload,
+  const response = await fetch(`/api/admin/users/${userId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
     },
-  };
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error?.error ?? 'Failed to update user')
+  }
+
+  return response.json() as Promise<unknown>
 }
 
 export function useUpdateAdminUser(filters: AdminUserFilters) {

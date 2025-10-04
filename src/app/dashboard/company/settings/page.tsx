@@ -41,24 +41,14 @@ export function CompanySettingsPage() {
   useEffect(() => {
     const loadCompany = async () => {
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        const data = {
-          company: {
-            id: "comp_123",
-            name: "Vulnera Inc.",
-            description: "A leading platform for bug bounties and vulnerability disclosure.",
-            website: "https://vulnera.com",
-            walletAddress: "So11111111111111111111111111111111111111112",
-            logoUrl: "/vulnera-logo.svg",
-            industry: "Cybersecurity",
-            companySize: "1-10",
-            location: "Remote",
-          },
-        };
-        const companyData = data?.company;
+        const res = await fetch("/api/companies/my-company", { credentials: "include" })
+        if (!res.ok) {
+          throw new Error("Failed to load company profile")
+        }
+        const data = await res.json()
+        const companyData = data?.company
         if (companyData) {
-          setCompany(companyData);
+          setCompany(companyData)
           setFormData({
             name: companyData.name || "",
             description: companyData.description || "",
@@ -68,37 +58,61 @@ export function CompanySettingsPage() {
             industry: companyData.industry || "",
             companySize: companyData.companySize || "",
             location: companyData.location || "",
-          });
+          })
         }
       } catch (err) {
-        console.error("Load company error:", err);
-        toast.error("Failed to load company profile");
+        console.error("Load company error:", err)
+        toast.error("Failed to load company profile")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-    void loadCompany();
+    }
+    void loadCompany()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!company?.id) return;
+    e.preventDefault()
+    if (!company?.id) return
 
-    setSaving(true);
+    setSaving(true)
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const payload: Record<string, unknown> = {}
+      if (formData.name !== company.name) payload.name = formData.name
+      if (formData.description !== company.description) payload.description = formData.description
+      if (formData.website !== company.website) payload.website = formData.website
+      if (formData.walletAddress !== company.walletAddress) payload.walletAddress = formData.walletAddress
+      if (formData.logoUrl !== company.logoUrl) payload.logoUrl = formData.logoUrl
+      if (formData.industry !== company.industry) payload.industry = formData.industry
+      if (formData.companySize !== company.companySize) payload.companySize = formData.companySize
+      if (formData.location !== company.location) payload.location = formData.location
 
-      toast.success("Company profile updated successfully");
+      if (Object.keys(payload).length === 0) {
+        toast.info("No changes to save")
+        return
+      }
+
+      const res = await fetch(`/api/companies/${company.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error?.error || "Failed to update company")
+      }
+
+      toast.success("Company profile updated successfully")
       // Refresh the company data
-      setCompany((prev) => (prev ? { ...prev, ...formData } : null));
+      setCompany((prev) => prev ? { ...prev, ...payload } : null)
     } catch (err) {
-      console.error("Update company error:", err);
-      toast.error(err instanceof Error ? err.message : "Failed to update company");
+      console.error("Update company error:", err)
+      toast.error(err instanceof Error ? err.message : "Failed to update company")
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   if (loading) {
     return (

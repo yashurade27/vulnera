@@ -29,42 +29,12 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
   const fetchBountyDetails = useCallback(async () => {
     setLoading(true)
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      const data = {
-        bounty: {
-          id: bountyId,
-          title: 'Harden the dashboard authentication flow',
-          description: "This bounty focuses on improving the security of our dashboard's authentication flow.",
-          requirements: 'A detailed report with a proof of concept is required.',
-          inScope: 'The dashboard login and session management.',
-          outOfScope: 'The marketing website.',
-          guidelines: 'Please follow our responsible disclosure policy.',
-          rewardAmount: 1500,
-          bountyType: 'SECURITY',
-          status: 'ACTIVE',
-          endsAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-          escrowBalanceLamports: 1500000000000,
-          escrowAddress: 'So11111111111111111111111111111111111111112',
-          txSignature: 'mock_tx_signature',
-          company: {
-            name: 'Vulnera Inc.',
-            slug: 'vulnera-inc',
-            logoUrl: '/vulnera-logo.svg',
-            isVerified: true,
-            walletAddress: 'So22222222222222222222222222222222222222222',
-          },
-          stats: {
-            totalSubmissions: 10,
-            paidSubmissions: 2,
-            pendingSubmissions: 3,
-          },
-          _count: {
-            submissions: 10,
-          },
-        },
+      const response = await fetch(`/api/bounties/${bountyId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch bounty details");
       }
-      setCurrentBounty(data.bounty)
+      const data = await response.json();
+      setCurrentBounty(data);
     } catch (error) {
       console.error('Failed to fetch bounty details:', error)
     } finally {
@@ -74,28 +44,13 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
 
   const fetchSubmissions = useCallback(async () => {
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      const data = {
-        submissions: [
-          {
-            id: 'sub_1',
-            title: 'XSS in Profile Page',
-            status: 'APPROVED',
-            createdAt: new Date().toISOString(),
-            user: { fullName: 'John Doe', username: 'hunter1' },
-          },
-          {
-            id: 'sub_2',
-            title: 'CSRF in Settings',
-            status: 'PENDING',
-            createdAt: new Date().toISOString(),
-            user: { fullName: 'Jane Smith', username: 'hunter2' },
-          },
-        ],
+      const response = await fetch(`/api/bounties/${bountyId}/submissions`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch submissions");
       }
-      const normalized = Array.isArray(data?.submissions)
-        ? data.submissions.map((submission: any) => ({
+      const data = await response.json();
+      const normalized = Array.isArray(data)
+        ? data.map((submission: any) => ({
             id: submission?.id,
             title: submission?.title ?? 'Submission',
             status: submission?.status ?? 'PENDING',
@@ -104,18 +59,18 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
               displayName:
                 submission?.user?.fullName ??
                 submission?.user?.username ??
-                submission?.hunter?.name ??
                 'Anonymous Hunter',
-              username: submission?.user?.username ?? submission?.hunter?.username ?? null,
+              username: submission?.user?.username ?? null,
             },
           }))
         : []
       setSubmissions(normalized)
+      // TODO: Replace with actual logic to check if the user is a company member
       setIsCompanyMember(true)
     } catch (error) {
       console.error('Failed to fetch submissions:', error)
     }
-  }, [bountyId, clearSubmissions, setSubmissions])
+  }, [bountyId, setSubmissions])
 
   useEffect(() => {
     clearSubmissions()

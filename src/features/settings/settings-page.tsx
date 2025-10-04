@@ -76,26 +76,18 @@ export function SettingsPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       if (!userId) {
-        setLoading(false);
-        return;
+        setLoading(false)
+        return
       }
       try {
-        setLoading(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        const payload = {
-          user: {
-            fullName: "John Doe",
-            bio: "A passionate bug bounty hunter.",
-            avatarUrl: "https://example.com/avatar.png",
-            country: "United States",
-            githubUrl: "https://github.com/johndoe",
-            twitterUrl: "https://twitter.com/johndoe",
-            linkedinUrl: "https://linkedin.com/in/johndoe",
-            portfolioUrl: "https://johndoe.dev",
-            walletAddress: "So11111111111111111111111111111111111111112",
-          },
-        };
+        setLoading(true)
+        const response = await fetch(`/api/users/${userId}`, {
+          credentials: "include",
+        })
+        if (!response.ok) {
+          throw new Error("Unable to load profile")
+        }
+        const payload = await response.json()
         profileForm.reset({
           fullName: payload?.user?.fullName ?? undefined,
           bio: payload?.user?.bio ?? undefined,
@@ -105,24 +97,24 @@ export function SettingsPage() {
           twitterUrl: payload?.user?.twitterUrl ?? undefined,
           linkedinUrl: payload?.user?.linkedinUrl ?? undefined,
           portfolioUrl: payload?.user?.portfolioUrl ?? undefined,
-        });
+        })
         walletForm.reset({
           walletAddress: payload?.user?.walletAddress ?? "",
           signature: "",
-        });
+        })
         // Generate message if wallet address exists
         if (payload?.user?.walletAddress) {
-          generateMessageToSign(payload.user.walletAddress);
+          generateMessageToSign(payload.user.walletAddress)
         }
       } catch (err) {
-        console.error(err);
-        setError(err instanceof Error ? err.message : "Unexpected error loading profile");
+        console.error(err)
+        setError(err instanceof Error ? err.message : "Unexpected error loading profile")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    void fetchProfile();
+    void fetchProfile()
   }, [userId, profileForm, walletForm])
 
   const handleAvatarUpload = async (file: File) => {
@@ -130,17 +122,16 @@ export function SettingsPage() {
       setAvatarUploading(true)
       const formData = new FormData()
       formData.append("file", file)
-      // const response = await fetch("/api/upload/image", {
-      //   method: "POST",
-      //   body: formData,
-      // });
+      const response = await fetch("/api/upload/image", {
+        method: "POST",
+        body: formData,
+      })
 
-      // if (!response.ok) {
-      //   throw new Error("Upload failed");
-      // }
+      if (!response.ok) {
+        throw new Error("Upload failed")
+      }
 
-      // const payload = await response.json();
-      const payload = { url: `https://example.com/uploads/${file.name}` };
+      const payload = await response.json()
       profileForm.setValue("avatarUrl", payload.url ?? undefined, { shouldValidate: true })
       toast.success("Avatar updated")
     } catch (error) {
@@ -169,19 +160,18 @@ export function SettingsPage() {
         portfolioUrl: values.portfolioUrl?.trim() ? values.portfolioUrl.trim() : undefined,
       }
 
-      // const response = await fetch(`/api/users/${userId}`, {
-      //   method: "PATCH",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   credentials: "include",
-      //   body: JSON.stringify(payload),
-      // });
-      // if (!response.ok) {
-      //   const errorPayload = await response.json().catch(() => null);
-      //   throw new Error(errorPayload?.error ?? "Failed to update profile");
-      // }
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      })
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null)
+        throw new Error(errorPayload?.error ?? "Failed to update profile")
+      }
       toast.success("Profile saved")
       router.refresh()
     } catch (error) {
@@ -202,22 +192,21 @@ export function SettingsPage() {
     }
 
     try {
-      // const response = await fetch(`/api/users/${userId}/wallet`, {
-      //   method: "PATCH",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   credentials: "include",
-      //   body: JSON.stringify({
-      //     ...values,
-      //     message: messageToSign,
-      //   }),
-      // });
-      // if (!response.ok) {
-      //   const errorPayload = await response.json().catch(() => null);
-      //   throw new Error(errorPayload?.error ?? "Failed to update wallet");
-      // }
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const response = await fetch(`/api/users/${userId}/wallet`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          ...values,
+          message: messageToSign,
+        }),
+      })
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null)
+        throw new Error(errorPayload?.error ?? "Failed to update wallet")
+      }
       toast.success("Wallet updated")
       router.refresh()
     } catch (error) {

@@ -41,59 +41,26 @@ export interface AdminUsersResponse {
 }
 
 async function fetchAdminUsers(filters: AdminUserFilters = {}): Promise<AdminUsersResponse> {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  const { page = 1, limit = 20, search, role, status } = filters
+  const params = new URLSearchParams()
 
-  const sampleUsers: AdminUserSummary[] = [
-    {
-      id: "1",
-      email: "hunter@example.com",
-      username: "bounty_hunter_1",
-      fullName: "John Doe",
-      role: "BOUNTY_HUNTER",
-      status: "ACTIVE",
-      emailVerified: true,
-      walletAddress: "So11111111111111111111111111111111111111112",
-      avatarUrl: null,
-      country: "USA",
-      totalEarnings: 1500,
-      totalBounties: 5,
-      reputation: 100,
-      rank: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      lastLoginAt: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      email: "admin@company.com",
-      username: "company_admin_1",
-      fullName: "Jane Smith",
-      role: "COMPANY_ADMIN",
-      status: "ACTIVE",
-      emailVerified: true,
-      walletAddress: "So22222222222222222222222222222222222222222",
-      avatarUrl: null,
-      country: "Canada",
-      totalEarnings: 0,
-      totalBounties: 10,
-      reputation: 0,
-      rank: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      lastLoginAt: new Date().toISOString(),
-    },
-  ];
+  params.set('limit', limit.toString())
+  params.set('offset', ((page - 1) * limit).toString())
 
-  return {
-    users: sampleUsers,
-    pagination: {
-      total: 2,
-      limit: 20,
-      offset: 0,
-      hasMore: false,
-    },
-  };
+  if (search) params.set('search', search)
+  if (role) params.set('role', role)
+  if (status) params.set('status', status)
+
+  const response = await fetch(`/api/admin/users?${params.toString()}`, {
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch users')
+  }
+
+  const data = (await response.json()) as AdminUsersResponse
+  return data
 }
 
 export function useAdminUsers(filters: AdminUserFilters) {

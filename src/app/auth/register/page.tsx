@@ -108,28 +108,16 @@ export default function RegisterPage() {
     async (values: RegisterInput) => {
       try {
         setIsSubmitting(true)
-        // const response = await fetch("/api/auth/register", {
-        //   method: "POST",
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //   },
-        //   body: JSON.stringify(values),
-        // });
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(values),
+        });
 
-        // const data = await response.json().catch(() => null);
+        const data = await response.json().catch(() => null);
 
-        // if (!response.ok) {
-        //   const message =
-        //     data?.error ??
-        //     (Array.isArray(data?.details)
-        //       ? data.details.map((detail: { message?: string }) => detail?.message).filter(Boolean).join(", ")
-        //       : null) ??
-        //     "We could not create your account. Please try again.";
-        //   toast.error(message);
-        //   return;
-        // }
-        const response = { ok: true };
-        const data = { message: "Account created. Check your inbox for verification instructions." };
         if (!response.ok) {
           const message =
             data?.error ??

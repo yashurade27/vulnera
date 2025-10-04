@@ -50,54 +50,24 @@ export function LeaderboardPage() {
         setLoading(true);
         setError(null);
 
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        const response = await fetch("/api/leaderboard");
+        if (!response.ok) {
+          throw new Error("Failed to fetch leaderboard data");
+        }
+        const data = await response.json();
 
-        const sampleLeaderboard: LeaderboardEntry[] = [
-          {
-            id: "1",
-            username: "bounty_hunter_1",
-            fullName: "John Doe",
-            avatarUrl: null,
-            country: "USA",
-            totalEarnings: 1500,
-            totalBounties: 5,
-            reputation: 100,
-            rank: 1,
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: "2",
-            username: "bounty_hunter_2",
-            fullName: "Jane Smith",
-            avatarUrl: null,
-            country: "Canada",
-            totalEarnings: 1200,
-            totalBounties: 4,
-            reputation: 80,
-            rank: 2,
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: "3",
-            username: "bounty_hunter_3",
-            fullName: "Peter Jones",
-            avatarUrl: null,
-            country: "UK",
-            totalEarnings: 1000,
-            totalBounties: 3,
-            reputation: 60,
-            rank: 3,
-            createdAt: new Date().toISOString(),
-          },
-        ];
-
-        setEntries(sampleLeaderboard);
+        if (!cancelled) {
+          setEntries(data);
+        }
       } catch (err) {
-        console.error(err);
-        setError(err instanceof Error ? err.message : "Unexpected error loading leaderboard");
+        if (!cancelled) {
+          console.error(err);
+          setError(err instanceof Error ? err.message : "Unexpected error loading leaderboard");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
