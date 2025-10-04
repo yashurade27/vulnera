@@ -95,17 +95,74 @@ export function CreateBountyPage() {
     setDebugInfo(prev => [...prev, logEntry])
   }
 
+  const safePublicKeyToBase58 = (key: PublicKey | null | undefined, context: string, log = false) => {
+    if (!key) {
+      return null
+    }
+
+    try {
+      const toBase58 = (key as any)?.toBase58
+      if (typeof toBase58 === "function") {
+        const value = toBase58.call(key)
+        if (typeof value === "string" && value.length > 0) {
+          return value
+        }
+      }
+
+      const toString = (key as any)?.toString
+      if (typeof toString === "function") {
+        const value = toString.call(key)
+        if (typeof value === "string" && value.length > 0) {
+          if (log) {
+            addDebugLog('SAFE_TO_BASE58_FALLBACK_TO_STRING', { context, value })
+          } else {
+            console.warn('[CreateBounty] Falling back to public key string representation', { context, value })
+          }
+          return value
+        }
+      }
+
+      const debugPayload = {
+        context,
+        keyType: (key as any)?.constructor?.name ?? typeof key,
+        keys: typeof key === 'object' && key ? Object.keys(key as any) : null,
+      }
+      if (log) {
+        addDebugLog('SAFE_TO_BASE58_NO_METHOD', debugPayload)
+      } else {
+        console.warn('[CreateBounty] Public key missing toBase58 method', debugPayload)
+      }
+      return null
+    } catch (error) {
+      const debugPayload = {
+        context,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        hasBn: typeof (key as any)?._bn !== 'undefined',
+        keyType: (key as any)?.constructor?.name ?? typeof key,
+      }
+      if (log) {
+        addDebugLog('SAFE_TO_BASE58_ERROR', debugPayload)
+      } else {
+        console.error('[CreateBounty] Failed to convert public key to base58', debugPayload)
+      }
+      return null
+    }
+  }
+
+  const publicKeyBase58 = useMemo(() => safePublicKeyToBase58(publicKey, 'PUBLIC_KEY_MEMO'), [publicKey])
+  const programIdBase58 = useMemo(() => safePublicKeyToBase58(program?.programId ?? null, 'PROGRAM_ID_MEMO'), [program])
+
   // Track wallet connection state changes with error handling
   useEffect(() => {
     try {
       const walletStateData = {
         connected: !!connected,
-        publicKey: publicKey?.toBase58() || null,
+        publicKey: publicKeyBase58,
         hasProgram: !!program,
         sessionStatus: sessionStatus || 'unknown',
         walletReady: (wallet as any)?.readyState || 'unknown',
         walletName: (wallet as any)?.adapter?.name || 'unknown',
-        programId: program?.programId?.toBase58() || null,
+        programId: programIdBase58,
         walletError: (wallet as any)?.adapter?.lastError?.message || null
       }
       
@@ -123,7 +180,7 @@ export function CreateBountyPage() {
         stack: error instanceof Error ? error.stack : null
       })
     }
-  }, [connected, publicKey, program, sessionStatus, wallet, fundingError])
+  }, [connected, publicKey, publicKeyBase58, program, programIdBase58, sessionStatus, wallet, fundingError])
 
   useEffect(() => {
     // Wait for session to be ready before loading company
@@ -357,8 +414,8 @@ export function CreateBountyPage() {
       hasPublicKey: !!publicKey,
       hasProgram: !!program,
       companyId: company?.id,
-      companyWallet: company?.walletAddress,
-      connectedWallet: publicKey?.toBase58(),
+  companyWallet: company?.walletAddress,
+  connectedWallet: publicKeyBase58,
       lamportsAmount,
       minEscrowDisplay,
       canFundBounty,
@@ -382,9 +439,9 @@ export function CreateBountyPage() {
       return
     }
 
-    if (!connected || !publicKey) {
+    if (!connected || !publicKey || !publicKeyBase58) {
       const errorMsg = "Please connect your Solana wallet before funding the bounty."
-      const errorData = { connected, hasPublicKey: !!publicKey, walletStatus: (wallet as any)?.adapter?.name }
+      const errorData = { connected, hasPublicKey: !!publicKey, walletStatus: (wallet as any)?.adapter?.name, publicKeyBase58Available: !!publicKeyBase58 }
       addDebugLog('WALLET_ERROR', errorData)
       console.error('[CreateBounty] Wallet error:', errorMsg, errorData)
       setFundingError(errorMsg)
@@ -396,8 +453,8 @@ export function CreateBountyPage() {
       const errorData = { 
         hasProgram: !!program, 
         companyId: company?.id,
-        programId: program?.programId?.toBase58(),
-        providerWallet: program?.provider?.wallet?.publicKey?.toBase58()
+        programId: programIdBase58,
+  providerWallet: safePublicKeyToBase58(program?.provider?.wallet?.publicKey ?? null, 'PROVIDER_WALLET_CHECK', true)
       }
       addDebugLog('PROGRAM_ERROR', errorData)
       console.error('[CreateBounty] Missing requirements:', errorMsg, errorData)
@@ -405,11 +462,11 @@ export function CreateBountyPage() {
       return
     }
 
-    if (company.walletAddress && company.walletAddress !== publicKey.toBase58()) {
+    if (company.walletAddress && publicKeyBase58 && company.walletAddress !== publicKeyBase58) {
       const errorMsg = "Connected wallet does not match the company wallet on file."
       const errorData = {
         companyWallet: company.walletAddress,
-        connectedWallet: publicKey.toBase58(),
+        connectedWallet: publicKeyBase58,
         walletName: (wallet as any)?.adapter?.name
       }
       addDebugLog('WALLET_MISMATCH', errorData)
@@ -525,12 +582,23 @@ export function CreateBountyPage() {
         console.warn("Expected escrow amount mismatch", { expectedAmount, lamportsAmount })
       }
 
-      const ownerPublicKey = new PublicKey(publicKey.toBase58())
+      let ownerPublicKey: PublicKey
+      try {
+        ownerPublicKey = new PublicKey(publicKeyBase58)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown public key error'
+        addDebugLog('OWNER_PUBLIC_KEY_CONSTRUCTION_FAILURE', {
+          error: message,
+          base58: publicKeyBase58,
+        })
+        throw new Error(`Unable to parse wallet public key: ${message}`)
+      }
 
       addDebugLog('PUBLIC_KEY_VALIDATION', {
-        originalEqualsRebuilt: publicKey.toBase58() === ownerPublicKey.toBase58(),
+        originalEqualsRebuilt: publicKeyBase58 === ownerPublicKey.toBase58(),
         originalHasBn: (publicKey as any)?._bn !== undefined,
-        rebuiltHasBn: (ownerPublicKey as any)?._bn !== undefined
+        rebuiltHasBn: (ownerPublicKey as any)?._bn !== undefined,
+        base58Available: !!publicKeyBase58,
       })
 
       const [escrowPda] = await PublicKey.findProgramAddress(
@@ -540,8 +608,8 @@ export function CreateBountyPage() {
 
       addDebugLog('PDA_DERIVATION', {
         escrowPda: escrowPda.toBase58(),
-        programId: program.programId.toBase58(),
-  owner: ownerPublicKey.toBase58()
+        programId: programIdBase58 ?? program.programId.toBase58(),
+        owner: ownerPublicKey.toBase58()
       })
 
       // Check if the account already exists
@@ -1136,7 +1204,7 @@ export function CreateBountyPage() {
                       <ul className="space-y-1">
                         {!company?.walletAddress && <li>• Set up company wallet address</li>}
                         {!connected && <li>• Connect your Solana wallet</li>}
-                        {connected && publicKey && company?.walletAddress && publicKey.toBase58() !== company.walletAddress && <li>• Connect the correct wallet ({company.walletAddress.slice(0, 8)}...)</li>}
+                        {connected && publicKeyBase58 && company?.walletAddress && publicKeyBase58 !== company.walletAddress && <li>• Connect the correct wallet ({company.walletAddress.slice(0, 8)}...)</li>}
                         {!formData.title && <li>• Add bounty title</li>}
                         {!formData.description && <li>• Add bounty description</li>}
                         {formData.bountyTypes.length === 0 && <li>• Select at least one bounty type</li>}
