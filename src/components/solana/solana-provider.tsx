@@ -19,11 +19,41 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
     console.log('[SolanaProvider] Initializing wallet adapters (attempt:', retryCount + 1, ')')
     try {
       setProviderError(null)
-      const adapters = [
-        new PhantomWalletAdapter(),
-        new SolflareWalletAdapter(),
-        new TorusWalletAdapter()
-      ]
+      
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined') {
+        return []
+      }
+      
+      const adapters: Array<PhantomWalletAdapter | SolflareWalletAdapter | TorusWalletAdapter> = []
+      
+      // Only initialize adapters if their corresponding extensions are available
+      try {
+        if ((window as any)?.phantom?.solana) {
+          adapters.push(new PhantomWalletAdapter())
+          console.log('[SolanaProvider] Phantom wallet detected and initialized')
+        }
+      } catch (e) {
+        console.warn('[SolanaProvider] Phantom adapter initialization failed:', e)
+      }
+      
+      try {
+        if ((window as any)?.solflare) {
+          adapters.push(new SolflareWalletAdapter())
+          console.log('[SolanaProvider] Solflare wallet detected and initialized')
+        }
+      } catch (e) {
+        console.warn('[SolanaProvider] Solflare adapter initialization failed:', e)
+      }
+      
+      try {
+        // Torus is always available as it's web-based
+        adapters.push(new TorusWalletAdapter())
+        console.log('[SolanaProvider] Torus wallet initialized')
+      } catch (e) {
+        console.warn('[SolanaProvider] Torus adapter initialization failed:', e)
+      }
+      
       console.log('[SolanaProvider] Successfully initialized', adapters.length, 'wallet adapters')
       return adapters
     } catch (error) {
@@ -50,6 +80,13 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
       error.message?.toLowerCase().includes(msg.toLowerCase())
     )
     
+    // Special handling for WalletNotReadyError
+    if (error.name === 'WalletNotReadyError') {
+      console.warn('[Wallet Info] Wallet not ready - user may need to install or enable wallet extension')
+      // Don't set as provider error, just log it
+      return
+    }
+    
     if (!shouldIgnore) {
       console.error('[Wallet Error]', {
         message: error.message,
@@ -60,7 +97,7 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
         retryCount
       })
       
-      // Set provider error for critical issues
+      // Set provider error for critical issues only
       if (error.message?.includes('Network') || error.message?.includes('Connection')) {
         setProviderError(error.message)
         
@@ -106,8 +143,19 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
 
   try {
     return (
-      <ConnectionProvider endpoint={endpoint}>
-        <WalletProvider wallets={wallets} autoConnect={false} onError={onError}>
+      <ConnectionProvider 
+        endpoint={endpoint}
+        config={{ 
+          commitment: 'processed',
+          confirmTransactionInitialTimeout: 60000 
+        }}
+      >
+        <WalletProvider 
+          wallets={wallets} 
+          autoConnect={false} 
+          onError={onError}
+          localStorageKey="solana-wallet-adapter"
+        >
           <WalletModalProvider>{children}</WalletModalProvider>
         </WalletProvider>
       </ConnectionProvider>

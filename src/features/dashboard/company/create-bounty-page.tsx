@@ -50,7 +50,8 @@ const BOUNTY_TYPES = [
 import { useProgram } from "@/lib/use-program"
 import { BN } from "@coral-xyz/anchor"
 import { MIN_ESCROW_AMOUNT } from "@/lib/solana"
-import { WalletConnectionCard } from "@/components/wallet-connection-card"
+import { WalletConnectionGuide } from "@/components/wallet-connection-guide"
+
 
 interface EscrowInfo {
   escrowAddress: string
@@ -170,6 +171,11 @@ export function CreateBountyPage() {
         adapter: (wallet as any)?.adapter?.name 
       })
       
+      // Check if wallet is ready before connecting
+      if ((wallet as any)?.readyState !== 'Installed') {
+        throw new Error('Wallet not installed or ready')
+      }
+      
       if (!(wallet as any)?.connect) {
         throw new Error('Wallet adapter not available')
       }
@@ -180,9 +186,35 @@ export function CreateBountyPage() {
       const errorMsg = error instanceof Error ? error.message : 'Unknown wallet error'
       console.error('[CreateBounty] Wallet connection failed:', error)
       addDebugLog('WALLET_CONNECT_ERROR', { error: errorMsg })
-      setFundingError(`Wallet connection failed: ${errorMsg}`)
+      
+      // Provide helpful error messages based on error type
+      if (error instanceof Error && error.name === 'WalletNotReadyError') {
+        setFundingError('Please install a Solana wallet extension and refresh the page')
+      } else if (errorMsg.includes('not installed')) {
+        setFundingError('Wallet not installed - please install Phantom, Solflare, or another Solana wallet')
+      } else {
+        setFundingError(`Wallet connection failed: ${errorMsg}`)
+      }
     }
   }
+  
+  // Wallet readiness check
+  useEffect(() => {
+    const checkWalletReadiness = () => {
+      const readyState = (wallet as any)?.readyState
+      addDebugLog('WALLET_READINESS_CHECK', {
+        readyState,
+        hasWallet: !!wallet,
+        walletName: (wallet as any)?.adapter?.name
+      })
+    }
+    
+    checkWalletReadiness()
+    
+    // Listen for wallet state changes
+    const interval = setInterval(checkWalletReadiness, 5000)
+    return () => clearInterval(interval)
+  }, [wallet, addDebugLog])
 
   const lamportsAmount = useMemo(() => {
     const reward = Number.parseFloat(formData.rewardAmount)
@@ -905,7 +937,7 @@ export function CreateBountyPage() {
                   </div>
 
                   {/* Wallet Connection Status */}
-                  <WalletConnectionCard 
+                  <WalletConnectionGuide 
                     companyWallet={company?.walletAddress || undefined}
                     showMismatchWarning={connected && publicKey && company?.walletAddress ? publicKey.toBase58() !== company.walletAddress : false}
                   />
