@@ -84,6 +84,8 @@ const IMPACT_LEVELS = [
   { value: "CRITICAL", label: "Critical", description: "Severe impact, system-wide vulnerability" },
 ]
 
+const DEFAULT_BOUNTY_TYPES = ["SECURITY", "FUNCTIONALITY", "PERFORMANCE", "UI"] as const
+
 const mapSubmissionSummary = (submission: any) => ({
   id: submission?.id,
   title: submission?.title ?? "Submission",
@@ -113,6 +115,13 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
   const [impact, setImpact] = useState("")
   const [proofOfConcept, setProofOfConcept] = useState("")
   const [attachments, setAttachments] = useState<File[]>([])
+
+  const availableBountyTypes = useMemo(() => {
+    if (currentBounty?.bountyTypes?.length) {
+      return currentBounty.bountyTypes
+    }
+    return [...DEFAULT_BOUNTY_TYPES]
+  }, [currentBounty?.bountyTypes])
 
   const vulnerabilityOptions = useMemo(() => {
     const typeKey = selectedBountyType?.toUpperCase() ?? "DEFAULT"
@@ -163,9 +172,14 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
   }, [bountyId])
 
   useEffect(() => {
-    const fallbackType = currentBounty?.bountyTypes?.[0] ?? null
-    setSelectedBountyType(fallbackType)
-  }, [currentBounty?.id, currentBounty?.bountyTypes])
+    const fallbackType = availableBountyTypes[0] ?? null
+    setSelectedBountyType((prev) => {
+      if (prev && availableBountyTypes.includes(prev)) {
+        return prev
+      }
+      return fallbackType
+    })
+  }, [bountyId, availableBountyTypes])
 
   useEffect(() => {
     if (vulnerabilityType && !vulnerabilityOptions.includes(vulnerabilityType)) {
@@ -330,7 +344,7 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
 
           <div className="flex items-center gap-3">
             <div className="flex flex-wrap gap-2">
-              {currentBounty.bountyTypes.map((type) => {
+              {availableBountyTypes.map((type) => {
                 const isSelected = selectedBountyType === type
                 return (
                   <Button
@@ -386,7 +400,7 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {currentBounty.bountyTypes.map((type) => (
+                  {availableBountyTypes.map((type) => (
                     <SelectItem key={type} value={type}>
                       {type}
                     </SelectItem>
