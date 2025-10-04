@@ -217,27 +217,38 @@ export function CreateBountyPage() {
   }, [wallet, addDebugLog])
 
   const lamportsAmount = useMemo(() => {
-    const reward = Number.parseFloat(formData.rewardAmount)
-    const max = Number.parseFloat(formData.maxSubmissions)
+    try {
+      // Defensive check for form data
+      if (!formData?.rewardAmount || !formData?.maxSubmissions) {
+        return 0
+      }
+      
+      const reward = Number.parseFloat(formData.rewardAmount)
+      const max = Number.parseFloat(formData.maxSubmissions)
 
-    const rewardLamports = Number.isFinite(reward) && reward > 0 ? Math.round(reward * LAMPORTS_PER_SOL) : 0
-    const maxValue = Number.isFinite(max) && max > 0 ? Math.floor(max) : 0
+      // Extra validation
+      if (!Number.isFinite(reward) || !Number.isFinite(max) || reward <= 0 || max <= 0) {
+        return 0
+      }
 
-    if (rewardLamports === 0) {
+      const rewardLamports = Math.round(reward * LAMPORTS_PER_SOL)
+      const maxValue = Math.floor(max)
+
+      if (rewardLamports <= 0 || maxValue <= 0) {
+        return 0
+      }
+
+      const product = rewardLamports * maxValue
+      if (!Number.isSafeInteger(product) || product <= 0) {
+        return Number.MAX_SAFE_INTEGER
+      }
+
+      return product
+    } catch (error) {
+      console.error('[CreateBounty] Error calculating lamportsAmount:', error)
       return 0
     }
-
-    if (maxValue === 0) {
-      return rewardLamports
-    }
-
-    const product = rewardLamports * maxValue
-    if (!Number.isSafeInteger(product)) {
-      return Number.MAX_SAFE_INTEGER
-    }
-
-    return product
-  }, [formData.rewardAmount, formData.maxSubmissions])
+  }, [formData?.rewardAmount, formData?.maxSubmissions])
 
   const totalEscrowAmount = useMemo(() => {
     if (lamportsAmount === Number.MAX_SAFE_INTEGER) {
@@ -277,7 +288,14 @@ export function CreateBountyPage() {
 
   const meetsMinimumEscrow = lamportsAmount >= MIN_ESCROW_AMOUNT
 
-  const exceedsSafeAmount = lamportsAmount === Number.MAX_SAFE_INTEGER
+  const exceedsSafeAmount = useMemo(() => {
+    try {
+      return lamportsAmount === Number.MAX_SAFE_INTEGER || lamportsAmount >= Number.MAX_SAFE_INTEGER
+    } catch (error) {
+      console.error('[CreateBounty] Error checking safe amount:', error)
+      return true // Assume unsafe if we can't check
+    }
+  }, [lamportsAmount])
 
   const canFundBounty = Boolean(
     !funding &&
@@ -296,12 +314,38 @@ export function CreateBountyPage() {
       .map((line) => line.trim())
       .filter(Boolean)
 
+  // Safe lamports display helper
+  const safeLamportsDisplay = (amount: number): string => {
+    try {
+      if (!Number.isFinite(amount) || amount < 0) return '0'
+      if (amount >= Number.MAX_SAFE_INTEGER) return 'unsafe amount'
+      return amount.toLocaleString()
+    } catch (error) {
+      console.error('[CreateBounty] Error formatting lamports:', error)
+      return 'error'
+    }
+  }
+
   const handleCreateBounty = async () => {
     // This function is now integrated into handleInitializeEscrow
     // Keeping for potential future use
   }
 
   const handleInitializeEscrow = async () => {
+    // Early safety check to prevent BN errors
+    try {
+      if (!Number.isFinite(lamportsAmount) || lamportsAmount <= 0) {
+        setFundingError(`Invalid escrow amount: ${lamportsAmount}. Please check your reward and submission values.`)
+        return
+      }
+      
+      // Test BN creation early to catch any issues
+      new BN(lamportsAmount.toString())
+    } catch (bnError) {
+      console.error('[CreateBounty] BN creation test failed:', bnError)
+      setFundingError(`Cannot process escrow amount: ${lamportsAmount}. Please reduce your values.`)
+      return
+    }
     const initData = {
       sessionStatus,
       connected,
@@ -499,6 +543,23 @@ export function CreateBountyPage() {
       })
 
       let signature: string;
+      
+      // Validate lamportsAmount before creating BN
+      if (!Number.isFinite(lamportsAmount) || lamportsAmount <= 0) {
+        throw new Error(`Invalid escrow amount: ${lamportsAmount}`)
+      }
+      
+      if (lamportsAmount > Number.MAX_SAFE_INTEGER) {
+        throw new Error(`Escrow amount too large: ${lamportsAmount}`)
+      }
+      
+      addDebugLog('BN_CREATION', {
+        lamportsAmount,
+        lamportsAmountType: typeof lamportsAmount,
+        isFinite: Number.isFinite(lamportsAmount),
+        isSafeInteger: Number.isSafeInteger(lamportsAmount)
+      })
+      
       const amountBn = new BN(lamportsAmount.toString())
 
       try {
@@ -875,7 +936,7 @@ export function CreateBountyPage() {
                     Escrow Required: {totalEscrowDisplay === "0" ? "0 SOL" : `${totalEscrowDisplay} SOL`}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Converted to {exceedsSafeAmount ? "an unsafe amount" : lamportsAmount.toLocaleString()} lamports
+                    Converted to {exceedsSafeAmount ? "an unsafe amount" : safeLamportsDisplay(lamportsAmount)} lamports
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Minimum escrow: {minEscrowDisplay} SOL ({MIN_ESCROW_AMOUNT.toLocaleString()} lamports)
@@ -946,7 +1007,7 @@ export function CreateBountyPage() {
                       <p className="text-sm font-semibold text-yellow-400">Escrow Summary</p>
                       <p className="text-xs text-muted-foreground">
                         Total escrow amount: {totalEscrowDisplay === "0" ? "0 SOL" : `${totalEscrowDisplay} SOL`} ({
-                        exceedsSafeAmount ? "unsafe amount" : `${lamportsAmount.toLocaleString()} lamports`})
+                        exceedsSafeAmount ? "unsafe amount" : `${safeLamportsDisplay(lamportsAmount)} lamports`})
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Minimum required: {minEscrowDisplay} SOL
