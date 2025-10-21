@@ -21,6 +21,7 @@ import Link from 'next/link'
 import { useBountiesStore } from '@/stores/bounties-store'
 import Image from 'next/image'
 import { useEscrowBalance } from '@/hooks/use-escrow-balance'
+import { AddFundsDialog } from '@/components/add-funds-dialog'
 
 export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: string }> }) {
   const { bountyId } = React.use(params)
@@ -268,9 +269,18 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                   </div>
                 </div>
               </div>
-              <Button className="w-full btn-primary mt-3" onClick={() => router.push(`/bounties/${bountyId}/submit`)}>
-                Submit Bug Report
-              </Button>
+              {isCompanyMember ? (
+                <AddFundsDialog
+                  bountyId={bountyId}
+                  bountyTitle={currentBounty.title}
+                  currentEscrowBalance={(escrowSol || 0) * 1_000_000_000}
+                  onSuccess={fetchBountyDetails}
+                />
+              ) : (
+                <Button className="w-full btn-primary mt-3" onClick={() => router.push(`/bounties/${bountyId}/submit`)}>
+                  Submit Bug Report
+                </Button>
+              )}
             </div>
           </div>
         </div>
