@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyWalletSchema } from '@/lib/types';
+import nacl from 'tweetnacl';
+import bs58 from 'bs58';
+import { PublicKey } from '@solana/web3.js';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,14 +18,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { walletAddress, signature } = parsed.data;
+    const { walletAddress, signature, message } = parsed.data;
 
-    // TODO: Implement actual Solana signature verification
-    // For now, just check if wallet is provided and signature is present
-    if (!walletAddress || !signature) {
+    // Verify Solana signature
+    try {
+      const publicKey = new PublicKey(walletAddress);
+      const messageBytes = new TextEncoder().encode(message);
+      const signatureBytes = bs58.decode(signature);
+      
+      const verified = nacl.sign.detached.verify(
+        messageBytes,
+        signatureBytes,
+        publicKey.toBytes()
+      );
+
+      if (!verified) {
+        return NextResponse.json(
+          { error: 'Invalid signature - wallet ownership could not be verified' },
+          { status: 401 }
+        );
+      }
+    } catch (error) {
+      console.error('Signature verification failed:', error);
       return NextResponse.json(
-        { error: 'Wallet address and signature required' },
-        { status: 400 }
+        { error: 'Signature verification failed. Please try again.' },
+        { status: 401 }
       );
     }
 
@@ -37,9 +57,6 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-
-    // For demo purposes, assume signature is valid
-    // In production, verify the signature against the message
 
     return NextResponse.json(
       {

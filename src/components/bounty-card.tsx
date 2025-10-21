@@ -108,7 +108,7 @@ export function BountyCard({ bounty }: BountyCardProps) {
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="w-4 h-4" />
-              <span>{bounty._count.submissions} submissions</span>
+              <span>{bounty._count?.submissions} submissions</span>
             </div>
           </div>
           <div className="flex items-center justify-between rounded border border-yellow-400/30 bg-yellow-500/10 px-3 py-2">

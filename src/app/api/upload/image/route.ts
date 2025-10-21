@@ -29,23 +29,47 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type (images only)
-    if (!file.type.startsWith("image/")) {
+    const allowedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!allowedImageTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: "Only image files are allowed" },
+        { error: "Only JPEG, PNG, GIF, and WebP images are allowed" },
         { status: 400 }
       );
     }
 
-    // Validate file size (4MB max)
-    if (file.size > 4 * 1024 * 1024) {
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json(
-        { error: "File size must be less than 4MB" },
+        { error: "File size must be less than 5MB" },
         { status: 400 }
       );
     }
+
+    // Validate magic numbers (file signature)
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    const isValidImage = 
+      // JPEG
+      (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) ||
+      // PNG
+      (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) ||
+      // GIF
+      (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) ||
+      // WebP
+      (bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50);
+
+    if (!isValidImage) {
+      return NextResponse.json(
+        { error: "Invalid image file format" },
+        { status: 400 }
+      );
+    }
+
+    // Convert back to File for upload
+    const validatedFile = new File([buffer], file.name, { type: file.type });
 
     // Upload to Uploadthing
-    const uploadResult = await utapi.uploadFiles([file]);
+    const uploadResult = await utapi.uploadFiles([validatedFile]);
 
     if (!uploadResult || uploadResult.length === 0) {
       return NextResponse.json(
