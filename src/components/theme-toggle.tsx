@@ -8,10 +8,26 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 
 export function ThemeToggle() {
+  const [mounted, setMounted] = React.useState(false)
   const { theme, setTheme } = useTheme()
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
+  }
+
+  // Prevent hydration mismatch by not rendering theme-dependent content until mounted
+  if (!mounted) {
+    return (
+      <Button variant="outline" size="icon" className="relative">
+        {/* Empty placeholder with same dimensions to prevent layout shift */}
+        <div className="h-[1.2rem] w-[1.2rem]" />
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    )
   }
 
   return (
@@ -26,7 +42,7 @@ export function ThemeToggle() {
             transition={{ duration: 0.1, ease: 'easeInOut' }}
             className="absolute"
           >
-            <Moon className="h-[1.2rem] w-[1.2rem]" />
+            <Moon className="h-[1.2rem] w-[1.2rem]"/>
           </motion.div>
         ) : (
           <motion.div
