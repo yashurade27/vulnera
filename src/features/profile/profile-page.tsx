@@ -1,8 +1,8 @@
-"use client"
+'use client'
 
-import { useEffect, useMemo, useState, type ReactElement } from "react"
-import Link from "next/link"
-import { useSession } from "next-auth/react"
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
+import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import {
   ArrowRight,
   Award,
@@ -20,28 +20,30 @@ import {
   Trophy,
   Twitter,
   Users,
-} from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+} from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ProjectCard } from '@/components/ui/project-card'
+import { AddProjectDialog } from '@/components/ui/add-project-dialog'
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "decimal",
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'decimal',
   minimumFractionDigits: 2,
   maximumFractionDigits: 9,
 })
 
-const integerFormatter = new Intl.NumberFormat("en-US")
+const integerFormatter = new Intl.NumberFormat('en-US')
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
 })
 
-type UserRole = "BOUNTY_HUNTER" | "COMPANY_ADMIN" | "ADMIN"
+type UserRole = 'BOUNTY_HUNTER' | 'COMPANY_ADMIN' | 'ADMIN'
 
 interface ProfileUser {
   id: string
@@ -87,6 +89,15 @@ interface SubmissionSummary {
     id: string
     name: string
   } | null
+}
+
+interface ProjectSummary {
+  id: string
+  name: string
+  description: string | null
+  website: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 interface CompanyMembershipSummary {
@@ -135,7 +146,6 @@ interface CompanyStatsOverview {
   totalSubmissions: number
   activeMembers: number
 }
-
 
 interface CompanyBountySummary {
   id: string
@@ -220,7 +230,7 @@ interface ProfilePageProps {
 }
 
 export function ProfilePage({ userId }: ProfilePageProps) {
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<ProfileUser | null>(null)
@@ -230,6 +240,47 @@ export function ProfilePage({ userId }: ProfilePageProps) {
   const [company, setCompany] = useState<CompanyProfile | null>(null)
   const [companyStats, setCompanyStats] = useState<CompanyStatsOverview | null>(null)
   const [companyBounties, setCompanyBounties] = useState<CompanyBountySummary[]>([])
+  const [projects, setProjects] = useState<ProjectSummary[]>([])
+  const [projectsLoading, setProjectsLoading] = useState(false)
+
+  const loadProjects = useCallback(async () => {
+    // Don't load if session is still loading
+    if (sessionStatus === 'loading') {
+      return
+    }
+
+    // Ensure we have a valid session and are viewing own profile
+    if (!session?.user?.id || !userId || session.user.id !== userId) {
+      return
+    }
+
+    try {
+      setProjectsLoading(true)
+      
+      const response = await fetch('/api/users/project', { 
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('Failed to load projects:', response.status, errorData)
+        // Don't throw error, just log it and show empty state
+        setProjects([])
+        return
+      }
+      
+      const data = await response.json()
+      setProjects(data.projects || [])
+    } catch (error) {
+      console.error('Error loading projects:', error)
+      setProjects([])
+    } finally {
+      setProjectsLoading(false)
+    }
+  }, [session?.user?.id, userId, sessionStatus])
 
   useEffect(() => {
     let cancelled = false
@@ -240,15 +291,15 @@ export function ProfilePage({ userId }: ProfilePageProps) {
         setError(null)
 
         const [userRes, statsRes] = await Promise.all([
-          fetch(`/api/users/${userId}`, { credentials: "include" }),
-          fetch(`/api/users/${userId}/stats`, { credentials: "include" }),
+          fetch(`/api/users/${userId}`, { credentials: 'include' }),
+          fetch(`/api/users/${userId}/stats`, { credentials: 'include' }),
         ])
 
         if (!userRes.ok) {
-          throw new Error("Unable to load user")
+          throw new Error('Unable to load user')
         }
         if (!statsRes.ok) {
-          throw new Error("Unable to load user stats")
+          throw new Error('Unable to load user stats')
         }
 
         const userPayload = await userRes.json()
@@ -256,13 +307,13 @@ export function ProfilePage({ userId }: ProfilePageProps) {
 
         const mappedUser: ProfileUser = {
           id: userPayload?.user?.id,
-          username: userPayload?.user?.username ?? "user",
+          username: userPayload?.user?.username ?? 'user',
           fullName: userPayload?.user?.fullName ?? null,
-          email: userPayload?.user?.email ?? "",
+          email: userPayload?.user?.email ?? '',
           bio: userPayload?.user?.bio ?? null,
           avatarUrl: userPayload?.user?.avatarUrl ?? null,
           country: userPayload?.user?.country ?? null,
-          role: userPayload?.user?.role ?? "BOUNTY_HUNTER",
+          role: userPayload?.user?.role ?? 'BOUNTY_HUNTER',
           totalEarnings: Number(userPayload?.user?.totalEarnings ?? 0),
           totalBounties: Number(userPayload?.user?.totalBounties ?? 0),
           reputation: Number(userPayload?.user?.reputation ?? 0),
@@ -290,14 +341,13 @@ export function ProfilePage({ userId }: ProfilePageProps) {
         setUser(mappedUser)
         setStats(mappedStats)
 
-        if (mappedUser.role === "BOUNTY_HUNTER") {
-          const submissionsRes = await fetch(
-            `/api/users/${userId}/submissions?status=APPROVED&limit=6`,
-            { credentials: "include" },
-          )
+        if (mappedUser.role === 'BOUNTY_HUNTER') {
+          const submissionsRes = await fetch(`/api/users/${userId}/submissions?status=APPROVED&limit=6`, {
+            credentials: 'include',
+          })
 
           if (!submissionsRes.ok) {
-            throw new Error("Unable to load submissions")
+            throw new Error('Unable to load submissions')
           }
 
           const submissionsPayload = await submissionsRes.json()
@@ -308,32 +358,32 @@ export function ProfilePage({ userId }: ProfilePageProps) {
           const mappedSubmissions: SubmissionSummary[] = Array.isArray(submissionsPayload?.submissions)
             ? submissionsPayload.submissions.map((submission: SubmissionApiResponse) => ({
                 id: submission?.id,
-                title: submission?.title ?? "Submission",
-                status: submission?.status ?? "PENDING",
+                title: submission?.title ?? 'Submission',
+                status: submission?.status ?? 'PENDING',
                 submittedAt: submission?.submittedAt ?? submission?.createdAt ?? new Date().toISOString(),
                 rewardAmount: Number(submission?.rewardAmount ?? submission?.bounty?.rewardAmount ?? 0),
                 bounty: {
-                  id: submission?.bounty?.id ?? "",
-                  title: submission?.bounty?.title ?? "Bounty",
+                  id: submission?.bounty?.id ?? '',
+                  title: submission?.bounty?.title ?? 'Bounty',
                   rewardAmount: Number(submission?.bounty?.rewardAmount ?? 0),
                 },
                 company: submission?.company
                   ? {
                       id: submission.company.id,
-                      name: submission.company.name ?? "",
+                      name: submission.company.name ?? '',
                     }
                   : null,
               }))
             : []
 
           setRecentSubmissions(mappedSubmissions)
-        } else if (mappedUser.role === "COMPANY_ADMIN") {
+        } else if (mappedUser.role === 'COMPANY_ADMIN') {
           const membershipRes = await fetch(`/api/users/${userId}/companies`, {
-            credentials: "include",
+            credentials: 'include',
           })
 
           if (!membershipRes.ok) {
-            throw new Error("Unable to load company memberships")
+            throw new Error('Unable to load company memberships')
           }
 
           const membershipPayload = await membershipRes.json()
@@ -343,7 +393,7 @@ export function ProfilePage({ userId }: ProfilePageProps) {
 
           const mappedMemberships: CompanyMembershipSummary[] = Array.isArray(membershipPayload?.memberships)
             ? membershipPayload.memberships.map((membership: MembershipApiResponse) => ({
-                role: membership?.role ?? "COMPANY_ADMIN",
+                role: membership?.role ?? 'COMPANY_ADMIN',
                 canCreateBounty: Boolean(membership?.canCreateBounty),
                 canReviewBounty: Boolean(membership?.canReviewBounty),
                 canApprovePayment: Boolean(membership?.canApprovePayment),
@@ -353,12 +403,12 @@ export function ProfilePage({ userId }: ProfilePageProps) {
                 company: membership?.company
                   ? {
                       id: membership.company.id,
-                      name: membership.company.name ?? "",
-                      slug: membership.company.slug ?? "",
+                      name: membership.company.name ?? '',
+                      slug: membership.company.slug ?? '',
                       description: membership.company.description ?? null,
                       website: membership.company.website ?? null,
                       logoUrl: membership.company.logoUrl ?? null,
-                      walletAddress: membership.company.walletAddress ?? "",
+                      walletAddress: membership.company.walletAddress ?? '',
                       smartContractAddress: membership.company.smartContractAddress ?? null,
                       industry: membership.company.industry ?? null,
                       companySize: membership.company.companySize ?? null,
@@ -384,21 +434,21 @@ export function ProfilePage({ userId }: ProfilePageProps) {
           const primaryCompany = mappedMemberships.find((item) => item.company)?.company ?? null
           if (primaryCompany) {
             const [companyRes, companyStatsRes, companyBountiesRes] = await Promise.all([
-              fetch(`/api/companies/${primaryCompany.id}`, { credentials: "include" }),
-              fetch(`/api/companies/${primaryCompany.id}/stats`, { credentials: "include" }),
+              fetch(`/api/companies/${primaryCompany.id}`, { credentials: 'include' }),
+              fetch(`/api/companies/${primaryCompany.id}/stats`, { credentials: 'include' }),
               fetch(`/api/companies/${primaryCompany.id}/bounties?status=ACTIVE&limit=6`, {
-                credentials: "include",
+                credentials: 'include',
               }),
             ])
 
             if (!companyRes.ok) {
-              throw new Error("Unable to load company profile")
+              throw new Error('Unable to load company profile')
             }
             if (!companyStatsRes.ok) {
-              throw new Error("Unable to load company stats")
+              throw new Error('Unable to load company stats')
             }
             if (!companyBountiesRes.ok) {
-              throw new Error("Unable to load company bounties")
+              throw new Error('Unable to load company bounties')
             }
 
             const companyData = await companyRes.json()
@@ -424,8 +474,12 @@ export function ProfilePage({ userId }: ProfilePageProps) {
               location: companyData?.company?.location ?? primaryCompany.location ?? null,
               isVerified: Boolean(companyData?.company?.isVerified ?? primaryCompany.isVerified),
               isActive: Boolean(companyData?.company?.isActive ?? primaryCompany.isActive),
-              totalBountiesFunded: Number(companyData?.company?.totalBountiesFunded ?? primaryCompany.totalBountiesFunded ?? 0),
-              totalBountiesPaid: Number(companyData?.company?.totalBountiesPaid ?? primaryCompany.totalBountiesPaid ?? 0),
+              totalBountiesFunded: Number(
+                companyData?.company?.totalBountiesFunded ?? primaryCompany.totalBountiesFunded ?? 0,
+              ),
+              totalBountiesPaid: Number(
+                companyData?.company?.totalBountiesPaid ?? primaryCompany.totalBountiesPaid ?? 0,
+              ),
               activeBounties: Number(companyData?.company?.activeBounties ?? primaryCompany.activeBounties ?? 0),
               resolvedVulnerabilities: Number(
                 companyData?.company?.resolvedVulnerabilities ?? primaryCompany.resolvedVulnerabilities ?? 0,
@@ -442,12 +496,11 @@ export function ProfilePage({ userId }: ProfilePageProps) {
             const mappedCompanyBounties: CompanyBountySummary[] = Array.isArray(companyBountiesData?.bounties)
               ? companyBountiesData.bounties.map((bounty: BountyApiResponse) => ({
                   id: bounty?.id,
-                  title: bounty?.title ?? "Bounty",
-                  bountyTypes: Array.isArray(bounty?.bountyTypes) && bounty.bountyTypes.length
-                    ? bounty.bountyTypes
-                    : ["SECURITY"],
+                  title: bounty?.title ?? 'Bounty',
+                  bountyTypes:
+                    Array.isArray(bounty?.bountyTypes) && bounty.bountyTypes.length ? bounty.bountyTypes : ['SECURITY'],
                   rewardAmount: Number(bounty?.rewardAmount ?? 0),
-                  status: bounty?.status ?? "ACTIVE",
+                  status: bounty?.status ?? 'ACTIVE',
                   createdAt: bounty?.createdAt ?? undefined,
                   endsAt: bounty?.endsAt ?? null,
                   _count: {
@@ -462,7 +515,7 @@ export function ProfilePage({ userId }: ProfilePageProps) {
       } catch (err) {
         console.error(err)
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Unexpected error loading profile")
+          setError(err instanceof Error ? err.message : 'Unexpected error loading profile')
         }
       } finally {
         if (!cancelled) {
@@ -478,6 +531,13 @@ export function ProfilePage({ userId }: ProfilePageProps) {
     }
   }, [userId])
 
+  useEffect(() => {
+    // Only load projects if session is ready, user exists, and viewing own profile
+    if (sessionStatus !== 'loading' && session?.user?.id && userId && session.user.id === userId) {
+      void loadProjects()
+    }
+  }, [sessionStatus, session?.user?.id, userId, loadProjects])
+
   const isOwnProfile = session?.user?.id === user?.id
 
   const socialLinks = useMemo(() => {
@@ -485,42 +545,42 @@ export function ProfilePage({ userId }: ProfilePageProps) {
       return []
     }
 
-  const links: Array<{ href: string; label: string; icon: ReactElement }> = []
+    const links: Array<{ href: string; label: string; icon: ReactElement }> = []
 
     if (user.githubUrl) {
-      links.push({ href: user.githubUrl, label: "GitHub", icon: <Github className="w-4 h-4" /> })
+      links.push({ href: user.githubUrl, label: 'GitHub', icon: <Github className="w-4 h-4" /> })
     }
     if (user.twitterUrl) {
-      links.push({ href: user.twitterUrl, label: "Twitter", icon: <Twitter className="w-4 h-4" /> })
+      links.push({ href: user.twitterUrl, label: 'Twitter', icon: <Twitter className="w-4 h-4" /> })
     }
     if (user.linkedinUrl) {
-      links.push({ href: user.linkedinUrl, label: "LinkedIn", icon: <BadgeCheck className="w-4 h-4" /> })
+      links.push({ href: user.linkedinUrl, label: 'LinkedIn', icon: <BadgeCheck className="w-4 h-4" /> })
     }
     if (user.portfolioUrl) {
-      links.push({ href: user.portfolioUrl, label: "Portfolio", icon: <Globe className="w-4 h-4" /> })
+      links.push({ href: user.portfolioUrl, label: 'Portfolio', icon: <Globe className="w-4 h-4" /> })
     }
 
     return links
   }, [user])
 
   const hunterBadges = useMemo(() => {
-    if (!user || !stats || user.role !== "BOUNTY_HUNTER") {
+    if (!user || !stats || user.role !== 'BOUNTY_HUNTER') {
       return []
     }
 
     const items: Array<{ title: string; description: string }> = []
 
     if (stats.totalEarnings >= 10_000) {
-      items.push({ title: "Elite Earner", description: "Secured over $10k in rewards" })
+      items.push({ title: 'Elite Earner', description: 'Secured over $10k in rewards' })
     }
     if (stats.approvedSubmissions >= 25) {
-      items.push({ title: "Seasoned Hunter", description: "25+ approved submissions" })
+      items.push({ title: 'Seasoned Hunter', description: '25+ approved submissions' })
     }
     if (user.reputation >= 500) {
-      items.push({ title: "Community Pillar", description: "Top-tier reputation score" })
+      items.push({ title: 'Community Pillar', description: 'Top-tier reputation score' })
     }
     if (items.length === 0) {
-      items.push({ title: "Rising Talent", description: "Actively growing on Vulnera" })
+      items.push({ title: 'Rising Talent', description: 'Actively growing on Vulnera' })
     }
 
     return items
@@ -534,16 +594,16 @@ export function ProfilePage({ userId }: ProfilePageProps) {
     const items: Array<{ title: string; description: string }> = []
 
     if (companyStats.totalBounties >= 10) {
-      items.push({ title: "Program Innovator", description: "Launched 10+ bounty programs" })
+      items.push({ title: 'Program Innovator', description: 'Launched 10+ bounty programs' })
     }
     if (companyStats.totalPaidOut >= 50_000) {
-      items.push({ title: "Security Champion", description: "Invested $50k+ in rewards" })
+      items.push({ title: 'Security Champion', description: 'Invested $50k+ in rewards' })
     }
     if (companyStats.approvedSubmissions >= 100) {
-      items.push({ title: "Bug Crusher", description: "Closed 100+ valid reports" })
+      items.push({ title: 'Bug Crusher', description: 'Closed 100+ valid reports' })
     }
     if (items.length === 0) {
-      items.push({ title: "Trusted Partner", description: "Building trust with the community" })
+      items.push({ title: 'Trusted Partner', description: 'Building trust with the community' })
     }
 
     return items
@@ -575,7 +635,11 @@ export function ProfilePage({ userId }: ProfilePageProps) {
   )
 
   if (loading) {
-    return <div className="min-h-screen bg-background py-12"><div className="container-custom">{renderLoading()}</div></div>
+    return (
+      <div className="min-h-screen bg-background py-12">
+        <div className="container-custom">{renderLoading()}</div>
+      </div>
+    )
   }
 
   if (error) {
@@ -609,16 +673,18 @@ export function ProfilePage({ userId }: ProfilePageProps) {
               <Avatar className="h-20 w-20 border border-yellow-500/30">
                 {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={user.fullName ?? user.username} /> : null}
                 <AvatarFallback className="bg-yellow-500/10 text-yellow-200 text-xl font-semibold">
-                  {(user.fullName ?? user.username ?? "U").slice(0, 2).toUpperCase()}
+                  {(user.fullName ?? user.username ?? 'U').slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-3xl font-semibold">
-                    {user.fullName ?? `@${user.username}`}
-                  </h1>
+                  <h1 className="text-3xl font-semibold">{user.fullName ?? `@${user.username}`}</h1>
                   <Badge variant="outline" className="border-yellow-400/40 bg-yellow-500/10 text-yellow-200">
-                    {user.role === "COMPANY_ADMIN" ? "Company Admin" : user.role === "ADMIN" ? "Admin" : "Bounty Hunter"}
+                    {user.role === 'COMPANY_ADMIN'
+                      ? 'Company Admin'
+                      : user.role === 'ADMIN'
+                        ? 'Admin'
+                        : 'Bounty Hunter'}
                   </Badge>
                   {user.rank ? (
                     <Badge variant="secondary" className="gap-1">
@@ -627,7 +693,7 @@ export function ProfilePage({ userId }: ProfilePageProps) {
                   ) : null}
                 </div>
                 <p className="text-muted-foreground mt-2 max-w-2xl">
-                  {user.bio ?? "This user has not added a bio yet."}
+                  {user.bio ?? 'This user has not added a bio yet.'}
                 </p>
                 <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-muted-foreground">
                   <span>@{user.username}</span>
@@ -655,16 +721,12 @@ export function ProfilePage({ userId }: ProfilePageProps) {
               ))}
               {isOwnProfile ? (
                 <Button asChild variant="outline">
-                  <Link href="/settings">
-                    Manage Profile
-                  </Link>
+                  <Link href="/settings">Manage Profile</Link>
                 </Button>
               ) : null}
-              {user.role === "BOUNTY_HUNTER" && (
+              {user.role === 'BOUNTY_HUNTER' && (
                 <Button asChild>
-                  <Link href={`/users/${user.id}/submissions`}>
-                    View Submissions
-                  </Link>
+                  <Link href={`/users/${user.id}/submissions`}>View Submissions</Link>
                 </Button>
               )}
             </div>
@@ -691,7 +753,9 @@ export function ProfilePage({ userId }: ProfilePageProps) {
               <CardTitle className="text-sm font-medium text-muted-foreground">Completed Bounties</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-semibold">{integerFormatter.format(stats?.totalBounties ?? user.totalBounties ?? 0)}</p>
+              <p className="text-3xl font-semibold">
+                {integerFormatter.format(stats?.totalBounties ?? user.totalBounties ?? 0)}
+              </p>
               <span className="text-xs text-muted-foreground">Successful bounty hunts</span>
             </CardContent>
           </Card>
@@ -701,27 +765,25 @@ export function ProfilePage({ userId }: ProfilePageProps) {
               <CardTitle className="text-sm font-medium text-muted-foreground">Reputation</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-semibold">{integerFormatter.format(stats?.reputation ?? user.reputation ?? 0)}</p>
+              <p className="text-3xl font-semibold">
+                {integerFormatter.format(stats?.reputation ?? user.reputation ?? 0)}
+              </p>
               <span className="text-xs text-muted-foreground">Community trust score</span>
             </CardContent>
           </Card>
 
           <Card className="card-glass">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Avg Reward
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Avg Reward</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-semibold">
-                {currencyFormatter.format(stats?.averageReward ?? 0)} SOL
-              </p>
+              <p className="text-3xl font-semibold">{currencyFormatter.format(stats?.averageReward ?? 0)} SOL</p>
               <span className="text-xs text-muted-foreground">Per approved submission</span>
             </CardContent>
           </Card>
         </section>
 
-        {user.role === "BOUNTY_HUNTER" ? (
+        {user.role === 'BOUNTY_HUNTER' ? (
           <section className="grid lg:grid-cols-[2fr_1fr] gap-8">
             <Card className="card-glass">
               <CardHeader className="flex flex-row items-center justify-between">
@@ -735,9 +797,7 @@ export function ProfilePage({ userId }: ProfilePageProps) {
               </CardHeader>
               <CardContent>
                 {recentSubmissions.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground">
-                    No approved submissions yet.
-                  </div>
+                  <div className="text-center py-10 text-muted-foreground">No approved submissions yet.</div>
                 ) : (
                   <div className="space-y-4">
                     {recentSubmissions.map((submission) => (
@@ -755,7 +815,7 @@ export function ProfilePage({ userId }: ProfilePageProps) {
                         </div>
                         <p className="text-xs text-muted-foreground mb-3">
                           Submitted on {dateFormatter.format(new Date(submission.submittedAt))}
-                          {submission.company ? ` · ${submission.company.name}` : ""}
+                          {submission.company ? ` · ${submission.company.name}` : ''}
                         </p>
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2 text-yellow-300 font-semibold">
@@ -778,9 +838,7 @@ export function ProfilePage({ userId }: ProfilePageProps) {
             <Card className="card-glass">
               <CardHeader>
                 <CardTitle className="text-2xl">Badges</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Recognition unlocked through consistent performance
-                </p>
+                <p className="text-sm text-muted-foreground">Recognition unlocked through consistent performance</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 {hunterBadges.map((badge) => (
@@ -797,7 +855,44 @@ export function ProfilePage({ userId }: ProfilePageProps) {
           </section>
         ) : null}
 
-        {user.role === "COMPANY_ADMIN" && company ? (
+        {user.role === 'BOUNTY_HUNTER' && isOwnProfile && sessionStatus === 'authenticated' ? (
+          <section>
+            <Card className="card-glass">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-2xl">Proof of Work</CardTitle>
+                  <p className="text-sm text-muted-foreground">Showcase your projects and achievements</p>
+                </div>
+                <AddProjectDialog onProjectAdded={loadProjects} />
+              </CardHeader>
+              <CardContent>
+                {projectsLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="space-y-3">
+                        <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-full" />
+                      </div>
+                    ))}
+                  </div>
+                ) : projects.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    No projects added yet. Click &quot;+ ADD&quot; to showcase your work.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {projects.map((project, index) => (
+                      <ProjectCard key={project.id} project={project} gradientIndex={index} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </section>
+        ) : null}
+
+        {user.role === 'COMPANY_ADMIN' && company ? (
           <section className="space-y-8">
             <div className="grid lg:grid-cols-[2fr_1fr] gap-8">
               <Card className="card-glass relative overflow-hidden">
@@ -814,20 +909,28 @@ export function ProfilePage({ userId }: ProfilePageProps) {
                     <div className="flex items-center gap-3 flex-wrap">
                       <h2 className="text-2xl font-semibold">{company.name}</h2>
                       {company.isVerified ? (
-                        <Badge variant="outline" className="border-green-400/40 text-green-300 bg-green-500/10 flex items-center gap-1">
+                        <Badge
+                          variant="outline"
+                          className="border-green-400/40 text-green-300 bg-green-500/10 flex items-center gap-1"
+                        >
                           <ShieldCheck className="w-3 h-3" /> Verified
                         </Badge>
                       ) : null}
                       <Badge variant="secondary" className="flex items-center gap-1">
-                        <Building2 className="w-3 h-3" /> {company.industry ?? "Industry"}
+                        <Building2 className="w-3 h-3" /> {company.industry ?? 'Industry'}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground max-w-2xl">
-                      {company.description ?? "This company has not added a description yet."}
+                      {company.description ?? 'This company has not added a description yet.'}
                     </p>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                       {company.website ? (
-                        <Link href={company.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 link-premium">
+                        <Link
+                          href={company.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 link-premium"
+                        >
                           <ExternalLink className="w-4 h-4" /> Visit website
                         </Link>
                       ) : null}
@@ -868,7 +971,9 @@ export function ProfilePage({ userId }: ProfilePageProps) {
                   <CardTitle className="text-sm text-muted-foreground">Active Bounties</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-semibold">{integerFormatter.format(companyStats?.activeBounties ?? company.activeBounties ?? 0)}</p>
+                  <p className="text-3xl font-semibold">
+                    {integerFormatter.format(companyStats?.activeBounties ?? company.activeBounties ?? 0)}
+                  </p>
                   <span className="text-xs text-muted-foreground">Currently accepting submissions</span>
                 </CardContent>
               </Card>
@@ -878,7 +983,8 @@ export function ProfilePage({ userId }: ProfilePageProps) {
                 </CardHeader>
                 <CardContent>
                   <p className="text-3xl font-semibold text-yellow-300">
-                    {currencyFormatter.format(companyStats?.totalBountiesFunded ?? company.totalBountiesFunded ?? 0)} SOL
+                    {currencyFormatter.format(companyStats?.totalBountiesFunded ?? company.totalBountiesFunded ?? 0)}{' '}
+                    SOL
                   </p>
                   <span className="text-xs text-muted-foreground">Escrowed across programs</span>
                 </CardContent>
@@ -919,13 +1025,14 @@ export function ProfilePage({ userId }: ProfilePageProps) {
               </CardHeader>
               <CardContent>
                 {companyBounties.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground">
-                    No active bounties right now.
-                  </div>
+                  <div className="text-center py-10 text-muted-foreground">No active bounties right now.</div>
                 ) : (
                   <div className="grid md:grid-cols-2 gap-4">
                     {companyBounties.map((bounty) => (
-                      <div key={bounty.id} className="border border-border rounded-xl p-4 hover:border-yellow-400/50 transition">
+                      <div
+                        key={bounty.id}
+                        className="border border-border rounded-xl p-4 hover:border-yellow-400/50 transition"
+                      >
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div>
                             <h3 className="font-semibold text-base line-clamp-2">{bounty.title}</h3>
@@ -974,7 +1081,8 @@ export function ProfilePage({ userId }: ProfilePageProps) {
                           <div>
                             <p className="font-semibold">{membership.company?.name}</p>
                             <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Users className="w-3 h-3" /> {integerFormatter.format(membership.company?._count?.members ?? 0)} members
+                              <Users className="w-3 h-3" />{' '}
+                              {integerFormatter.format(membership.company?._count?.members ?? 0)} members
                             </p>
                           </div>
                           <Badge variant="secondary">{membership.role}</Badge>
