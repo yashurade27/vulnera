@@ -19,12 +19,12 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const { searchParams } = new URL(request.url)
     const queryParams: Record<string, string | undefined> = {}
-    
+
     const limitParam = searchParams.get('limit')
     const offsetParam = searchParams.get('offset')
     const sortByParam = searchParams.get('sortBy')
     const sortOrderParam = searchParams.get('sortOrder')
-    
+
     if (limitParam) queryParams.limit = limitParam
     if (offsetParam) queryParams.offset = offsetParam
     if (sortByParam) queryParams.sortBy = sortByParam
@@ -34,10 +34,7 @@ export async function GET(request: NextRequest) {
 
     if (!parsed.success) {
       console.error('Query validation error:', parsed.error.issues)
-      return NextResponse.json(
-        { error: 'Invalid query parameters', details: parsed.error.issues },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid query parameters', details: parsed.error.issues }, { status: 400 })
     }
 
     const { limit = 50, offset = 0, sortBy, sortOrder } = parsed.data
@@ -101,10 +98,7 @@ export async function POST(request: NextRequest) {
     const parsed = createProjectSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid input', details: parsed.error.issues },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid input', details: parsed.error.issues }, { status: 400 })
     }
 
     const { name, description, website } = parsed.data
@@ -134,4 +128,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

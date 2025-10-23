@@ -256,14 +256,14 @@ export function ProfilePage({ userId }: ProfilePageProps) {
 
     try {
       setProjectsLoading(true)
-      
-      const response = await fetch('/api/users/project', { 
+
+      const response = await fetch('/api/users/project', {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
         console.error('Failed to load projects:', response.status, errorData)
@@ -271,7 +271,7 @@ export function ProfilePage({ userId }: ProfilePageProps) {
         setProjects([])
         return
       }
-      
+
       const data = await response.json()
       setProjects(data.projects || [])
     } catch (error) {

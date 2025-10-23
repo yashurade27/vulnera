@@ -5,8 +5,6 @@ import { prisma } from '@/lib/prisma'
 import { updateProjectSchema, type UpdateProjectInput } from '@/lib/types'
 import { type RouteParams } from '@/lib/next'
 
-
-
 /**
  * PATCH /api/users/project/[projectId]
  * Update a specific project
@@ -40,10 +38,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams<{ proj
     const parsed = updateProjectSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid input', details: parsed.error.issues },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid input', details: parsed.error.issues }, { status: 400 })
     }
 
     // Update the project
@@ -115,11 +110,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams<{ pro
           name: existingProject.name,
         },
       },
-      { status: 200 }
+      { status: 200 },
     )
   } catch (error) {
     console.error('Delete project error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

@@ -13,14 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
@@ -96,9 +89,7 @@ export function AddProjectDialog({ onProjectAdded, trigger }: AddProjectDialogPr
         </button>
         <DialogHeader>
           <DialogTitle className="text-xl">Add Project</DialogTitle>
-          <DialogDescription>
-            Showcase your work by adding a project to your profile
-          </DialogDescription>
+          <DialogDescription>Showcase your work by adding a project to your profile</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -183,4 +174,3 @@ export function AddProjectDialog({ onProjectAdded, trigger }: AddProjectDialogPr
     </Dialog>
   )
 }
-

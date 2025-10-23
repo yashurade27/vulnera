@@ -53,11 +53,8 @@ export function ProjectCard({ project, gradientIndex }: ProjectCardProps) {
             </Link>
           )}
         </div>
-        {project.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
-        )}
+        {project.description && <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>}
       </CardContent>
     </Card>
   )
 }
-
