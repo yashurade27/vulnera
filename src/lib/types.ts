@@ -414,6 +414,27 @@ export const deleteFileSchema = z.object({
   fileId: z.string(),
 });
 
+// ==================== PROJECT SCHEMAS ====================
+
+export const createProjectSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().max(1000).optional(),
+  website: z.string().url().optional(),
+});
+
+export const updateProjectSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().max(1000).optional(),
+  website: z.string().url().optional(),
+});
+
+export const getProjectsQuerySchema = z.object({
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'name']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
 // ==================== WEBHOOK SCHEMAS ====================
 
 export const solanaWebhookSchema = z.object({
@@ -429,6 +450,8 @@ export const paymentConfirmedWebhookSchema = z.object({
   confirmations: z.number().int().min(0).optional(),
   blockTime: z.number().optional(),
 });
+
+
 
 // ==================== TYPE DEFINITIONS ====================
 
@@ -484,6 +507,9 @@ export type SearchCompaniesQuery = z.infer<typeof searchCompaniesQuerySchema>;
 export type UploadImageInput = z.infer<typeof uploadImageSchema>;
 export type UploadAttachmentInput = z.infer<typeof uploadAttachmentSchema>;
 export type DeleteFileInput = z.infer<typeof deleteFileSchema>;
+export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
+export type GetProjectsQuery = z.infer<typeof getProjectsQuerySchema>;
 export type SolanaWebhookInput = z.infer<typeof solanaWebhookSchema>;
 export type PaymentConfirmedWebhookInput = z.infer<typeof paymentConfirmedWebhookSchema>;
 
