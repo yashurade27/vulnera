@@ -137,6 +137,33 @@ The smart contract (`lib.rs`) implements three main functions:
 ### 13. `/src/app/api/bounties/[bountyId]/status/route.ts` (NEW)
 **Purpose:** Update bounty status independently (DRAFT, ACTIVE, CLOSED, EXPIRED)
 
+### 14. `/src/app/api/users/project/route.ts` (NEW)
+**Purpose:** Manage user projects (portfolio/showcase)
+
+**Features:**
+- **GET** - List all projects for authenticated user
+  - Supports pagination (limit, offset)
+  - Supports sorting (sortBy, sortOrder)
+  - Returns total count and hasMore flag
+- **POST** - Create a new project
+  - Requires: name (required), description (optional), website (optional)
+  - Validates input with Zod schema
+  - Automatically links project to authenticated user
+
+### 15. `/src/app/api/users/project/[projectId]/route.ts` (NEW)
+**Purpose:** Update or delete specific user projects
+
+**Features:**
+- **PATCH** - Update project details
+  - Validates ownership (user can only update own projects)
+  - Admins can update any project
+  - Supports partial updates
+  - Converts empty strings to null for optional fields
+- **DELETE** - Delete a project
+  - Validates ownership (user can only delete own projects)
+  - Admins can delete any project
+  - Cascade delete via database foreign key
+
 ## API Flow Summary
 
 ### Creating and Funding a Bounty
@@ -173,13 +200,33 @@ GET /api/companies/my-company   # Retrieve current user's company
 PATCH /api/bounties/{id}/status   # Update bounty status (e.g., DRAFT→ACTIVE)
 ```
 
+### Project For POW(Proof of Work)
+```
+GET    /api/users/project                # List all projects for authenticated user
+POST   /api/users/project                # Create a new project
+PATCH  /api/users/project/{projectId}    # Update a specific project
+DELETE /api/users/project/{projectId}    # Delete a specific project
+```
+
 ## Database Schema Updates Required
 
+### Smart Contract Integration
 No schema changes needed! All existing fields support the integration:
 - `Bounty.escrowAddress` - Stores PDA address
 - `Bounty.txSignature` - Stores initialize transaction
 - `Payment.txSignature` - Stores payment transaction
 - `Payment.blockchainConfirmed` - Tracks confirmation status
+
+### Project Management (NEW)
+Added `Project` model for user portfolio/showcase:
+- `id` - Primary key (String)
+- `userId` - Foreign key to User (cascade delete)
+- `name` - Project name (required)
+- `description` - Project description (optional)
+- `website` - Project website URL (optional)
+- `createdAt` - Timestamp
+- `updatedAt` - Timestamp
+- Indexes on `userId` and `createdAt` for performance
 
 ## Environment Variables Needed
 
