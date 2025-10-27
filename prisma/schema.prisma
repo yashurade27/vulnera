@@ -121,6 +121,7 @@ model User {
   reportsAgainst    Report[]        @relation("ReportedUserReports")
   notifications     Notification[]
   projects          Project[]
+  bountyBookmarks   BountyBookmark[]
   
   @@index([email])
   @@index([walletAddress])
@@ -261,9 +262,27 @@ model Bounty {
   // Relations
   company         Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   submissions     Submission[]
+  bookmarks       BountyBookmark[]
   
   @@index([companyId, status])
   @@index([startsAt, endsAt])
+}
+
+model BountyBookmark {
+  id          String   @id @default(cuid())
+  userId      String
+  bountyId    String
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bounty      Bounty   @relation(fields: [bountyId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, bountyId])
+  @@index([userId])
+  @@index([bountyId])
 }
 
 // ==================== SUBMISSION MANAGEMENT ====================

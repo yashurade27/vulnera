@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useEscrowBalance } from "@/hooks/use-escrow-balance"
+import { BookmarkButton } from "@/components/bookmark-button"
 
 interface BountyCardProps {
   bounty: {
@@ -30,6 +31,7 @@ interface BountyCardProps {
       submissions: number
     }
   }
+  onBookmarkChange?: (bountyId: string, isBookmarked: boolean) => void
 }
 
 const BOUNTY_TYPE_COLORS: Record<string, string> = {
@@ -39,7 +41,7 @@ const BOUNTY_TYPE_COLORS: Record<string, string> = {
   SECURITY: "bg-red-500/10 text-red-400 border-red-500/30",
 }
 
-export function BountyCard({ bounty }: BountyCardProps) {
+export function BountyCard({ bounty, onBookmarkChange }: BountyCardProps) {
   const { balance: escrowSol, isLoading: isLoadingEscrow } = useEscrowBalance(bounty.escrowAddress)
   const formatDate = (date: string | null) => {
     if (!date) return "No deadline"
@@ -65,28 +67,36 @@ export function BountyCard({ bounty }: BountyCardProps) {
     <Card className="vulnerability-card group hover:border-yellow-400/50">
       <CardHeader>
         <div className="flex items-start justify-between gap-4 mb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 flex items-center justify-center border border-yellow-500/30">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 flex items-center justify-center border border-yellow-500/30 flex-shrink-0">
               <Building2 className="w-6 h-6 text-yellow-400" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="font-semibold text-sm">{bounty.company.name}</p>
-                {bounty.company.isVerified && <CheckCircle2 className="w-4 h-4 text-yellow-400" />}
+                <p className="font-semibold text-sm truncate">{bounty.company.name}</p>
+                {bounty.company.isVerified && <CheckCircle2 className="w-4 h-4 text-yellow-400 flex-shrink-0" />}
               </div>
-              <p className="text-xs text-muted-foreground">@{bounty.company.slug}</p>
+              <p className="text-xs text-muted-foreground truncate">@{bounty.company.slug}</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 justify-end">
-            {bounty.bountyTypes?.length ? (
-              bounty.bountyTypes.map((type) => (
-                <Badge key={type} variant="outline" className={BOUNTY_TYPE_COLORS[type] || ""}>
-                  {type}
-                </Badge>
-              ))
-            ) : (
-              <Badge variant="outline">Unknown</Badge>
-            )}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <BookmarkButton 
+              bountyId={bounty.id} 
+              variant="ghost" 
+              size="sm" 
+              onBookmarkChange={onBookmarkChange}
+            />
+            <div className="flex flex-wrap gap-2 justify-end">
+              {bounty.bountyTypes?.length ? (
+                bounty.bountyTypes.map((type) => (
+                  <Badge key={type} variant="outline" className={BOUNTY_TYPE_COLORS[type] || ""}>
+                    {type}
+                  </Badge>
+                ))
+              ) : (
+                <Badge variant="outline">Unknown</Badge>
+              )}
+            </div>
           </div>
         </div>
 

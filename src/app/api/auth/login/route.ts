@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { loginSchema } from '@/lib/types';
 import { encode } from 'next-auth/jwt';
-import { authOptions } from '../[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {

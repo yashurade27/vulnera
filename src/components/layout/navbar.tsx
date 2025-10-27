@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Menu, X, Shield, LogOut, User, LayoutDashboard } from 'lucide-react'
+import { Menu, X, Shield, LogOut, User, LayoutDashboard, Bookmark } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -145,6 +145,11 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
               <DropdownMenuItem asChild>
                 <Link href={dashboardHref} className="flex items-center gap-2">
                   <LayoutDashboard className="h-4 w-4" /> {dashboardLabel}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/bookmarks" className="flex items-center gap-2">
+                  <Bookmark className="h-4 w-4" /> Bookmarks
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UTApi } from "uploadthing/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { type RouteParams } from "@/lib/next";
 
 const utapi = new UTApi({

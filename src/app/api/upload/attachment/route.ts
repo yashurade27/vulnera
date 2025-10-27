@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UTApi } from "uploadthing/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 
 const utapi = new UTApi({
   token: process.env.UPLOADTHING_TOKEN,

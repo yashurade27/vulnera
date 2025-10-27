@@ -22,6 +22,7 @@ import { useBountiesStore } from '@/stores/bounties-store'
 import Image from 'next/image'
 import { useEscrowBalance } from '@/hooks/use-escrow-balance'
 import { AddFundsDialog } from '@/components/add-funds-dialog'
+import { BookmarkButton } from '@/components/bookmark-button'
 
 export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: string }> }) {
   const { bountyId } = React.use(params)
@@ -176,27 +177,30 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
 
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center">
-                  {currentBounty.company.logoUrl ? (
-                    <Image
-                      width={64}
-                      height={64}
-                      src={currentBounty.company.logoUrl || '/placeholder.svg'}
-                      alt={currentBounty.company.name}
-                      className="w-8 h-8 object-contain"
-                    />
-                  ) : (
-                    <Building2 className="w-6 h-6 text-muted-foreground" />
-                  )}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">{currentBounty.company.name}</h3>
-                    {currentBounty.company.isVerified && <CheckCircle2 className="w-4 h-4 text-yellow-400" />}
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center">
+                    {currentBounty.company.logoUrl ? (
+                      <Image
+                        width={64}
+                        height={64}
+                        src={currentBounty.company.logoUrl || '/placeholder.svg'}
+                        alt={currentBounty.company.name}
+                        className="w-8 h-8 object-contain"
+                      />
+                    ) : (
+                      <Building2 className="w-6 h-6 text-muted-foreground" />
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground">@{currentBounty.company.slug}</p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{currentBounty.company.name}</h3>
+                      {currentBounty.company.isVerified && <CheckCircle2 className="w-4 h-4 text-yellow-400" />}
+                    </div>
+                    <p className="text-sm text-muted-foreground">@{currentBounty.company.slug}</p>
+                  </div>
                 </div>
+                <BookmarkButton bountyId={currentBounty.id} variant="outline" size="default" showLabel />
               </div>
 
               <h1 className="text-3xl lg:text-4xl font-medium mb-4">{currentBounty.title}</h1>

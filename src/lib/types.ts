@@ -435,6 +435,25 @@ export const getProjectsQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// ==================== BOOKMARK SCHEMAS ====================
+
+export const addBookmarkSchema = z.object({
+  bountyId: z.string().min(1),
+});
+
+export const removeBookmarkSchema = z.object({
+  bountyId: z.string().min(1),
+});
+
+export const checkBookmarkSchema = z.object({
+  bountyId: z.string().min(1),
+});
+
+export const getBookmarksQuerySchema = z.object({
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+});
+
 // ==================== WEBHOOK SCHEMAS ====================
 
 export const solanaWebhookSchema = z.object({
@@ -512,6 +531,10 @@ export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 export type GetProjectsQuery = z.infer<typeof getProjectsQuerySchema>;
 export type SolanaWebhookInput = z.infer<typeof solanaWebhookSchema>;
 export type PaymentConfirmedWebhookInput = z.infer<typeof paymentConfirmedWebhookSchema>;
+export type AddBookmarkInput = z.infer<typeof addBookmarkSchema>;
+export type RemoveBookmarkInput = z.infer<typeof removeBookmarkSchema>;
+export type CheckBookmarkInput = z.infer<typeof checkBookmarkSchema>;
+export type GetBookmarksQuery = z.infer<typeof getBookmarksQuerySchema>;
 
 export interface DbUser {
   id: string;
@@ -565,4 +588,38 @@ export interface ExtendedUser {
   twitterUrl?: string | null;
   linkedinUrl?: string | null;
   portfolioUrl?: string | null;
+  projectsCount?: number;
+  bookmarksCount?: number;
+}
+
+export interface BountyBookmark {
+  id: string;
+  userId: string;
+  bountyId: string;
+  createdAt: Date;
+}
+
+export interface BookmarkedBounty {
+  id: string;
+  title: string;
+  description: string;
+  bountyTypes: string[];
+  rewardAmount: number;
+  status: string;
+  endsAt: string | null;
+  escrowAddress: string | null;
+  escrowBalanceLamports: number | null;
+  txSignature: string | null;
+  company: {
+    id: string;
+    name: string;
+    slug: string;
+    logoUrl: string | null;
+    isVerified: boolean;
+  };
+  _count: {
+    submissions: number;
+  };
+  bookmarkedAt: string;
+  bookmarkId: string;
 }
