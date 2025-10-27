@@ -47,7 +47,7 @@ const BOUNTY_TYPES = [
   { value: "SECURITY", label: "Security Vulnerabilities", color: "bg-red-500/10 text-red-400 border-red-500/30" },
 ]
 
-import { useProgram } from "@/lib/use-program"
+import { useProgram, PROGRAM_ID } from "@/lib/use-program"
 import { BN } from "@coral-xyz/anchor"
 
 interface EscrowInfo {
@@ -210,13 +210,13 @@ export function CreateBountyPage() {
       }
       setCreatedBountyId(bountyId)
 
-      if (company.walletAddress) {
+      if (publicKey) {
         const escrowRes = await fetch("/api/blockchain/create-escrow", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
-            ownerWallet: company.walletAddress,
+            ownerWallet: publicKey.toBase58(),
             amount: lamportsAmount,
           }),
         })
@@ -252,11 +252,26 @@ export function CreateBountyPage() {
 
       const [escrowPda] = await PublicKey.findProgramAddress(
         [Buffer.from("bounty-escrow"), publicKey.toBuffer()],
-        program.programId
+        PROGRAM_ID
       );
 
+      console.log('Derived Escrow PDA:', escrowPda.toBase58());
+      console.log('Program ID used for PDA:', PROGRAM_ID.toBase58());
+      console.log('Program instance programId:', program.programId.toBase58());
+
+      // Verify the program is actually deployed
+      console.log('Checking if program exists at address...');
+      const programInfo = await connection.getAccountInfo(PROGRAM_ID);
+      console.log('Program info result:', programInfo);
+      if (!programInfo) {
+        throw new Error(`Program not found at address ${PROGRAM_ID.toBase58()}. Make sure the program is deployed to devnet.`);
+      }
+      console.log('Program account found. Executable:', programInfo.executable);
+
       // Check if the account already exists
+      console.log('Checking if escrow vault already exists...');
       const accountInfo = await connection.getAccountInfo(escrowPda);
+      console.log('Vault account info:', accountInfo);
 
       let signature: string;
       if (accountInfo === null) {
@@ -303,8 +318,18 @@ export function CreateBountyPage() {
 
       // Redirect on success
       router.push(`/bounties/${createdBountyId}`)
-    } catch (err) {
-      console.error("Funding error:", err)
+    } catch (err: any) {
+      console.error("=== Funding error occurred ===")
+      console.error("Error object:", err)
+      console.error("Error type:", err?.constructor?.name)
+      console.error("Error details:", {
+        message: err?.message,
+        code: err?.code,
+        name: err?.name,
+        logs: err?.logs,
+        programId: program?.programId?.toBase58(),
+        stack: err?.stack,
+      })
       setFundingError(err instanceof Error ? err.message : "Unable to send funding transaction.")
     } finally {
       setFunding(false)

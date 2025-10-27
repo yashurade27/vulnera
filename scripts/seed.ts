@@ -162,9 +162,79 @@ async function main() {
         walletAddress: 'EthanRootAdminWallet88888888888888888888',
       },
     }),
+    prisma.user.create({
+      data: {
+        email: 'james.nft@nftmarketplace.io',
+        username: 'james_nft',
+        passwordHash: hashedPassword,
+        role: 'COMPANY_ADMIN',
+        status: 'ACTIVE',
+        emailVerified: true,
+        fullName: 'James Martinez',
+        bio: 'Co-founder of NFT Marketplace Pro',
+        country: 'UAE',
+        walletAddress: 'JamesNFTWallet99999999999999999999999999',
+      },
+    }),
+    prisma.user.create({
+      data: {
+        email: 'lisa.defi@defiprotocol.finance',
+        username: 'lisa_defi',
+        passwordHash: hashedPassword,
+        role: 'COMPANY_ADMIN',
+        status: 'ACTIVE',
+        emailVerified: true,
+        fullName: 'Lisa Wong',
+        bio: 'Head of Security at DeFi Protocol Labs',
+        country: 'Switzerland',
+        walletAddress: 'LisaDeFiWalletAAAAAAAAAAAAAAAAAAAAAAAAA',
+      },
+    }),
+    prisma.user.create({
+      data: {
+        email: 'david.cloud@cloudsecure.com',
+        username: 'david_cloud',
+        passwordHash: hashedPassword,
+        role: 'COMPANY_ADMIN',
+        status: 'ACTIVE',
+        emailVerified: true,
+        fullName: 'David Thompson',
+        bio: 'VP of Engineering at CloudSecure Inc',
+        country: 'USA',
+        walletAddress: 'DavidCloudWalletBBBBBBBBBBBBBBBBBBBBBBBBB',
+      },
+    }),
+    prisma.user.create({
+      data: {
+        email: 'sophia.game@gamefistudios.gg',
+        username: 'sophia_game',
+        passwordHash: hashedPassword,
+        role: 'COMPANY_ADMIN',
+        status: 'ACTIVE',
+        emailVerified: true,
+        fullName: 'Sophia Kim',
+        bio: 'Lead Game Developer at GameFi Studios',
+        country: 'South Korea',
+        walletAddress: 'SophiaGameWalletCCCCCCCCCCCCCCCCCCCCCCCC',
+      },
+    }),
+    prisma.user.create({
+      data: {
+        email: 'rachel.health@healthtech.com',
+        username: 'rachel_health',
+        passwordHash: hashedPassword,
+        role: 'COMPANY_ADMIN',
+        status: 'ACTIVE',
+        emailVerified: true,
+        fullName: 'Rachel Anderson',
+        bio: 'Chief Technology Officer at HealthTech Innovations',
+        country: 'USA',
+        walletAddress: 'RachelHealthWalletDDDDDDDDDDDDDDDDDDDDDD',
+      },
+    }),
   ]);
 
-  const [alice, bob, charlie, dana, sarah, mike, olivia, ethan] = createdUsers;
+  const [alice, bob, charlie, dana, sarah, mike, olivia, ethan, james, lisa, david, sophia, rachel] = createdUsers;
   console.log('✅ Created users');
 
   // Create projects for bounty hunters
@@ -343,9 +413,183 @@ async function main() {
         isActive: false,
       },
     }),
+    prisma.company.create({
+      data: {
+        name: 'NFT Marketplace Pro',
+        slug: 'nft-marketplace-pro',
+        description: 'Leading NFT marketplace with advanced security features and multi-chain support',
+        website: 'https://nftmarketplacepro.io',
+        walletAddress: 'So666666666666666666666666666666666666667',
+        smartContractAddress: 'SC66666666666666666666666666666666666667',
+        industry: 'NFT/Web3',
+        companySize: '100-150',
+        location: 'Dubai, UAE',
+        totalBountiesFunded: new Prisma.Decimal('425.750000000'), // SOL
+        totalBountiesPaid: new Prisma.Decimal('298.500000000'), // SOL
+        activeBounties: 4,
+        resolvedVulnerabilities: 21,
+        reputation: 91.8,
+        isVerified: true,
+        isActive: true,
+      },
+    }),
+    prisma.company.create({
+      data: {
+        name: 'DeFi Protocol Labs',
+        slug: 'defi-protocol-labs',
+        description: 'Decentralized finance protocol specializing in yield aggregation and liquidity pools',
+        website: 'https://defiprotocol.finance',
+        walletAddress: 'So777777777777777777777777777777777777778',
+        smartContractAddress: 'SC77777777777777777777777777777777777778',
+        industry: 'DeFi',
+        companySize: '50-100',
+        location: 'Zug, Switzerland',
+        totalBountiesFunded: new Prisma.Decimal('890.000000000'), // SOL
+        totalBountiesPaid: new Prisma.Decimal('612.450000000'), // SOL
+        activeBounties: 5,
+        resolvedVulnerabilities: 38,
+        reputation: 97.2,
+        isVerified: true,
+        isActive: true,
+      },
+    }),
+    prisma.company.create({
+      data: {
+        name: 'CloudSecure Inc',
+        slug: 'cloudsecure-inc',
+        description: 'Cloud infrastructure security platform with automated vulnerability scanning',
+        website: 'https://cloudsecure.com',
+        walletAddress: 'So888888888888888888888888888888888888889',
+        smartContractAddress: 'SC88888888888888888888888888888888888889',
+        industry: 'Cloud Security',
+        companySize: '500+',
+        location: 'Seattle, WA',
+        totalBountiesFunded: new Prisma.Decimal('1250.000000000'), // SOL
+        totalBountiesPaid: new Prisma.Decimal('890.250000000'), // SOL
+        activeBounties: 7,
+        resolvedVulnerabilities: 52,
+        reputation: 94.5,
+        isVerified: true,
+        isActive: true,
+      },
+    }),
+    prisma.company.create({
+      data: {
+        name: 'GameFi Studios',
+        slug: 'gamefi-studios',
+        description: 'Blockchain gaming platform with play-to-earn mechanics and NFT integration',
+        website: 'https://gamefistudios.gg',
+        walletAddress: 'So999999999999999999999999999999999999990',
+        smartContractAddress: 'SC99999999999999999999999999999999999990',
+        industry: 'Gaming/Web3',
+        companySize: '150-250',
+        location: 'Seoul, South Korea',
+        totalBountiesFunded: new Prisma.Decimal('315.500000000'), // SOL
+        totalBountiesPaid: new Prisma.Decimal('178.900000000'), // SOL
+        activeBounties: 3,
+        resolvedVulnerabilities: 15,
+        reputation: 87.6,
+        isVerified: true,
+        isActive: true,
+      },
+    }),
+    prisma.company.create({
+      data: {
+        name: 'HealthTech Innovations',
+        slug: 'healthtech-innovations',
+        description: 'Healthcare technology company building secure patient data management systems',
+        website: 'https://healthtech-innovations.com',
+        walletAddress: 'SoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB',
+        smartContractAddress: 'SCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB',
+        industry: 'Healthcare',
+        companySize: '250-500',
+        location: 'Boston, MA',
+        totalBountiesFunded: new Prisma.Decimal('560.000000000'), // SOL
+        totalBountiesPaid: new Prisma.Decimal('412.750000000'), // SOL
+        activeBounties: 2,
+        resolvedVulnerabilities: 28,
+        reputation: 92.1,
+        isVerified: true,
+        isActive: true,
+      },
+    }),
+    prisma.company.create({
+      data: {
+        name: 'EduChain',
+        slug: 'educhain',
+        description: 'Blockchain-based education platform for verifiable credentials and certifications',
+        website: 'https://educhain.org',
+        walletAddress: 'SoBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBC',
+        smartContractAddress: 'SCBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBC',
+        industry: 'Education/Web3',
+        companySize: '25-50',
+        location: 'Austin, TX',
+        totalBountiesFunded: new Prisma.Decimal('145.250000000'), // SOL
+        totalBountiesPaid: new Prisma.Decimal('98.750000000'), // SOL
+        activeBounties: 1,
+        resolvedVulnerabilities: 11,
+        reputation: 83.4,
+        isVerified: true,
+        isActive: true,
+      },
+    }),
+    prisma.company.create({
+      data: {
+        name: 'MetaVerse Builders',
+        slug: 'metaverse-builders',
+        description: 'Virtual reality metaverse platform with decentralized land ownership',
+        website: 'https://metaversebuilders.world',
+        walletAddress: 'SoCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCD',
+        smartContractAddress: 'SCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCD',
+        industry: 'Metaverse/VR',
+        companySize: '100-150',
+        location: 'London, UK',
+        totalBountiesFunded: new Prisma.Decimal('275.800000000'), // SOL
+        totalBountiesPaid: new Prisma.Decimal('156.400000000'), // SOL
+        activeBounties: 2,
+        resolvedVulnerabilities: 13,
+        reputation: 79.8,
+        isVerified: false,
+        isActive: true,
+      },
+    }),
+    prisma.company.create({
+      data: {
+        name: 'AgroTech Solutions',
+        slug: 'agrotech-solutions',
+        description: 'Agricultural technology company using blockchain for supply chain transparency',
+        website: 'https://agrotech-sol.com',
+        walletAddress: 'SoDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDE',
+        smartContractAddress: 'SCDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDE',
+        industry: 'Agriculture/Supply Chain',
+        companySize: '50-100',
+        location: 'Amsterdam, Netherlands',
+        totalBountiesFunded: new Prisma.Decimal('88.500000000'), // SOL
+        totalBountiesPaid: new Prisma.Decimal('52.300000000'), // SOL
+        activeBounties: 1,
+        resolvedVulnerabilities: 6,
+        reputation: 76.2,
+        isVerified: false,
+        isActive: true,
+      },
+    }),
   ]);
 
-  const [techCorp, fintechSolutions, chainGuard, quantumApps, secureLedger] = createdCompanies;
+  const [
+    techCorp, 
+    fintechSolutions, 
+    chainGuard, 
+    quantumApps, 
+    secureLedger,
+    nftMarketplacePro,
+    defiProtocolLabs,
+    cloudSecureInc,
+    gameFiStudios,
+    healthTechInnovations,
+    eduChain,
+    metaVerseBuilders,
+    agroTechSolutions
+  ] = createdCompanies;
   console.log('✅ Created companies');
 
   await Promise.all([
@@ -399,6 +643,99 @@ async function main() {
         canManageMembers: false,
         invitedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         joinedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+      },
+    }),
+    // New company members for new companies
+    prisma.companyMember.create({
+      data: {
+        userId: james.id,
+        companyId: nftMarketplacePro.id,
+        role: 'COMPANY_ADMIN',
+        canCreateBounty: true,
+        canReviewBounty: true,
+        canApprovePayment: true,
+        canManageMembers: true,
+        invitedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        joinedAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
+      },
+    }),
+    prisma.companyMember.create({
+      data: {
+        userId: lisa.id,
+        companyId: defiProtocolLabs.id,
+        role: 'COMPANY_ADMIN',
+        canCreateBounty: true,
+        canReviewBounty: true,
+        canApprovePayment: true,
+        canManageMembers: true,
+        invitedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+        joinedAt: new Date(Date.now() - 58 * 24 * 60 * 60 * 1000),
+      },
+    }),
+    prisma.companyMember.create({
+      data: {
+        userId: david.id,
+        companyId: cloudSecureInc.id,
+        role: 'COMPANY_ADMIN',
+        canCreateBounty: true,
+        canReviewBounty: true,
+        canApprovePayment: true,
+        canManageMembers: true,
+        invitedAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+        joinedAt: new Date(Date.now() - 85 * 24 * 60 * 60 * 1000),
+      },
+    }),
+    prisma.companyMember.create({
+      data: {
+        userId: sophia.id,
+        companyId: gameFiStudios.id,
+        role: 'COMPANY_ADMIN',
+        canCreateBounty: true,
+        canReviewBounty: true,
+        canApprovePayment: true,
+        canManageMembers: true,
+        invitedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+        joinedAt: new Date(Date.now() - 23 * 24 * 60 * 60 * 1000),
+      },
+    }),
+    prisma.companyMember.create({
+      data: {
+        userId: rachel.id,
+        companyId: healthTechInnovations.id,
+        role: 'COMPANY_ADMIN',
+        canCreateBounty: true,
+        canReviewBounty: true,
+        canApprovePayment: true,
+        canManageMembers: true,
+        invitedAt: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000),
+        joinedAt: new Date(Date.now() - 48 * 24 * 60 * 60 * 1000),
+      },
+    }),
+    // Add some cross-company relationships for realism
+    prisma.companyMember.create({
+      data: {
+        userId: charlie.id,
+        companyId: gameFiStudios.id,
+        role: 'COMPANY_ADMIN',
+        canCreateBounty: false,
+        canReviewBounty: true,
+        canApprovePayment: false,
+        canManageMembers: false,
+        invitedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        joinedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+      },
+    }),
+    prisma.companyMember.create({
+      data: {
+        userId: alice.id,
+        companyId: cloudSecureInc.id,
+        role: 'COMPANY_ADMIN',
+        canCreateBounty: false,
+        canReviewBounty: true,
+        canApprovePayment: false,
+        canManageMembers: false,
+        invitedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+        joinedAt: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000),
       },
     }),
   ]);
@@ -1078,14 +1415,22 @@ async function main() {
   console.log('   Audit Logs: 4');
 
   console.log('\n🔑 Test Login Credentials (password123 for all):');
-  console.log('   alice.hunter@example.com');
-  console.log('   bob.security@example.com');
-  console.log('   charlie.pentest@example.com');
-  console.log('   dana.mobile@example.com');
-  console.log('   sarah.ceo@techcorp.com');
-  console.log('   mike.security@fintech.com');
-  console.log('   olivia.ops@chainguard.io');
-  console.log('   ethan.root@vulnera.dev');
+  console.log('   Bounty Hunters:');
+  console.log('   - alice.hunter@example.com');
+  console.log('   - bob.security@example.com');
+  console.log('   - charlie.pentest@example.com');
+  console.log('   - dana.mobile@example.com');
+  console.log('\n   Company Admins:');
+  console.log('   - sarah.ceo@techcorp.com');
+  console.log('   - mike.security@fintech.com');
+  console.log('   - olivia.ops@chainguard.io');
+  console.log('   - james.nft@nftmarketplace.io');
+  console.log('   - lisa.defi@defiprotocol.finance');
+  console.log('   - david.cloud@cloudsecure.com');
+  console.log('   - sophia.game@gamefistudios.gg');
+  console.log('   - rachel.health@healthtech.com');
+  console.log('\n   Platform Admin:');
+  console.log('   - ethan.root@vulnera.dev');
 }
 
 main()
