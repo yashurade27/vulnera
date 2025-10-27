@@ -416,6 +416,7 @@ This covers the essential flow and demonstrates blockchain integration!
 ## Summary
 
 **Core Pages: 10** (enough for full demo)
+
 **Optional Pages: 6** (polish and extras)
 - Bookmarks (NEW)
 - Projects Management (NEW)

@@ -231,29 +231,7 @@ The smart contract (`lib.rs`) implements three main functions:
   - Requires authentication
   - Fast lookup using unique compound index
 
-### 20. `/src/components/bookmark-button.tsx` (NEW)
-**Purpose:** Reusable bookmark toggle button component
 
-**Features:**
-- Real-time bookmark status checking
-- Toggle bookmark on/off with single click
-- Visual feedback (filled icon when bookmarked)
-- Toast notifications on success/error
-- Authentication redirect for unauthenticated users
-- Customizable appearance (variant, size, label)
-- Callback support for parent component updates (`onBookmarkChange`)
-
-### 21. `/src/app/bookmarks/page.tsx` (NEW)
-**Purpose:** Dedicated bookmarks page for users
-
-**Features:**
-- Display all bookmarked bounties in grid layout
-- Search/filter bookmarks by title, description, or company
-- Real-time removal when unbookmarked
-- Pagination with load more functionality
-- Empty state with call-to-action
-- Count display
-- Uses `BountyCard` component with bookmark integration
 
 ## API Flow Summary
 
