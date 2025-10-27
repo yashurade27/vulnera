@@ -6,13 +6,16 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-vulnera = "CZ6kuqEBvfdzM8h3rACEYazp771BFDXDMNgsoNSNvJ5Q"
+vulnera = "8K6AdQyPxjCfVoTZtAZW7TnQjhsJFjEdR5tzVWzESVvB"
+
+[programs.devnet]
+vulnera = "8K6AdQyPxjCfVoTZtAZW7TnQjhsJFjEdR5tzVWzESVvB"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
