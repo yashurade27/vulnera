@@ -10,7 +10,7 @@ const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.
 // Platform wallet address for fees - should be set in environment
 // Program ID from the smart contract
 export const PROGRAM_ID = new PublicKey(
-  process.env.NEXT_PUBLIC_PROGRAM_ID || 'CZ6kuqEBvfdzM8h3rACEYazp771BFDXDMNgsoNSNvJ5Q',
+  process.env.NEXT_PUBLIC_PROGRAM_ID || '8K6AdQyPxjCfVoTZtAZW7TnQjhsJFjEdR5tzVWzESVvB',
 )
 
 // Minimum escrow amount (0.1 SOL = 100,000,000 lamports)
