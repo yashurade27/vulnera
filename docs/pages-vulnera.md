@@ -47,10 +47,13 @@
 - Search by keyword
 - Sort by: newest, highest reward, ending soon
 - Bounty cards showing: title, company, type, reward, deadline
+- Bookmark button on each bounty card (save for later)
 
 **APIs Used**:
 - `GET /api/bounties` with filters
 - `GET /api/companies` for company details
+- `POST /api/bookmarks` - Add bookmark
+- `DELETE /api/bookmarks` - Remove bookmark
 
 ---
 
@@ -59,6 +62,7 @@
 
 **Sections**:
 - Bounty header (title, company, reward, type)
+- Bookmark button (save for later reference)
 - Description and requirements
 - Scope (in-scope, out-of-scope)
 - Guidelines
@@ -70,6 +74,9 @@
 - `GET /api/bounties/[bountyId]`
 - `GET /api/bounties/[bountyId]/submissions`
 - `POST /api/submissions` (when submitting)
+- `POST /api/bookmarks` - Add bookmark
+- `DELETE /api/bookmarks` - Remove bookmark
+- `GET /api/bookmarks/check` - Check bookmark status
 
 ---
 
@@ -114,12 +121,14 @@
 **Sections**:
 - Profile stats (total earnings, reputation, rank)
 - Recent submissions with status
+- Bookmarked bounties (quick access)
 - Available bounties (recommendations)
 - Payment history
 
 **APIs Used**:
 - `GET /api/users/[userId]/stats`
 - `GET /api/users/[userId]/submissions`
+- `GET /api/bookmarks?limit=3` - Recent bookmarks
 - `GET /api/bounties?limit=6`
 - `GET /api/payments/user/[userId]`
 
@@ -186,9 +195,28 @@
 
 ---
 
-## 🎨 Optional But Recommended (Nice to Have) - 4 Pages
+## 🎨 Optional But Recommended (Nice to Have) - 6 Pages
 
-### 11. **Leaderboard** `/leaderboard`
+### 11. **Bookmarks** `/bookmarks`
+**Purpose**: Saved bounties for later reference
+
+**Features**:
+- Grid view of all bookmarked bounties
+- Search/filter bookmarks by title, description, or company
+- Real-time removal when unbookmarked
+- Load more pagination
+- Empty state with "Browse Bounties" CTA
+- Total bookmarks count display
+- Quick access to saved opportunities
+
+**APIs Used**:
+- `GET /api/bookmarks` - List bookmarked bounties
+- `DELETE /api/bookmarks?bountyId=[id]` - Remove bookmark
+- `GET /api/bookmarks/check?bountyId=[id]` - Check bookmark status
+
+---
+
+### 12. **Leaderboard** `/leaderboard`
 **Purpose**: Showcase top bounty hunters
 
 **Features**:
@@ -200,7 +228,7 @@
 
 ---
 
-### 12. **Company Profile Setup** `/onboarding/company`
+### 13. **Company Profile Setup** `/onboarding/company`
 **Purpose**: First-time setup for companies
 
 **Form**:
@@ -214,7 +242,7 @@
 
 ---
 
-### 13. **Notifications** `/notifications`
+### 14. **Notifications** `/notifications`
 **Purpose**: View all notifications
 
 **Features**:
@@ -227,7 +255,7 @@
 
 ---
 
-### 14. **Settings** `/settings`
+### 15. **Settings** `/settings`
 **Purpose**: User account settings
 
 **Sections**:
@@ -238,6 +266,25 @@
 - Social links
 
 **APIs**: `PATCH /api/users/[userId]`, `PATCH /api/users/[userId]/wallet`
+
+---
+
+### 16. **Projects Management** `/settings/projects`
+**Purpose**: Manage portfolio/proof of work projects
+
+**Features**:
+- List all user projects
+- Add new project (name, description, website)
+- Edit existing projects
+- Delete projects
+- Showcase professional work
+- Pagination and sorting
+
+**APIs Used**:
+- `GET /api/users/project` - List projects
+- `POST /api/users/project` - Create project
+- `PATCH /api/users/project/[projectId]` - Update project
+- `DELETE /api/users/project/[projectId]` - Delete project
 
 ---
 
@@ -261,9 +308,11 @@
 
 ### Phase 2 - Polish (If Time Permits)
 10. User Profile
-11. Leaderboard
-12. Notifications
-13. Settings
+11. Bookmarks (NEW - High value for UX)
+12. Projects Management (NEW - Portfolio showcase)
+13. Leaderboard
+14. Notifications
+15. Settings
 
 ---
 
@@ -272,9 +321,10 @@
 ### Act 1: Hunter Journey (2 min)
 1. Start on landing page - show stats
 2. Browse bounties with filters
-3. Click on a bounty (Security type)
-4. Submit a bug report with attachments
-5. Dashboard shows pending submission
+3. Bookmark a bounty (show visual feedback)
+4. Click on a bounty (Security type)
+5. Submit a bug report with attachments
+6. Dashboard shows pending submission and bookmarks
 
 ### Act 2: Company Journey (2 min)
 1. Company login
@@ -286,9 +336,10 @@
 
 ### Act 3: Platform Features (1 min)
 1. Show AI analysis results (spam/duplicate detection)
-2. Show leaderboard with top hunters
-3. Show transparency (all payments on-chain)
-4. Show 21-day accountability feature
+2. Show bookmarks page with saved bounties
+3. Show leaderboard with top hunters
+4. Show transparency (all payments on-chain)
+5. Show projects/portfolio feature
 
 ---
 
@@ -298,6 +349,7 @@
 1. **Navbar**
    - Logo
    - Browse Bounties
+   - Bookmarks (if logged in)
    - Dashboard (if logged in)
    - Notifications icon
    - Wallet connect button
@@ -310,7 +362,14 @@
 
 3. **Sidebar** (Dashboard pages)
    - For Companies: Overview, Bounties, Submissions, Reports, Settings
-   - For Hunters: Overview, Submissions, Payments, Settings
+   - For Hunters: Overview, Submissions, Bookmarks, Payments, Settings
+
+4. **Reusable Components**
+   - **BountyCard** - Card display with bookmark button
+   - **BookmarkButton** - Toggle bookmark on/off with visual feedback
+   - **BountyFilter** - Filter and search bounties
+   - **SubmissionCard** - Submission preview card
+   - **StatsCard** - Dashboard statistics display
 
 ---
 
@@ -333,8 +392,10 @@
 2. **Real-time Updates** - Submission status changes, payment confirmations
 3. **AI Analysis** - Visual display of spam/duplicate scores
 4. **Blockchain Transparency** - Link to Solana explorer for transactions
-5. **Responsive Design** - Works on mobile and desktop
-6. **Clean UX** - Intuitive flow from bounty creation to payment
+5. **Bookmarks System** - Save and organize interesting bounties for later
+6. **Portfolio Showcase** - Projects management for hunters to display their work
+7. **Responsive Design** - Works on mobile and desktop
+8. **Clean UX** - Intuitive flow from bounty creation to payment
 
 ---
 
@@ -355,6 +416,17 @@ This covers the essential flow and demonstrates blockchain integration!
 ## Summary
 
 **Core Pages: 10** (enough for full demo)
-**Optional Pages: 4** (polish and extras)
+**Optional Pages: 6** (polish and extras)
+- Bookmarks (NEW)
+- Projects Management (NEW)
+- Leaderboard
+- Company Onboarding
+- Notifications
+- Settings
 
-**Total for MVP: 10-14 pages**
+**Total for MVP: 10-16 pages**
+
+### New Features Added
+- **Bookmarks System**: Save bounties for later with real-time UI updates
+- **Projects Management**: Showcase portfolio/proof of work
+- **Enhanced Authentication**: Improved auth config with better error handling
