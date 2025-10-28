@@ -392,7 +392,7 @@ export function CreateBountyPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card/40 backdrop-blur-sm">
+      <div className=" border-b border-border bg-card/40 bg-neutral-100 dark:bg-card/40 backdrop-blur-sm">
         <div className="container-custom py-8 space-y-2">
           <h1 className="text-4xl font-bold">Create New Bounty</h1>
           <p className="text-muted-foreground">

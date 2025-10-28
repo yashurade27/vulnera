@@ -130,7 +130,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
                   {user.avatarUrl ? (
                     <AvatarImage src={user.avatarUrl} alt={user.fullName ?? user.username ?? 'User'} />
                   ) : null}
-                  <AvatarFallback className="bg-yellow-500/20 text-yellow-200 font-medium">
+                  <AvatarFallback className="bg-yellow-500/20 text-yellow-900 dark:text-yellow-200 font-medium">
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
@@ -275,7 +275,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
                       {user.avatarUrl ? (
                         <AvatarImage src={user.avatarUrl} alt={user.fullName ?? user.username ?? 'User'} />
                       ) : null}
-                      <AvatarFallback className="bg-yellow-500/20 text-yellow-200 font-medium">
+                      <AvatarFallback className="bg-yellow-500/20 text-yellow-900 dark:text-yellow-200 font-medium">
                         {userInitials}
                       </AvatarFallback>
                     </Avatar>

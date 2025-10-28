@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useConnection, useWallet } from "@solana/wallet-adapter-react"
-import { PublicKey, Transaction, TransactionInstruction, SystemProgram } from "@solana/web3.js"
+import { PublicKey, SystemProgram } from "@solana/web3.js"
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Plus, AlertCircle, CheckCircle2, Coins } from "lucide-react"
 import { toast } from "sonner"
+import { useProgram, PROGRAM_ID } from "@/lib/use-program"
+import { BN } from "@coral-xyz/anchor"
 
 interface AddFundsDialogProps {
   bountyId: string
@@ -27,7 +29,8 @@ interface AddFundsDialogProps {
 
 export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, onSuccess }: AddFundsDialogProps) {
   const { connection } = useConnection()
-  const { publicKey, sendTransaction } = useWallet()
+  const { publicKey } = useWallet()
+  const { program } = useProgram()
 
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState("")
@@ -36,7 +39,14 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, on
   const [txSignature, setTxSignature] = useState<string | null>(null)
 
   const handleAddFunds = async () => {
-    if (!publicKey || !amount) return
+    if (!publicKey || !amount || !program) {
+      if (!program) {
+        toast.error("Wallet not connected", {
+          description: "Please connect your wallet to add funds",
+        })
+      }
+      return
+    }
 
     const amountNum = parseFloat(amount)
     if (isNaN(amountNum) || amountNum <= 0) {
@@ -68,61 +78,48 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, on
 
       const { depositParams } = await prepareRes.json()
 
-      // Step 2: Build the deposit transaction
-      const programId = new PublicKey(depositParams.programId)
-      const escrowPubkey = new PublicKey(depositParams.escrowAddress)
-      const ownerPubkey = new PublicKey(depositParams.ownerWallet)
-
-      // Verify the connected wallet matches the owner
-      if (publicKey.toString() !== ownerPubkey.toString()) {
-        throw new Error("Connected wallet does not match the bounty owner wallet")
-      }
-
-      // Create PDA for vault
-      const [vaultPubkey] = PublicKey.findProgramAddressSync(
-        [Buffer.from("bounty-escrow"), ownerPubkey.toBuffer()],
-        programId
+      // Step 2: Derive the vault PDA
+      const [vaultPda] = await PublicKey.findProgramAddress(
+        [Buffer.from("bounty-escrow"), publicKey.toBuffer()],
+        PROGRAM_ID
       )
 
-      // Build deposit instruction
-      const depositIx = new TransactionInstruction({
-        programId,
-        keys: [
-          { pubkey: vaultPubkey, isSigner: false, isWritable: true },
-          { pubkey: ownerPubkey, isSigner: true, isWritable: true },
-          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-        ],
-        data: Buffer.from([
-          3, // Instruction index for deposit
-          ...new Uint8Array(new BigUint64Array([BigInt(depositParams.amount)]).buffer),
-        ]),
-      })
+      console.log("Derived Vault PDA:", vaultPda.toBase58())
 
-      const transaction = new Transaction().add(depositIx)
-      transaction.feePayer = publicKey
-      const { blockhash } = await connection.getLatestBlockhash()
-      transaction.recentBlockhash = blockhash
+      // Verify the program is deployed
+      const programInfo = await connection.getAccountInfo(PROGRAM_ID)
+      if (!programInfo) {
+        throw new Error(`Program not found at address ${PROGRAM_ID.toBase58()}. Make sure the program is deployed to devnet.`)
+      }
 
-      // Step 3: Sign and send transaction
-      const signature = await sendTransaction(transaction, connection)
+      // Convert SOL to lamports
+      const lamportsAmount = Math.round(amountNum * 1_000_000_000)
+
+      // Step 3: Use Anchor program to deposit funds
+      const signature = await program.methods
+        .deposit(new BN(lamportsAmount))
+        .accounts({
+          vault: vaultPda,
+          owner: publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc({
+          skipPreflight: false,
+          commitment: "confirmed",
+        })
+
+      console.log("Deposit transaction successful with signature:", signature)
       setTxSignature(signature)
       setStep("confirming")
 
-      // Step 4: Wait for confirmation
-      const confirmation = await connection.confirmTransaction(signature, "confirmed")
-
-      if (confirmation.value.err) {
-        throw new Error("Transaction failed on blockchain")
-      }
-
-      // Step 5: Notify backend
+      // Step 4: Notify backend
       const depositRes = await fetch("/api/blockchain/deposit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bountyId,
           txSignature: signature,
-          amount: depositParams.amount,
+          amount: lamportsAmount,
         }),
         credentials: "include",
       })
@@ -265,7 +262,7 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, on
           <Button
             className="flex-1 btn-primary"
             onClick={handleAddFunds}
-            disabled={!amount || loading || !publicKey || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0}
+            disabled={!amount || loading || !publicKey || !program || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0}
           >
             {loading ? (
               <>

@@ -666,7 +666,7 @@ export function ProfilePage({ userId }: ProfilePageProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card/40 backdrop-blur-sm">
+      <div className=" border-b border-border bg-card/40 bg-neutral-100 dark:bg-card/40 backdrop-blur-sm">
         <div className="container-custom py-10">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-start gap-6">

@@ -198,7 +198,7 @@ export function CompanyBountiesPublicPage({ params }: { params: Promise<{ compan
   return (
     <div className="min-h-screen bg-background">
       {/* Company Header */}
-      <div className="border-b border-border bg-card/40 backdrop-blur-sm">
+      <div className=" border-b border-border bg-card/40 bg-neutral-100 dark:bg-card/40 backdrop-blur-sm">
         <div className="container-custom py-10">
           <div className="flex items-center gap-4 mb-6">
             <Button

@@ -318,7 +318,7 @@ export function CompanyDashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card/40 backdrop-blur-sm">
+      <div className=" border-b border-border bg-card/40 bg-neutral-100 dark:bg-card/40 backdrop-blur-sm">
         <div className="container-custom py-8">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
