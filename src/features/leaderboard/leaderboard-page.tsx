@@ -214,7 +214,7 @@ export function LeaderboardPage() {
                         <Award className="w-3 h-3 mr-1" /> Elite Hunter
                       </Badge>
                       <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/profile/${entry.id}`} className="flex items-center gap-1 text-xs">
+                        <Link href={`/users/${entry.id}`} className="flex items-center gap-1 text-xs">
                           View profile <ChevronRight className="w-3 h-3" />
                         </Link>
                       </Button>
@@ -264,7 +264,7 @@ export function LeaderboardPage() {
                       <span>{entry.reputation}</span>
                       <div className="flex justify-end">
                         <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/profile/${entry.id}`} className="text-xs flex items-center gap-1">
+                          <Link href={`/users/${entry.id}`} className="text-xs flex items-center gap-1">
                             View <ChevronRight className="w-3 h-3" />
                           </Link>
                         </Button>
