@@ -358,20 +358,20 @@ export function UserViewProfile({ userId }: UserViewProfileProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Profile Header */}
-      <div className=" border-b border-border bg-card/40 bg-neutral-100 dark:bg-card/40 backdrop-blur-sm">
+      <div className="border-b border-border bg-neutral-100 dark:bg-card/40 backdrop-blur-sm">
         <div className="container-custom py-10">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-start gap-6">
-              <Avatar className="h-20 w-20 border border-yellow-500/30">
+              <Avatar className="h-20 w-20 border border-yellow-600/30 dark:border-yellow-500/30">
                 {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={user.fullName ?? user.username} /> : null}
-                <AvatarFallback className="bg-yellow-500/10 text-yellow-200 text-xl font-semibold">
+                <AvatarFallback className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-200 text-xl font-semibold">
                   {(user.fullName ?? user.username ?? 'U').slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="text-3xl font-semibold">{user.fullName ?? `@${user.username}`}</h1>
-                  <Badge variant="outline" className="border-yellow-400/40 bg-yellow-500/10 text-yellow-200">
+                  <Badge variant="outline" className="border-yellow-600/40 dark:border-yellow-400/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200">
                     {user.role === 'COMPANY_ADMIN'
                       ? 'Company Admin'
                       : user.role === 'ADMIN'
@@ -424,7 +424,7 @@ export function UserViewProfile({ userId }: UserViewProfileProps) {
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Earnings</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-semibold text-yellow-400">
+              <p className="text-3xl font-semibold text-yellow-600 dark:text-yellow-400">
                 {currencyFormatter.format(stats?.totalEarnings ?? user.totalEarnings ?? 0)} SOL
               </p>
               <span className="text-xs text-muted-foreground">Approved bounty rewards</span>
@@ -460,7 +460,7 @@ export function UserViewProfile({ userId }: UserViewProfileProps) {
               <CardTitle className="text-sm font-medium text-muted-foreground">Avg Reward</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-semibold">{currencyFormatter.format(stats?.averageReward ?? 0)} SOL</p>
+              <p className="text-3xl font-semibold text-yellow-600 dark:text-yellow-400">{currencyFormatter.format(stats?.averageReward ?? 0)} SOL</p>
               <span className="text-xs text-muted-foreground">Per approved submission</span>
             </CardContent>
           </Card>
@@ -491,7 +491,7 @@ export function UserViewProfile({ userId }: UserViewProfileProps) {
                           <h3 className="font-semibold text-base line-clamp-1 group-hover:text-yellow-300">
                             {submission.title}
                           </h3>
-                          <Badge variant="outline" className="border-green-500/40 text-green-300 bg-green-500/10">
+                          <Badge variant="outline" className="border-green-600/40 dark:border-green-500/40 text-green-700 dark:text-green-300 bg-green-500/10">
                             {submission.status}
                           </Badge>
                         </div>
@@ -500,7 +500,7 @@ export function UserViewProfile({ userId }: UserViewProfileProps) {
                           {submission.company ? ` · ${submission.company.name}` : ''}
                         </p>
                         <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2 text-yellow-300 font-semibold">
+                          <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300 font-semibold">
                             <Coins className="w-4 h-4" />
                             {currencyFormatter.format(submission.rewardAmount)} SOL
                           </div>
@@ -526,7 +526,7 @@ export function UserViewProfile({ userId }: UserViewProfileProps) {
               <CardContent className="space-y-4">
                 {hunterBadges.map((badge) => (
                   <div key={badge.title} className="border border-border rounded-xl p-4 flex gap-3">
-                    <Award className="w-5 h-5 text-yellow-300 mt-1" />
+                    <Award className="w-5 h-5 text-yellow-600 dark:text-yellow-300 mt-1" />
                     <div>
                       <p className="font-semibold">{badge.title}</p>
                       <p className="text-sm text-muted-foreground">{badge.description}</p>
@@ -586,7 +586,7 @@ export function UserViewProfile({ userId }: UserViewProfileProps) {
                 </p>
               </CardHeader>
               <CardContent className="text-center py-8">
-                <Star className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+                <Star className="w-12 h-12 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
                 <p className="text-muted-foreground mb-4">
                   Company administrators help secure blockchain projects through bug bounty programs.
                 </p>

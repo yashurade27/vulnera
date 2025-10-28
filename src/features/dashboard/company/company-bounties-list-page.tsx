@@ -32,9 +32,9 @@ const STATUS_OPTIONS = [
 ]
 
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: "bg-green-500/10 border-green-400/40 text-green-200",
-  CLOSED: "bg-gray-500/10 border-gray-400/40 text-gray-200",
-  EXPIRED: "bg-red-500/10 border-red-400/40 text-red-200",
+  ACTIVE: "bg-green-500/10 border-green-500/40 text-green-700 dark:text-green-200",
+  CLOSED: "bg-gray-500/10 border-gray-500/40 text-gray-700 dark:text-gray-200",
+  EXPIRED: "bg-red-500/10 border-red-500/40 text-red-700 dark:text-red-200",
 }
 
 interface Bounty {
@@ -168,7 +168,7 @@ export function CompanyBountiesListPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-border bg-card/40 bg-neutral-100 dark:bg-card/40 backdrop-blur-sm">
+      <div className="border-b border-border bg-neutral-100 dark:bg-card/40 backdrop-blur-sm">
         <div className="container-custom py-8">
           <div className="flex items-center gap-4 mb-4">
             <Button
@@ -186,9 +186,9 @@ export function CompanyBountiesListPage() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <StatusIcon className="w-8 h-8 text-yellow-400" />
+                <StatusIcon className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
                 <h1 className="text-4xl lg:text-5xl font-medium">
-                  Manage <span className="text-yellow-400">Bounties</span>
+                  Manage <span className="text-yellow-600 dark:text-yellow-400">Bounties</span>
                 </h1>
               </div>
               <p className="text-muted-foreground text-lg">
@@ -251,7 +251,7 @@ export function CompanyBountiesListPage() {
                     {bounties.filter((b) => b.status === "ACTIVE").length}
                   </p>
                 </div>
-                <CheckCircle2 className="w-10 h-10 text-green-400" />
+                <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
               </div>
             </CardContent>
           </Card>
@@ -264,7 +264,7 @@ export function CompanyBountiesListPage() {
                     {bounties.reduce((sum, b) => sum + (b._count?.submissions || 0), 0)}
                   </p>
                 </div>
-                <Users className="w-10 h-10 text-blue-400" />
+                <Users className="w-10 h-10 text-blue-600 dark:text-blue-400" />
               </div>
             </CardContent>
           </Card>
@@ -273,13 +273,13 @@ export function CompanyBountiesListPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Total Rewards</p>
-                  <p className="text-3xl font-semibold text-yellow-400">
+                  <p className="text-3xl font-semibold text-yellow-600 dark:text-yellow-400">
                     {currencyFormatter.format(
                       bounties.reduce((sum, b) => sum + Number(b.rewardAmount), 0)
                     )}
                   </p>
                 </div>
-                <DollarSign className="w-10 h-10 text-yellow-400" />
+                <DollarSign className="w-10 h-10 text-yellow-600 dark:text-yellow-400" />
               </div>
             </CardContent>
           </Card>
@@ -332,7 +332,7 @@ export function CompanyBountiesListPage() {
                           <Badge
                             key={type}
                             variant="outline"
-                            className="bg-purple-500/10 border-purple-400/40 text-purple-200"
+                            className="bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-200"
                           >
                             {type}
                           </Badge>
@@ -355,7 +355,7 @@ export function CompanyBountiesListPage() {
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-2xl font-bold text-yellow-400">
+                      <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                         {currencyFormatter.format(bounty.rewardAmount)}
                       </p>
                       <p className="text-xs text-muted-foreground">Max Reward</p>
@@ -373,7 +373,7 @@ export function CompanyBountiesListPage() {
                         <span className="font-semibold">{bounty.validSubmissions || 0}</span> Valid
                       </span>
                     </div>
-                    <Button variant="ghost" size="sm" className="text-yellow-400 hover:text-yellow-300">
+                    <Button variant="ghost" size="sm" className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300">
                       View Details →
                     </Button>
                   </div>
