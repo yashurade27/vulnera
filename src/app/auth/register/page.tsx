@@ -237,7 +237,7 @@ export default function RegisterPage() {
                     <FormLabel>Role</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full h-full">
                           <SelectValue placeholder="Select your role" />
                         </SelectTrigger>
                       </FormControl>

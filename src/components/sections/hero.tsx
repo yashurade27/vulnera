@@ -22,7 +22,7 @@ export function HeroSection() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-sm text-yellow-200 mb-8">
+            <div className="inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-sm text-yellow-600 dark:text-yellow-200 mb-8">
               <Sparkles className="w-4 h-4" />
               <span>Blockchain-powered bug bounty platform</span>
             </div>
@@ -42,9 +42,9 @@ export function HeroSection() {
             <div className="flex flex-wrap items-center gap-6 mb-10">
               <div className="flex items-center gap-4">
                 <div className="flex -space-x-3">
-                  <span className="w-11 h-11 rounded-full bg-gradient-to-br from-gray-200 to-gray-500 border-2 border-[#0F172A]" />
-                  <span className="w-11 h-11 rounded-full bg-gradient-to-br from-gray-100 to-gray-400 border-2 border-[#0F172A]" />
-                  <span className="w-11 h-11 rounded-full bg-gradient-to-br from-yellow-400/80 to-yellow-500/60 border-2 border-[#0F172A]" />
+                  <span className="w-11 h-11 rounded-full bg-gradient-to-br from-gray-200 to-gray-500 border-2 border-background" />
+                  <span className="w-11 h-11 rounded-full bg-gradient-to-br from-gray-100 to-gray-400 border-2 border-background" />
+                  <span className="w-11 h-11 rounded-full bg-gradient-to-br from-yellow-400/80 to-yellow-500/60 border-2 border-background" />
                 </div>
                 <div>
                   <p className="text-2xl font-semibold text-foreground">120k+</p>
@@ -74,7 +74,7 @@ export function HeroSection() {
                 asChild
                 variant="outline"
                 size="lg"
-                className="border-yellow-400 text-yellow-300 hover:bg-yellow-400/20 hover:text-yellow-200"
+                className="border-yellow-400 text-yellow-600 dark:text-yellow-300 hover:bg-yellow-400/20 hover:text-yellow-700 dark:hover:text-yellow-200"
               >
                 <Link href="/vulnera">Browse Bounties</Link>
               </Button>
@@ -118,11 +118,11 @@ export function HeroSection() {
                     style={{ animationDuration: "18s" }}
                   />
                   <div
-                    className="absolute inset-6 rounded-full border border-white/20 animate-spin-slow"
+                    className="absolute inset-6 rounded-full border border-gray-400/50 dark:border-white/20 animate-spin-slow"
                     style={{ animationDuration: "14s", animationDirection: "reverse" }}
                   />
                   <div
-                    className="absolute inset-12 rounded-full border border-white/10 animate-spin-slow"
+                    className="absolute inset-12 rounded-full border border-gray-400/40 dark:border-white/10 animate-spin-slow"
                     style={{ animationDuration: "10s" }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -135,7 +135,7 @@ export function HeroSection() {
             <Card className="absolute -right-4 top-1/2 w-64 -translate-y-1/2 bg-gradient-to-br from-yellow-300 to-yellow-400 text-gray-900 shadow-xl">
               <CardContent className="relative space-y-3">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">May 2025</p>
+                  <p className="text-sm font-medium">Nov 2025</p>
                   <p className="text-4xl font-semibold">5.24k</p>
                   <p className="text-sm">Valid reports processed this month</p>
                 </div>
