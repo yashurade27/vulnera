@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { useConnection, useWallet, type AnchorWallet } from '@solana/wallet-adapter-react'
 import idl from '../../anchor/target/idl/vulnera_bounty.json'
 
-export const PROGRAM_ID = new PublicKey('8K6AdQyPxjCfVoTZtAZW7TnQjhsJFjEdR5tzVWzESVvB')
+export const PROGRAM_ID = new PublicKey('5E6gim2SHCpuaJ4Lg3nq2nxs1So1t9MDU5ACdPdB1U6W')
 
 export function useProgram() {
   const { connection } = useConnection()
@@ -24,14 +24,7 @@ export function useProgram() {
     if (!provider) return null
 
     // Use the IDL directly - it already has the correct address
-    const prog = new Program(idl as Idl, provider)
-    
-    // Debug: Log to verify program ID
-    console.log('Program ID from PROGRAM_ID constant:', PROGRAM_ID.toBase58())
-    console.log('Program ID from program instance:', prog.programId.toBase58())
-    console.log('IDL address field:', (idl as any).address)
-    
-    return prog
+    return new Program(idl as Idl, provider)
   }, [provider])
 
   return { program, provider }

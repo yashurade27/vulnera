@@ -96,11 +96,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    console.log('[Bookmark POST] Request body:', body)
+    console.log('[Bookmark POST] User ID:', session.user.id)
     
     // Validate request body
     const { addBookmarkSchema } = await import('@/lib/types')
     const validationResult = addBookmarkSchema.safeParse(body)
     if (!validationResult.success) {
+      console.error('[Bookmark POST] Validation failed:', validationResult.error.issues)
       return NextResponse.json(
         { error: 'Invalid request body', details: validationResult.error.issues },
         { status: 400 }
@@ -108,6 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { bountyId } = validationResult.data
+    console.log('[Bookmark POST] Bounty ID:', bountyId)
 
     // Check if bounty exists
     const bounty = await prisma.bounty.findUnique({
@@ -115,8 +119,11 @@ export async function POST(request: NextRequest) {
     })
 
     if (!bounty) {
+      console.error('[Bookmark POST] Bounty not found:', bountyId)
       return NextResponse.json({ error: 'Bounty not found' }, { status: 404 })
     }
+
+    console.log('[Bookmark POST] Bounty found:', bounty.id)
 
     // Check if already bookmarked
     const existing = await prisma.bountyBookmark.findUnique({
@@ -129,9 +136,11 @@ export async function POST(request: NextRequest) {
     })
 
     if (existing) {
+      console.log('[Bookmark POST] Already bookmarked')
       return NextResponse.json({ error: 'Bounty already bookmarked' }, { status: 400 })
     }
 
+    console.log('[Bookmark POST] Creating bookmark...')
     // Create bookmark
     const bookmark = await prisma.bountyBookmark.create({
       data: {
@@ -140,13 +149,24 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    console.log('[Bookmark POST] Bookmark created successfully:', bookmark.id)
     return NextResponse.json({
       message: 'Bookmark added successfully',
       bookmark,
     })
   } catch (error) {
-    console.error('Add bookmark error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('[Bookmark POST] Error occurred:', error)
+    console.error('[Bookmark POST] Error details:', {
+      name: (error as any)?.name,
+      message: (error as any)?.message,
+      code: (error as any)?.code,
+      meta: (error as any)?.meta,
+      stack: (error as any)?.stack,
+    })
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: (error as any)?.message 
+    }, { status: 500 })
   }
 }
 

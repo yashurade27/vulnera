@@ -256,35 +256,46 @@ export function CreateBountyPage() {
       );
 
       console.log('Derived Escrow PDA:', escrowPda.toBase58());
-      console.log('Program ID used for PDA:', PROGRAM_ID.toBase58());
-      console.log('Program instance programId:', program.programId.toBase58());
 
       // Verify the program is actually deployed
-      console.log('Checking if program exists at address...');
       const programInfo = await connection.getAccountInfo(PROGRAM_ID);
-      console.log('Program info result:', programInfo);
       if (!programInfo) {
         throw new Error(`Program not found at address ${PROGRAM_ID.toBase58()}. Make sure the program is deployed to devnet.`);
       }
-      console.log('Program account found. Executable:', programInfo.executable);
 
       // Check if the account already exists
-      console.log('Checking if escrow vault already exists...');
       const accountInfo = await connection.getAccountInfo(escrowPda);
-      console.log('Vault account info:', accountInfo);
 
       let signature: string;
       if (accountInfo === null) {
         // Account doesn't exist, so initialize it
         console.log("Vault account not found. Initializing...");
-        signature = await program.methods
-          .initialize(new BN(escrowInfo.expectedAmount))
-          .accounts({
-            vault: escrowPda,
-            owner: publicKey,
-            systemProgram: SystemProgram.programId,
-          })
-          .rpc();
+        try {
+          signature = await program.methods
+            .initialize(new BN(escrowInfo.expectedAmount))
+            .accounts({
+              vault: escrowPda,
+              owner: publicKey,
+              systemProgram: SystemProgram.programId,
+            })
+            .rpc({
+              skipPreflight: false,
+              commitment: "confirmed",
+            });
+          console.log("Initialize transaction successful with signature:", signature);
+        } catch (initError: any) {
+          console.error("Initialize transaction error:", initError);
+          
+          // Check if the account was actually created despite the error
+          const recheckAccountInfo = await connection.getAccountInfo(escrowPda);
+          if (recheckAccountInfo) {
+            console.log("Account was created successfully despite error. Using existing account.");
+            // Get the transaction signature from the error if available
+            signature = initError?.signature || "unknown";
+          } else {
+            throw initError;
+          }
+        }
       } else {
         // Account exists, so deposit into it
         console.log("Vault account found. Depositing funds...");
@@ -295,10 +306,14 @@ export function CreateBountyPage() {
             owner: publicKey,
             systemProgram: SystemProgram.programId,
           })
-          .rpc();
+          .rpc({
+            skipPreflight: false,
+            commitment: "confirmed",
+          });
+        console.log("Deposit transaction successful with signature:", signature);
       }
 
-      console.log("Transaction successful with signature:", signature);
+      console.log("Transaction completed with signature:", signature);
 
       // Verify with backend
       const fundRes = await fetch(`/api/bounties/${createdBountyId}/fund`, {
