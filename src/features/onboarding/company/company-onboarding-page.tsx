@@ -371,7 +371,7 @@ export function CompanyOnboardingPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-dashed">
+                  {/* <Card className="border-dashed">
                     <CardHeader>
                       <CardTitle className="text-base flex items-center gap-2">
                         <ShieldCheck className="w-4 h-4" /> On-chain registration (optional now)
@@ -408,7 +408,7 @@ export function CompanyOnboardingPage() {
                         )}
                       />
                     </CardContent>
-                  </Card>
+                  </Card> */}
 
                   <div className="flex items-center justify-between">
                     <Link href="/dashboard/company" className="text-sm text-muted-foreground hover:text-foreground">
@@ -445,13 +445,13 @@ export function CompanyOnboardingPage() {
                     <p>Authorize the wallet that will fund and approve bounty rewards.</p>
                   </div>
                 </div>
-                <div className="flex gap-3">
+                {/* <div className="flex gap-3">
                   <Badge variant="secondary">3</Badge>
                   <div>
                     <p className="font-medium text-foreground">Register on-chain</p>
                     <p>Submit your registration transaction to verify your program.</p>
                   </div>
-                </div>
+                </div> */}
               </CardContent>
             </Card>
 

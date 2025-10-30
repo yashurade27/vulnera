@@ -1,6 +1,7 @@
 {
   "name": "vulnera",
   "scripts": {
+    "add-users": "npx tsx scripts/add-users.ts",
     "anchor": "cd anchor && anchor",
     "anchor-build": "cd anchor && anchor build",
     "anchor-localnet": "cd anchor && anchor localnet",

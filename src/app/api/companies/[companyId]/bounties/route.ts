@@ -55,15 +55,25 @@ export async function GET(
     }
 
     // Get bounties with pagination
-    const fundedWhere: Prisma.BountyWhereInput = {
-      ...where,
-      escrowAddress: { not: null },
-      txSignature: { not: null },
-    };
+    // If status is DRAFT, return bounties without escrow OR with escrow but no balance
+    // Otherwise return funded bounties with balance
+    let queryWhere: Prisma.BountyWhereInput = where;
+    
+    if (status === 'DRAFT') {
+      // For drafts: either no escrow at all, or escrow exists but we'll check balance later
+      queryWhere = where;
+    } else if (status) {
+      // For non-draft statuses, only return funded bounties
+      queryWhere = {
+        ...where,
+        escrowAddress: { not: null },
+        txSignature: { not: null },
+      };
+    }
 
     const [bounties, totalCandidates] = await Promise.all([
       prisma.bounty.findMany({
-        where: fundedWhere,
+        where: queryWhere,
         select: {
           id: true,
           title: true,
@@ -87,6 +97,7 @@ export async function GET(
           closedAt: true,
           escrowAddress: true,
           txSignature: true,
+          maxSubmissions: true,
           _count: {
             select: {
               submissions: true,
@@ -98,7 +109,7 @@ export async function GET(
         skip: offset,
       }),
       prisma.bounty.findMany({
-        where: fundedWhere,
+        where: queryWhere,
         select: {
           id: true,
           escrowAddress: true,
@@ -128,32 +139,58 @@ export async function GET(
             ? bounty.bountyTypes
             : ['SECURITY'],
           escrowBalanceLamports,
+          maxSubmissions: bounty.maxSubmissions,
         };
       })
     );
 
-    const fundedBounties = enriched.filter(
-      (bounty) => bounty.escrowAddress && bounty.escrowBalanceLamports && bounty.escrowBalanceLamports > 0
-    );
+    // For draft bounties, return only bounties without proper funding
+    // For other statuses, filter by escrow balance
+    const filteredBounties = status === 'DRAFT' 
+      ? enriched.filter(
+          (bounty) => !bounty.escrowAddress || !bounty.escrowBalanceLamports || bounty.escrowBalanceLamports === 0
+        )
+      : enriched.filter(
+          (bounty) => bounty.escrowAddress && bounty.escrowBalanceLamports && bounty.escrowBalanceLamports > 0
+        );
 
     let total = 0;
     for (const candidate of totalCandidates) {
-      if (!candidate.escrowAddress) {
-        continue;
-      }
-      let escrowAmount = escrowCache.get(candidate.escrowAddress);
-      if (escrowAmount === undefined) {
-        const escrowData = await solanaService.getEscrowData(candidate.escrowAddress);
-        escrowAmount = escrowData?.escrowAmount ?? 0;
-        escrowCache.set(candidate.escrowAddress, escrowAmount);
-      }
-      if (escrowAmount && escrowAmount > 0) {
-        total += 1;
+      if (status === 'DRAFT') {
+        // For draft bounties, only count unfunded ones
+        if (!candidate.escrowAddress) {
+          total += 1;
+          continue;
+        }
+        let escrowAmount = escrowCache.get(candidate.escrowAddress);
+        if (escrowAmount === undefined) {
+          const escrowData = await solanaService.getEscrowData(candidate.escrowAddress);
+          escrowAmount = escrowData?.escrowAmount ?? 0;
+          escrowCache.set(candidate.escrowAddress, escrowAmount);
+        }
+        // Count as draft if no balance
+        if (!escrowAmount || escrowAmount === 0) {
+          total += 1;
+        }
+      } else {
+        // For other statuses, only count funded bounties
+        if (!candidate.escrowAddress) {
+          continue;
+        }
+        let escrowAmount = escrowCache.get(candidate.escrowAddress);
+        if (escrowAmount === undefined) {
+          const escrowData = await solanaService.getEscrowData(candidate.escrowAddress);
+          escrowAmount = escrowData?.escrowAmount ?? 0;
+          escrowCache.set(candidate.escrowAddress, escrowAmount);
+        }
+        if (escrowAmount && escrowAmount > 0) {
+          total += 1;
+        }
       }
     }
 
     return NextResponse.json({
-      bounties: fundedBounties,
+      bounties: filteredBounties,
       pagination: {
         total,
         limit,

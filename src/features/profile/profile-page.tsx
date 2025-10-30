@@ -721,7 +721,7 @@ export function ProfilePage({ userId }: ProfilePageProps) {
               ))}
               {isOwnProfile ? (
                 <Button asChild variant="outline">
-                  <Link href="/settings">Manage Profile</Link>
+                  <Link href="/dashboard/company/settings">Manage Profile</Link>
                 </Button>
               ) : null}
               {user.role === 'BOUNTY_HUNTER' && (
@@ -936,7 +936,7 @@ export function ProfilePage({ userId }: ProfilePageProps) {
                       ) : null}
                       <span className="flex items-center gap-1">
                         <Users className="w-4 h-4" />
-                        {integerFormatter.format(company._count?.members ?? companyStats?.activeMembers ?? 0)} members
+                        {company.companySize} members
                       </span>
                       {company.location ? (
                         <span className="flex items-center gap-1">

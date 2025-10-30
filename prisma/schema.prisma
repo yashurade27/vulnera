@@ -25,6 +25,7 @@ enum UserStatus {
 }
 
 enum BountyStatus {
+  DRAFT
   ACTIVE
   CLOSED
   EXPIRED

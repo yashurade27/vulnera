@@ -278,6 +278,8 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                   bountyId={bountyId}
                   bountyTitle={currentBounty.title}
                   currentEscrowBalance={(escrowSol || 0) * 1_000_000_000}
+                  rewardAmount={Number(currentBounty.rewardAmount)}
+                  maxSubmissions={currentBounty.maxSubmissions}
                   onSuccess={fetchBountyDetails}
                 />
               ) : (

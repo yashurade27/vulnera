@@ -210,13 +210,13 @@ export function CreateBountyPage() {
       }
       setCreatedBountyId(bountyId)
 
-      if (publicKey) {
+      if (company.walletAddress) {
         const escrowRes = await fetch("/api/blockchain/create-escrow", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
-            ownerWallet: publicKey.toBase58(),
+            ownerWallet: company.walletAddress,
             amount: lamportsAmount,
           }),
         })
@@ -241,8 +241,13 @@ export function CreateBountyPage() {
   }
 
   const handleInitializeEscrow = async () => {
-    if (!program || !publicKey || !createdBountyId || !escrowInfo?.escrowAddress || !escrowInfo.expectedAmount) {
+    if (!program || !createdBountyId || !escrowInfo?.escrowAddress || !escrowInfo.expectedAmount || !company?.walletAddress) {
       setFundingError("Missing required information to fund the bounty.")
+      return
+    }
+
+    if (!publicKey || publicKey.toBase58() !== company.walletAddress) {
+      setFundingError("Please connect the wallet associated with this company to fund the bounty.")
       return
     }
 
@@ -250,8 +255,9 @@ export function CreateBountyPage() {
       setFunding(true)
       setFundingError(null)
 
+      const ownerPublicKey = new PublicKey(company.walletAddress)
       const [escrowPda] = await PublicKey.findProgramAddress(
-        [Buffer.from("bounty-escrow"), publicKey.toBuffer()],
+        [Buffer.from("bounty-escrow"), ownerPublicKey.toBuffer()],
         PROGRAM_ID
       );
 
@@ -275,7 +281,7 @@ export function CreateBountyPage() {
             .initialize(new BN(escrowInfo.expectedAmount))
             .accounts({
               vault: escrowPda,
-              owner: publicKey,
+              owner: ownerPublicKey,
               systemProgram: SystemProgram.programId,
             })
             .rpc({
@@ -303,7 +309,7 @@ export function CreateBountyPage() {
           .deposit(new BN(escrowInfo.expectedAmount))
           .accounts({
             vault: escrowPda,
-            owner: publicKey,
+            owner: ownerPublicKey,
             systemProgram: SystemProgram.programId,
           })
           .rpc({
@@ -687,7 +693,7 @@ export function CreateBountyPage() {
                       <Button
                         className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
                         onClick={handleInitializeEscrow}
-                        disabled={funding || !escrowInfo || !publicKey}
+                        disabled={funding || !escrowInfo || !publicKey || publicKey.toBase58() !== company?.walletAddress}
                       >
                         {funding ? (
                           <>

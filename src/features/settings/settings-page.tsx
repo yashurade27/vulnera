@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -37,35 +37,57 @@ const walletSchema = z.object({
 type ProfileFormValues = z.infer<typeof updateUserProfileSchema>
 type WalletFormValues = z.infer<typeof walletSchema>
 
+interface UserData {
+  id: string
+  email: string
+  username: string
+  role: string
+  walletAddress?: string | null
+  fullName?: string | null
+  bio?: string | null
+  avatarUrl?: string | null
+  country?: string | null
+  githubUrl?: string | null
+  twitterUrl?: string | null
+  linkedinUrl?: string | null
+  portfolioUrl?: string | null
+  totalEarnings: number
+  totalBounties: number
+  reputation: number
+}
+
 export function SettingsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [userData, setUserData] = useState<UserData | null>(null)
   const [messageToSign, setMessageToSign] = useState<string>("")
   const [activeTab, setActiveTab] = useState("profile")
   const [avatarUploading, setAvatarUploading] = useState(false)
   const userId = session?.user?.id
 
-  const generateMessageToSign = (walletAddress: string) => {
+  const generateMessageToSign = useCallback((walletAddress: string) => {
     const timestamp = Date.now()
     const message = `Verify wallet ownership for Vulnera platform\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\nUser ID: ${userId ?? "unknown"}`
     setMessageToSign(message)
     return message
-  }
+  }, [userId])
+
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(updateUserProfileSchema),
     defaultValues: {
-      fullName: undefined,
-      bio: undefined,
-      avatarUrl: undefined,
-      country: undefined,
-      githubUrl: undefined,
-      twitterUrl: undefined,
-      linkedinUrl: undefined,
-      portfolioUrl: undefined,
+      fullName: "",
+      bio: "",
+      avatarUrl: "",
+      country: "",
+      githubUrl: "",
+      twitterUrl: "",
+      linkedinUrl: "",
+      portfolioUrl: "",
     },
   })
+
   const walletForm = useForm<WalletFormValues>({
     resolver: zodResolver(walletSchema),
     defaultValues: {
@@ -89,23 +111,33 @@ export function SettingsPage() {
           throw new Error("Unable to load profile")
         }
         const payload = await response.json()
-        profileForm.reset({
-          fullName: payload?.user?.fullName ?? undefined,
-          bio: payload?.user?.bio ?? undefined,
-          avatarUrl: payload?.user?.avatarUrl ?? undefined,
-          country: payload?.user?.country ?? undefined,
-          githubUrl: payload?.user?.githubUrl ?? undefined,
-          twitterUrl: payload?.user?.twitterUrl ?? undefined,
-          linkedinUrl: payload?.user?.linkedinUrl ?? undefined,
-          portfolioUrl: payload?.user?.portfolioUrl ?? undefined,
-        })
-        walletForm.reset({
-          walletAddress: payload?.user?.walletAddress ?? "",
-          signature: "",
-        })
-        // Generate message if wallet address exists
-        if (payload?.user?.walletAddress) {
-          generateMessageToSign(payload.user.walletAddress)
+        const user = payload?.user
+        
+        if (user) {
+          setUserData(user)
+          
+          // Reset profile form with user data
+          profileForm.reset({
+            fullName: user.fullName || "",
+            bio: user.bio || "",
+            avatarUrl: user.avatarUrl || "",
+            country: user.country || "",
+            githubUrl: user.githubUrl || "",
+            twitterUrl: user.twitterUrl || "",
+            linkedinUrl: user.linkedinUrl || "",
+            portfolioUrl: user.portfolioUrl || "",
+          })
+
+          // Reset wallet form with user data
+          walletForm.reset({
+            walletAddress: user.walletAddress || "",
+            signature: "",
+          })
+
+          // Generate message if wallet address exists
+          if (user.walletAddress) {
+            generateMessageToSign(user.walletAddress)
+          }
         }
       } catch (err) {
         console.error(err)
@@ -116,7 +148,8 @@ export function SettingsPage() {
     }
 
     void fetchProfile()
-  }, [userId, profileForm, walletForm, generateMessageToSign])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   const handleAvatarUpload = async (file: File) => {
     try {
@@ -149,31 +182,21 @@ export function SettingsPage() {
       return
     }
     try {
-      const payload = {
-        ...values,
-        avatarUrl: values.avatarUrl?.trim() ? values.avatarUrl.trim() : undefined,
-        fullName: values.fullName?.trim() ? values.fullName.trim() : undefined,
-        bio: values.bio?.trim() ? values.bio.trim() : undefined,
-        country: values.country?.trim() ? values.country.trim() : undefined,
-        githubUrl: values.githubUrl?.trim() ? values.githubUrl.trim() : undefined,
-        twitterUrl: values.twitterUrl?.trim() ? values.twitterUrl.trim() : undefined,
-        linkedinUrl: values.linkedinUrl?.trim() ? values.linkedinUrl.trim() : undefined,
-        portfolioUrl: values.portfolioUrl?.trim() ? values.portfolioUrl.trim() : undefined,
-      }
-
       const response = await fetch(`/api/users/${userId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(values),
       })
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => null)
         throw new Error(errorPayload?.error ?? "Failed to update profile")
       }
-      toast.success("Profile saved")
+      const payload = await response.json()
+      setUserData(payload.user)
+      toast.success("Profile saved successfully")
       router.refresh()
     } catch (error) {
       console.error(error)
@@ -263,6 +286,34 @@ export function SettingsPage() {
           </Card>
         ) : null}
 
+        {/* User Stats Card */}
+        {userData && (
+          <Card className="card-glass mb-6">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-yellow-400">{userData.totalEarnings} SOL</p>
+                  <p className="text-sm text-muted-foreground">Total Earnings</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold">{userData.totalBounties}</p>
+                  <p className="text-sm text-muted-foreground">Bounties Completed</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold">{userData.reputation.toFixed(1)}</p>
+                  <p className="text-sm text-muted-foreground">Reputation Score</p>
+                </div>
+                <div className="text-center">
+                  <Badge variant="outline" className="text-base">
+                    {userData.role.replace('_', ' ')}
+                  </Badge>
+                  <p className="text-sm text-muted-foreground mt-1">Account Role</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full max-w-xl grid-cols-2">
             <TabsTrigger value="profile" className="gap-2">
@@ -293,25 +344,30 @@ export function SettingsPage() {
                         <div className="flex items-center gap-4 mt-2">
                           {profileForm.watch("avatarUrl") ? (
                             <Image
-                              width={64}
-                              height={64}
-                              src={profileForm.watch("avatarUrl") ?? ""}
+                              width={80}
+                              height={80}
+                              src={profileForm.watch("avatarUrl") || ""}
                               alt="Avatar"
-                              className="h-16 w-16 rounded-full border border-border object-cover"
+                              className="h-20 w-20 rounded-full border-2 border-border object-cover"
                             />
                           ) : (
-                            <div className="h-16 w-16 rounded-full border border-dashed border-border flex items-center justify-center text-sm text-muted-foreground">
-                              No avatar
+                            <div className="h-20 w-20 rounded-full border-2 border-dashed border-border flex items-center justify-center text-sm text-muted-foreground">
+                              <UserCircle className="w-10 h-10" />
                             </div>
                           )}
-                          <div className="flex items-center gap-3">
-                            <label className="flex items-center gap-2 px-4 py-2 border border-dashed border-border rounded-lg cursor-pointer hover:bg-white/5 transition">
-                              <UploadCloud className="w-4 h-4" />
-                              <span>Upload avatar</span>
+                          <div className="flex flex-col gap-3">
+                            <label className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg cursor-pointer hover:bg-accent transition">
+                              {avatarUploading ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <UploadCloud className="w-4 h-4" />
+                              )}
+                              <span>{avatarUploading ? "Uploading..." : "Upload new avatar"}</span>
                               <input
                                 type="file"
-                                accept="image/png,image/jpeg,image/svg+xml"
+                                accept="image/png,image/jpeg,image/jpg,image/webp"
                                 className="hidden"
+                                disabled={avatarUploading}
                                 onChange={(event) => {
                                   const file = event.target.files?.[0]
                                   if (file) {
@@ -320,14 +376,14 @@ export function SettingsPage() {
                                 }}
                               />
                             </label>
-                            {avatarUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                            {profileForm.watch("avatarUrl") ? (
+                            {profileForm.watch("avatarUrl") && !avatarUploading ? (
                               <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => profileForm.setValue("avatarUrl", undefined, { shouldValidate: true })}
+                                size="sm"
+                                onClick={() => profileForm.setValue("avatarUrl", "", { shouldValidate: true })}
                               >
-                                Remove
+                                Remove avatar
                               </Button>
                             ) : null}
                           </div>
@@ -344,11 +400,7 @@ export function SettingsPage() {
                               <FormControl>
                                 <Input
                                   placeholder="Jane Doe"
-                                  value={field.value ?? ""}
-                                  onChange={(event) => {
-                                    const value = event.target.value
-                                    field.onChange(value === "" ? undefined : value)
-                                  }}
+                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -364,11 +416,7 @@ export function SettingsPage() {
                               <FormControl>
                                 <Input
                                   placeholder="Remote"
-                                  value={field.value ?? ""}
-                                  onChange={(event) => {
-                                    const value = event.target.value
-                                    field.onChange(value === "" ? undefined : value)
-                                  }}
+                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -387,11 +435,7 @@ export function SettingsPage() {
                               <Textarea
                                 rows={4}
                                 placeholder="Share your expertise and focus areas"
-                                value={field.value ?? ""}
-                                onChange={(event) => {
-                                  const value = event.target.value
-                                  field.onChange(value === "" ? undefined : value)
-                                }}
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage />
@@ -409,11 +453,7 @@ export function SettingsPage() {
                               <FormControl>
                                 <Input
                                   placeholder="https://github.com/username"
-                                  value={field.value ?? ""}
-                                  onChange={(event) => {
-                                    const value = event.target.value
-                                    field.onChange(value === "" ? undefined : value)
-                                  }}
+                                  {...field}
                                 />
                               </FormControl>
                               <FormDescription className="flex items-center gap-2 text-xs">
@@ -432,11 +472,7 @@ export function SettingsPage() {
                               <FormControl>
                                 <Input
                                   placeholder="https://twitter.com/username"
-                                  value={field.value ?? ""}
-                                  onChange={(event) => {
-                                    const value = event.target.value
-                                    field.onChange(value === "" ? undefined : value)
-                                  }}
+                                  {...field}
                                 />
                               </FormControl>
                               <FormDescription className="flex items-center gap-2 text-xs">
@@ -458,11 +494,7 @@ export function SettingsPage() {
                               <FormControl>
                                 <Input
                                   placeholder="https://linkedin.com/in/username"
-                                  value={field.value ?? ""}
-                                  onChange={(event) => {
-                                    const value = event.target.value
-                                    field.onChange(value === "" ? undefined : value)
-                                  }}
+                                  {...field}
                                 />
                               </FormControl>
                               <FormDescription className="flex items-center gap-2 text-xs">
@@ -480,12 +512,8 @@ export function SettingsPage() {
                               <FormLabel>Portfolio</FormLabel>
                               <FormControl>
                                 <Input
-                                  placeholder="https://"
-                                  value={field.value ?? ""}
-                                  onChange={(event) => {
-                                    const value = event.target.value
-                                    field.onChange(value === "" ? undefined : value)
-                                  }}
+                                  placeholder="https://your-portfolio.com"
+                                  {...field}
                                 />
                               </FormControl>
                               <FormDescription className="flex items-center gap-2 text-xs">
@@ -517,10 +545,17 @@ export function SettingsPage() {
               <CardHeader>
                 <CardTitle>Wallet settings</CardTitle>
                 <CardDescription>
-                  Update the wallet address associated with your bounty payouts. Signature is required for verification.
+                  Update the wallet address associated with your bounty payouts. Signature verification is required to prove ownership.
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {userData?.walletAddress && (
+                  <div className="mb-6 p-4 rounded-lg bg-muted border">
+                    <p className="text-sm font-medium mb-2">Current Wallet Address</p>
+                    <p className="font-mono text-sm break-all">{userData.walletAddress}</p>
+                  </div>
+                )}
+                
                 <Form {...walletForm}>
                   <form onSubmit={walletForm.handleSubmit(submitWallet)} className="space-y-6">
                     <FormField
@@ -528,7 +563,7 @@ export function SettingsPage() {
                       name="walletAddress"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Wallet address</FormLabel>
+                          <FormLabel>New Wallet Address</FormLabel>
                           <FormControl>
                             <Input
                               placeholder="Enter your Solana wallet address"
@@ -545,20 +580,30 @@ export function SettingsPage() {
                               }}
                             />
                           </FormControl>
+                          <FormDescription>
+                            Enter a new Solana wallet address to update your payout destination
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     {messageToSign && (
-                      <div className="p-4 rounded-lg bg-muted border">
-                        <FormLabel className="text-sm font-medium">Message to sign</FormLabel>
-                        <div className="mt-2 p-3 bg-background rounded border font-mono text-sm whitespace-pre-wrap">
-                          {messageToSign}
+                      <div className="p-4 rounded-lg bg-muted border space-y-3">
+                        <div>
+                          <FormLabel className="text-sm font-medium">Message to sign</FormLabel>
+                          <div className="mt-2 p-3 bg-background rounded border font-mono text-xs whitespace-pre-wrap">
+                            {messageToSign}
+                          </div>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Copy this message and sign it in your Solana wallet (Phantom, Backpack, etc.). The wallet
-                          will return a base58 signature you can paste below.
-                        </p>
+                        <div className="text-sm text-muted-foreground space-y-2">
+                          <p className="font-medium">How to sign:</p>
+                          <ol className="list-decimal list-inside space-y-1 pl-2">
+                            <li>Copy the message above</li>
+                            <li>Open your Solana wallet (Phantom, Backpack, etc.)</li>
+                            <li>Use the &quot;Sign Message&quot; feature</li>
+                            <li>Paste the signed message (base58 format) below</li>
+                          </ol>
+                        </div>
                       </div>
                     )}
                     <FormField
@@ -566,14 +611,16 @@ export function SettingsPage() {
                       name="signature"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Proof signature</FormLabel>
+                          <FormLabel>Signature</FormLabel>
                           <FormControl>
-                            <Input placeholder="Paste the signed message from your wallet" {...field} />
+                            <Textarea
+                              rows={3}
+                              placeholder="Paste the base58 signature from your wallet"
+                              {...field}
+                            />
                           </FormControl>
                           <FormDescription>
-                            1. Enter your wallet address above to generate a message<br/>
-                            2. Sign that message in your Solana wallet (use the &quot;Sign Message&quot; feature)<br/>
-                            3. Paste the base58 signature returned by your wallet client
+                            The signature proves you own the wallet address
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -581,7 +628,11 @@ export function SettingsPage() {
                     />
 
                     <div className="flex justify-end gap-3">
-                      <Button type="submit" disabled={walletForm.formState.isSubmitting}>
+                      <Button 
+                        type="submit" 
+                        disabled={walletForm.formState.isSubmitting || !messageToSign}
+                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
+                      >
                         {walletForm.formState.isSubmitting ? (
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         ) : (

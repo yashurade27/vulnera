@@ -45,6 +45,10 @@ interface BountyItem {
   rewardAmount: number
   submissionsCount: number
   endsAt: string | null
+  status?: string
+  escrowAddress?: string | null
+  escrowBalanceLamports?: number | null
+  maxSubmissions?: number | null
 }
 
 interface SubmissionItem {
@@ -131,9 +135,10 @@ export function CompanyDashboardPage() {
         setCompany(companyData)
         setAwaitingVerification(!companyData.isVerified)
 
-        const [rawStats, rawBounties, rawSubmissions] = await Promise.all([
+        const [rawStats, rawBounties, rawDraftBounties, rawSubmissions] = await Promise.all([
           fetch(`/api/companies/${companyData.id}/stats`, { credentials: "include" }),
           fetch(`/api/companies/${companyData.id}/bounties?status=ACTIVE&limit=5`, { credentials: "include" }),
+          fetch(`/api/companies/${companyData.id}/bounties?status=DRAFT&limit=5`, { credentials: "include" }),
           fetch(`/api/submissions?companyId=${companyData.id}&status=PENDING&limit=5`, { credentials: "include" }),
         ])
 
@@ -174,9 +179,44 @@ export function CompanyDashboardPage() {
               rewardAmount: Number(bounty?.rewardAmount ?? 0),
               submissionsCount: Number(bounty?._count?.submissions ?? 0),
               endsAt: bounty?.endsAt ?? null,
+              status: bounty?.status,
+              escrowAddress: bounty?.escrowAddress,
+              escrowBalanceLamports: bounty?.escrowBalanceLamports,
+              maxSubmissions: bounty?.maxSubmissions,
             }))
           : []
-        if (active) {
+
+        if (!rawDraftBounties.ok) {
+          console.warn("Unable to load draft bounties")
+        } else {
+          const draftBountiesJson = await rawDraftBounties.json()
+          const mappedDraftBounties: BountyItem[] = Array.isArray(draftBountiesJson?.bounties)
+            ? draftBountiesJson.bounties.map((bounty: any) => ({
+                id: bounty?.id,
+                title: bounty?.title ?? "Untitled bounty",
+                bountyTypes:
+                  Array.isArray(bounty?.bountyTypes) && bounty.bountyTypes.length
+                    ? bounty.bountyTypes
+                    : [bounty?.bountyType ?? "UI"],
+                rewardAmount: Number(bounty?.rewardAmount ?? 0),
+                submissionsCount: Number(bounty?._count?.submissions ?? 0),
+                endsAt: bounty?.endsAt ?? null,
+                status: bounty?.status,
+                escrowAddress: bounty?.escrowAddress,
+                escrowBalanceLamports: bounty?.escrowBalanceLamports,
+                maxSubmissions: bounty?.maxSubmissions,
+              }))
+            : []
+          if (active) {
+            setBounties([...mappedDraftBounties, ...mappedBounties])
+          }
+        }
+
+        if (!active && rawDraftBounties.ok) {
+          return
+        }
+
+        if (active && !rawDraftBounties.ok) {
           setBounties(mappedBounties)
         }
 
@@ -414,8 +454,8 @@ export function CompanyDashboardPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-2xl">Active Bounties</CardTitle>
-                    <CardDescription>Your currently running bug bounty programs</CardDescription>
+                    <CardTitle className="text-2xl">Bounties</CardTitle>
+                    <CardDescription>Draft and active bug bounty programs</CardDescription>
                   </div>
                   <Button variant="outline" size="sm" asChild>
                     <Link href="/dashboard/company/bounties">View All</Link>
@@ -452,6 +492,11 @@ export function CompanyDashboardPage() {
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="font-semibold text-lg line-clamp-2">{bounty.title}</h3>
                               <div className="flex flex-wrap gap-2">
+                                {bounty.status === "DRAFT" && (
+                                  <Badge variant="outline" className="bg-orange-500/10 text-orange-400 border-orange-500/30">
+                                    DRAFT
+                                  </Badge>
+                                )}
                                 {bounty.bountyTypes.map((type) => (
                                   <Badge key={type} variant="outline" className={BOUNTY_TYPE_COLORS[type] ?? ""}>
                                     {type}
@@ -477,6 +522,14 @@ export function CompanyDashboardPage() {
                                 </div>
                               ) : null}
                             </div>
+                            {bounty.escrowAddress && (
+                              <div className="mt-2 text-xs text-muted-foreground font-mono">
+                                <span className="text-yellow-400">Escrow:</span> {bounty.escrowAddress.substring(0, 8)}...{bounty.escrowAddress.substring(bounty.escrowAddress.length - 8)}
+                                {bounty.escrowBalanceLamports !== null && bounty.escrowBalanceLamports !== undefined && (
+                                  <span className="ml-2">({(bounty.escrowBalanceLamports / 1_000_000_000).toFixed(4)} SOL)</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                           <Button variant="outline" size="sm" asChild>
                             <Link href={`/bounties/${bounty.id}`}>View</Link>

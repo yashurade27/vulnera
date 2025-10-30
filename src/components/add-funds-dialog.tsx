@@ -24,10 +24,12 @@ interface AddFundsDialogProps {
   bountyId: string
   bountyTitle: string
   currentEscrowBalance: number // in lamports
+  rewardAmount: number // in SOL per submission
+  maxSubmissions?: number | null // maximum payouts
   onSuccess?: () => void
 }
 
-export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, onSuccess }: AddFundsDialogProps) {
+export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, rewardAmount, maxSubmissions, onSuccess }: AddFundsDialogProps) {
   const { connection } = useConnection()
   const { publicKey } = useWallet()
   const { program } = useProgram()
@@ -37,6 +39,9 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, on
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<"input" | "signing" | "confirming">("input")
   const [txSignature, setTxSignature] = useState<string | null>(null)
+
+  const minimumDepositSOL = maxSubmissions ? rewardAmount * maxSubmissions : rewardAmount
+  const currentBalanceSOL = currentEscrowBalance / 1_000_000_000
 
   const handleAddFunds = async () => {
     if (!publicKey || !amount || !program) {
@@ -52,6 +57,15 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, on
     if (isNaN(amountNum) || amountNum <= 0) {
       toast.error("Invalid amount", {
         description: "Please enter a valid amount greater than 0",
+      })
+      return
+    }
+
+    // Check if total balance after deposit meets minimum requirement
+    const totalAfterDeposit = currentBalanceSOL + amountNum
+    if (totalAfterDeposit < minimumDepositSOL) {
+      toast.error("Insufficient deposit", {
+        description: `Total escrow balance must be at least ${minimumDepositSOL} SOL (${rewardAmount} SOL × ${maxSubmissions || 1} payout${maxSubmissions !== 1 ? 's' : ''}). Current: ${currentBalanceSOL.toFixed(4)} SOL. You need to deposit at least ${(minimumDepositSOL - currentBalanceSOL).toFixed(4)} SOL.`,
       })
       return
     }
@@ -149,8 +163,6 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, on
     }
   }
 
-  const currentBalanceSOL = currentEscrowBalance / 1_000_000_000
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -202,18 +214,26 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, on
                   </div>
                 </div>
                 {amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0 && (
-                  <p className="text-sm text-green-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-4 h-4" />
-                    New balance: {(currentBalanceSOL + parseFloat(amount)).toFixed(4)} SOL
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-sm text-green-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-4 h-4" />
+                      New balance: {(currentBalanceSOL + parseFloat(amount)).toFixed(4)} SOL
+                    </p>
+                    {(currentBalanceSOL + parseFloat(amount)) < minimumDepositSOL && (
+                      <p className="text-sm text-red-400 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        Below minimum: {minimumDepositSOL} SOL required ({rewardAmount} SOL × {maxSubmissions || 1} payout{maxSubmissions !== 1 ? 's' : ''})
+                      </p>
+                    )}
+                  </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  💡 This will increase the total funds available for bounty rewards
+                  💡 Minimum deposit: {(Math.max(0, minimumDepositSOL - currentBalanceSOL)).toFixed(4)} SOL to meet bounty requirements
                 </p>
               </div>
 
               {/* Warning */}
-              <Alert>
+              {/* <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="text-xs">
                   <strong>⚠️ Smart Contract Update Required:</strong><br/>
@@ -222,7 +242,7 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, on
                   <br/><br/>
                   Make sure your wallet is connected and has sufficient balance to cover the deposit amount plus transaction fees.
                 </AlertDescription>
-              </Alert>
+              </Alert> */}
             </>
           )}
 
@@ -262,7 +282,7 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, on
           <Button
             className="flex-1 btn-primary"
             onClick={handleAddFunds}
-            disabled={!amount || loading || !publicKey || !program || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0}
+            disabled={loading || !publicKey || !program || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0}
           >
             {loading ? (
               <>
