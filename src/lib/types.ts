@@ -101,7 +101,7 @@ export const getCompaniesQuerySchema = z.object({
 });
 
 export const getCompanyBountiesQuerySchema = z.object({
-  status: z.enum(['ACTIVE', 'CLOSED', 'EXPIRED']).optional(),
+  status: z.enum(['ACTIVE', 'CLOSED', 'EXPIRED', 'DRAFT']).optional(),
   type: z.enum(['UI', 'FUNCTIONALITY', 'PERFORMANCE', 'SECURITY']).optional(),
   limit: z.string().regex(/^\d+$/).transform(Number).optional(),
   offset: z.string().regex(/^\d+$/).transform(Number).optional(),

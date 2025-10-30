@@ -26,6 +26,7 @@ interface Bounty {
 }
 
 interface BountyDetails extends Bounty {
+  maxSubmissions: number | null | undefined
   createdAt: string
   requirements: string | null
   inScope: string | null
