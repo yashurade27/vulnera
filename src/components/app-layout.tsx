@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ClusterUiChecker } from '@/features/cluster/ui/cluster-ui-checker'
+// import { ClusterUiChecker } from '@/features/cluster/ui/cluster-ui-checker'
 import { AccountUiChecker } from '@/features/account/ui/account-ui-checker'
 import { ThemeProvider } from './theme-provider'
 import { Toaster } from './ui/sonner'
@@ -18,9 +18,9 @@ export function AppLayout({
       <div className="flex flex-col min-h-screen">
         <AppHeader />
         <main className="flex-grow container mx-auto px-4 pt-24 pb-12">
-          <ClusterUiChecker>
+          {/* <ClusterUiChecker> */}
             <AccountUiChecker />
-          </ClusterUiChecker>
+          {/* </ClusterUiChecker> */}
           {children}
         </main>
         <AppFooter />

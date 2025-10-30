@@ -25,6 +25,7 @@ enum UserStatus {
 }
 
 enum BountyStatus {
+  DRAFT
   ACTIVE
   CLOSED
   EXPIRED
@@ -120,6 +121,8 @@ model User {
   reportsCreated    Report[]        @relation("ReporterReports")
   reportsAgainst    Report[]        @relation("ReportedUserReports")
   notifications     Notification[]
+  projects          Project[]
+  bountyBookmarks   BountyBookmark[]
   
   @@index([email])
   @@index([walletAddress])
@@ -194,6 +197,23 @@ model CompanyMember {
   @@unique([userId, companyId])
   @@index([companyId, isActive])
 }
+model Project {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?  @db.Text
+  website     String?
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  //relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([createdAt])
+}
 
 // ==================== BOUNTY MANAGEMENT ====================
 
@@ -243,9 +263,27 @@ model Bounty {
   // Relations
   company         Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   submissions     Submission[]
+  bookmarks       BountyBookmark[]
   
   @@index([companyId, status])
   @@index([startsAt, endsAt])
+}
+
+model BountyBookmark {
+  id          String   @id @default(cuid())
+  userId      String
+  bountyId    String
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bounty      Bounty   @relation(fields: [bountyId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, bountyId])
+  @@index([userId])
+  @@index([bountyId])
 }
 
 // ==================== SUBMISSION MANAGEMENT ====================
@@ -487,3 +525,4 @@ model PlatformStats {
   
   @@index([date])
 }
+

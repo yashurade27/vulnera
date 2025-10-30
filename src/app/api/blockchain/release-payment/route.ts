@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '../../auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { solanaService, PROGRAM_ID } from '@/lib/solana'
 
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
         escrowAddress: submission.bounty.escrowAddress,
         ownerWallet: submission.bounty.company.walletAddress,
         hunterWallet: submission.user.walletAddress,
-        platformWallet: process.env.PLATFORM_WALLET || '11111111111111111111111111111112',
+        platformWallet: process.env.PLATFORM_WALLET || 'GbLLTkUjCznwRrkLM6tewimmW6ZCC4AP8eF9yAD8e5qT',
         customAmount: customAmount || null,
         rewardPerSubmission: Number(submission.bounty.rewardAmount) * 1_000_000_000,
         maxSubmissions: submission.bounty.maxSubmissions || 999999,

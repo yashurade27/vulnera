@@ -1,7 +1,10 @@
 import { AnchorProvider, Program, type Idl } from '@coral-xyz/anchor'
+import { PublicKey } from '@solana/web3.js'
 import { useMemo } from 'react'
 import { useConnection, useWallet, type AnchorWallet } from '@solana/wallet-adapter-react'
-import idl from '../../anchor/Vulnera_idl.json'
+import idl from '../../anchor/target/idl/vulnera_bounty.json'
+
+export const PROGRAM_ID = new PublicKey('5E6gim2SHCpuaJ4Lg3nq2nxs1So1t9MDU5ACdPdB1U6W')
 
 export function useProgram() {
   const { connection } = useConnection()
@@ -20,15 +23,8 @@ export function useProgram() {
   const program = useMemo(() => {
     if (!provider) return null
 
-    const programId =
-      (idl as { metadata?: { address?: string } }).metadata?.address ??
-      (idl as { address?: string }).address ??
-      'CZ6kuqEBvfdzM8h3rACEYazp771BFDXDMNgsoNSNvJ5Q'
-
-    const parsedIdl = idl as unknown as Idl & { metadata?: { address?: string } }
-    parsedIdl.metadata = { ...(parsedIdl.metadata ?? {}), address: programId }
-
-    return new Program(parsedIdl, provider)
+    // Use the IDL directly - it already has the correct address
+    return new Program(idl as Idl, provider)
   }, [provider])
 
   return { program, provider }

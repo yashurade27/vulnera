@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { updateSubmissionSchema, type UpdateSubmissionInput } from '@/lib/types';
 import { type RouteParams } from '@/lib/next';
@@ -32,10 +32,13 @@ export async function GET(
             rewardAmount: true,
             status: true,
             responseDeadline: true,
+            maxSubmissions: true,
+            escrowAddress: true,
             company: {
               select: {
                 id: true,
                 name: true,
+                walletAddress: true,
               },
             },
           },
@@ -47,6 +50,7 @@ export async function GET(
             fullName: true,
             reputation: true,
             totalEarnings: true,
+            walletAddress: true,
           },
         },
         company: {

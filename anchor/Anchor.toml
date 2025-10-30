@@ -5,18 +5,18 @@ package_manager = "yarn"
 resolution = true
 skip-lint = false
 
+[programs.devnet]
+vulnera = "5E6gim2SHCpuaJ4Lg3nq2nxs1So1t9MDU5ACdPdB1U6W"
+
 [programs.localnet]
-vulnera = "CZ6kuqEBvfdzM8h3rACEYazp771BFDXDMNgsoNSNvJ5Q"
+vulnera = "5E6gim2SHCpuaJ4Lg3nq2nxs1So1t9MDU5ACdPdB1U6W"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "npx vitest"
-
-[idl]
-format = "ts"

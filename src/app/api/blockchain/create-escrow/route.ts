@@ -20,10 +20,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if owner has sufficient balance
+    // Adding buffer for transaction fees (roughly 0.001 SOL = 1,000,000 lamports)
+    const TRANSACTION_FEE_BUFFER = 1_000_000
     const balance = await solanaService.getBalance(ownerWallet)
-    if (balance < amount) {
+    const requiredBalance = amount + TRANSACTION_FEE_BUFFER
+    
+    if (balance < requiredBalance) {
+      const balanceInSOL = (balance / 1_000_000_000).toFixed(4)
+      const requiredInSOL = (requiredBalance / 1_000_000_000).toFixed(4)
       return NextResponse.json(
-        { error: 'Insufficient balance in wallet' },
+        { 
+          error: `Insufficient balance. You have ${balanceInSOL} SOL but need ${requiredInSOL} SOL (including transaction fees)`,
+          balance,
+          required: requiredBalance
+        },
         { status: 400 }
       )
     }

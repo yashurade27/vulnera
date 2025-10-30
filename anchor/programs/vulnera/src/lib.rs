@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{system_program, sysvar::clock::Clock};
 
-declare_id!("CZ6kuqEBvfdzM8h3rACEYazp771BFDXDMNgsoNSNvJ5Q");
+declare_id!("5E6gim2SHCpuaJ4Lg3nq2nxs1So1t9MDU5ACdPdB1U6W");
 
 // Platform fee in basis points (200 = 2%)
 pub const DEFAULT_PLATFORM_FEE: u16 = 200;

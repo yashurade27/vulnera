@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '../auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { createBountySchema, getBountiesQuerySchema, type CreateBountyInput } from '@/lib/types'
@@ -280,18 +280,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const existingForCompany = await prisma.bounty.count({
+    // Check if company already has an ACTIVE bounty
+    const existingActiveBounty = await prisma.bounty.count({
       where: {
         companyId,
+        status: 'ACTIVE',
       },
     })
 
-    if (existingForCompany > 0) {
+    if (existingActiveBounty > 0) {
       return NextResponse.json(
         { error: 'A bounty already exists for this company. Multiple bounties per company are not supported.' },
         { status: 400 },
       )
     }
+
+    // Delete any existing DRAFT bounties for this company before creating a new one
+    await prisma.bounty.deleteMany({
+      where: {
+        companyId,
+        status: 'DRAFT',
+      },
+    })
 
     // Create bounty
     const bounty = await prisma.bounty.create({
@@ -310,7 +320,7 @@ export async function POST(request: NextRequest) {
         startsAt,
         endsAt,
         responseDeadline,
-        status: startsAt ? 'ACTIVE' : 'ACTIVE', // Could be scheduled if startsAt is set
+        status: 'DRAFT', // Will be set to ACTIVE when funded
       },
       include: {
         company: {

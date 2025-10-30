@@ -1,8 +1,16 @@
 # API Routes - Smart Contract Integration Summary
 
+## Recent Updates
+
+**Latest Changes (Auth Refactoring & Bookmarks):**
+- Refactored authentication configuration to `/src/lib/auth.ts` to resolve Next.js build errors
+- Added complete bookmark system for bounties with API endpoints and UI components
+- Updated 50+ files to use new auth import path
+- Enhanced route handlers with full HTTP method support
+
 ## Changes Made
 
-This document summarizes the changes made to integrate the API routes with the Solana Anchor smart contract for the Vulnera bug bounty platform.
+This document summarizes the changes made to integrate the API routes with the Solana Anchor smart contract for the Vulnera bug bounty platform, including authentication improvements and new features like bookmarks and project management.
 
 ## Smart Contract Analysis
 
@@ -137,6 +145,94 @@ The smart contract (`lib.rs`) implements three main functions:
 ### 13. `/src/app/api/bounties/[bountyId]/status/route.ts` (NEW)
 **Purpose:** Update bounty status independently (DRAFT, ACTIVE, CLOSED, EXPIRED)
 
+### 14. `/src/app/api/users/project/route.ts` (NEW)
+**Purpose:** Manage user projects (portfolio/showcase)
+
+**Features:**
+- **GET** - List all projects for authenticated user
+  - Supports pagination (limit, offset)
+  - Supports sorting (sortBy, sortOrder)
+  - Returns total count and hasMore flag
+- **POST** - Create a new project
+  - Requires: name (required), description (optional), website (optional)
+  - Validates input with Zod schema
+  - Automatically links project to authenticated user
+
+### 15. `/src/app/api/users/project/[projectId]/route.ts` (NEW)
+**Purpose:** Update or delete specific user projects
+
+**Features:**
+- **PATCH** - Update project details
+  - Validates ownership (user can only update own projects)
+  - Admins can update any project
+  - Supports partial updates
+  - Converts empty strings to null for optional fields
+- **DELETE** - Delete a project
+  - Validates ownership (user can only delete own projects)
+  - Admins can delete any project
+  - Cascade delete via database foreign key
+
+### 16. `/src/lib/auth.ts` (NEW - Refactored)
+**Purpose:** Centralized NextAuth configuration
+
+**Changes:**
+- Extracted `authOptions` from `/src/app/api/auth/[...nextauth]/route.ts`
+- Contains all NextAuth providers (CredentialsProvider)
+- Includes TypeScript module augmentation for NextAuth types
+- Defines JWT and Session callbacks
+- Centralizes session strategy and configuration
+- **Reason:** Next.js route files have strict type validation and don't allow custom exports like `authOptions`
+
+**Features:**
+- Complete user authentication flow with bcrypt password verification
+- Email verification check before login
+- User account status validation
+- Last login timestamp tracking
+- Extended user session with custom fields (username, role, walletAddress, etc.)
+- JWT token enrichment with user metadata
+- Session enrichment with full user profile
+
+### 17. `/src/app/api/auth/[...nextauth]/route.ts` (REFACTORED)
+**Purpose:** NextAuth route handlers
+
+**Changes:**
+- Now imports `authOptions` from `/src/lib/auth`
+- Simplified to only contain route handler functions
+- Added support for all HTTP methods (GET, POST, PUT, PATCH, DELETE)
+- Includes response normalization to prevent empty response body issues
+- All imports across the codebase updated to use `@/lib/auth` instead
+
+### 18. `/src/app/api/bookmarks/route.ts` (NEW)
+**Purpose:** Manage bounty bookmarks for users
+
+**Features:**
+- **GET** - List all bookmarked bounties for authenticated user
+  - Supports pagination (limit, offset)
+  - Returns bounty details with company information
+  - Includes submission count
+  - Ordered by most recently bookmarked
+  - Returns bookmark metadata (bookmarkedAt, bookmarkId)
+- **POST** - Add a bounty to bookmarks
+  - Validates bounty exists
+  - Prevents duplicate bookmarks
+  - Requires authentication
+- **DELETE** - Remove a bounty from bookmarks
+  - Validates bookmark ownership
+  - Returns 404 if bookmark not found
+  - Requires authentication
+
+### 19. `/src/app/api/bookmarks/check/route.ts` (NEW)
+**Purpose:** Check if a specific bounty is bookmarked
+
+**Features:**
+- **GET** - Check bookmark status
+  - Returns `isBookmarked` boolean
+  - Returns `bookmarkId` if bookmarked
+  - Requires authentication
+  - Fast lookup using unique compound index
+
+
+
 ## API Flow Summary
 
 ### Creating and Funding a Bounty
@@ -173,13 +269,51 @@ GET /api/companies/my-company   # Retrieve current user's company
 PATCH /api/bounties/{id}/status   # Update bounty status (e.g., DRAFT→ACTIVE)
 ```
 
+### Project For POW(Proof of Work)
+```
+GET    /api/users/project                # List all projects for authenticated user
+POST   /api/users/project                # Create a new project
+PATCH  /api/users/project/{projectId}    # Update a specific project
+DELETE /api/users/project/{projectId}    # Delete a specific project
+```
+
+### Bookmark Management
+```
+GET    /api/bookmarks                    # List all bookmarked bounties
+POST   /api/bookmarks                    # Add a bounty to bookmarks
+DELETE /api/bookmarks?bountyId={id}      # Remove a bounty from bookmarks
+GET    /api/bookmarks/check?bountyId={id} # Check if bounty is bookmarked
+```
+
 ## Database Schema Updates Required
 
+### Smart Contract Integration
 No schema changes needed! All existing fields support the integration:
 - `Bounty.escrowAddress` - Stores PDA address
 - `Bounty.txSignature` - Stores initialize transaction
 - `Payment.txSignature` - Stores payment transaction
 - `Payment.blockchainConfirmed` - Tracks confirmation status
+
+### Project Management (NEW)
+Added `Project` model for user portfolio/showcase:
+- `id` - Primary key (String)
+- `userId` - Foreign key to User (cascade delete)
+- `name` - Project name (required)
+- `description` - Project description (optional)
+- `website` - Project website URL (optional)
+- `createdAt` - Timestamp
+- `updatedAt` - Timestamp
+- Indexes on `userId` and `createdAt` for performance
+
+### Bookmark System (NEW)
+Added `BountyBookmark` model for user bookmarks:
+- `id` - Primary key (String)
+- `userId` - Foreign key to User (cascade delete)
+- `bountyId` - Foreign key to Bounty (cascade delete)
+- `createdAt` - Timestamp
+- Unique compound index on `userId` and `bountyId` to prevent duplicates
+- Indexes on both `userId` and `bountyId` for fast lookups
+- Many-to-many relationship between Users and Bounties
 
 ## Environment Variables Needed
 
@@ -200,6 +334,7 @@ PLATFORM_WALLET=<your_platform_wallet_address>
 
 ## Testing Recommendations
 
+### Smart Contract Integration
 1. Test escrow creation with valid/invalid amounts
 2. Test funding with confirmed/unconfirmed transactions
 3. Test payment with sufficient/insufficient escrow balance
@@ -209,8 +344,32 @@ PLATFORM_WALLET=<your_platform_wallet_address>
 7. Test permission checks for all operations
 8. Test with multiple submissions per bounty
 
+### Authentication
+1. Test session retrieval for authenticated/unauthenticated users
+2. Test authOptions import across all API routes
+3. Test all HTTP methods (GET, POST, PUT, PATCH, DELETE) on NextAuth route
+4. Test email verification and account status checks during login
+
+### Bookmarks
+1. Test adding bookmark to a bounty
+2. Test removing bookmark from a bounty
+3. Test duplicate bookmark prevention
+4. Test bookmark status checking for authenticated users
+5. Test pagination on bookmarks list
+6. Test unauthorized access (unauthenticated users)
+7. Test bookmark UI updates in real-time
+8. Test search/filter functionality on bookmarks page
+
+### Projects
+1. Test project creation with valid/invalid data
+2. Test project update with ownership validation
+3. Test project deletion with cascade effects
+4. Test pagination and sorting on projects list
+5. Test admin vs. user permissions
+
 ## Frontend Integration Points
 
+### Blockchain Operations
 The frontend needs to:
 1. Connect to Solana wallet
 2. Initialize Anchor program with IDL
@@ -218,6 +377,19 @@ The frontend needs to:
 4. Handle transaction signing and sending
 5. Wait for confirmation
 6. Call confirmation APIs with transaction signatures
+
+### Bookmark System
+1. Use `BookmarkButton` component on bounty cards and detail pages
+2. Implement real-time UI updates via `onBookmarkChange` callback
+3. Display bookmarked state with visual indicators (filled icon)
+4. Handle authentication redirects for unauthenticated users
+5. Integrate with `/bookmarks` page for centralized bookmark management
+
+### Authentication
+1. Use `getServerSession(authOptions)` in server components and API routes
+2. Import `authOptions` from `@/lib/auth` (not from the route file)
+3. Handle session state in client components with `useSession()` hook
+4. Implement proper error handling for authentication failures
 
 ## Migration Path
 
@@ -234,3 +406,16 @@ If you have existing bounties:
 - Frontend is responsible for signing and sending all transactions
 - Backend only verifies transactions and updates database
 - Transaction signatures are stored for audit trail
+
+### Authentication Refactoring
+- `authOptions` has been extracted to `/src/lib/auth.ts` for better code organization
+- This resolves Next.js build errors related to route file export restrictions
+- All API routes now import from `@/lib/auth` instead of the route file
+- The refactoring improves maintainability and follows Next.js best practices
+
+### Bookmark Feature
+- Users can bookmark bounties for later reference
+- Bookmarks are stored in the database with a unique constraint per user-bounty pair
+- Real-time UI updates when bookmarks are added/removed
+- Bookmark status is checked on component mount for accurate display
+- Integration with existing `BountyCard` component for seamless UX

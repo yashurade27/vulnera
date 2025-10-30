@@ -1,0 +1,340 @@
+"use client"
+
+import { useState } from "react"
+import { useConnection, useWallet } from "@solana/wallet-adapter-react"
+import { PublicKey, SystemProgram } from "@solana/web3.js"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader2, Plus, AlertCircle, CheckCircle2, Coins } from "lucide-react"
+import { toast } from "sonner"
+import { useProgram, PROGRAM_ID } from "@/lib/use-program"
+import { BN } from "@coral-xyz/anchor"
+
+interface AddFundsDialogProps {
+  bountyId: string
+  bountyTitle: string
+  currentEscrowBalance: number // in lamports
+  rewardAmount: number // in SOL per submission
+  maxSubmissions?: number | null // maximum payouts
+  onSuccess?: () => void
+}
+
+export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, rewardAmount, maxSubmissions, onSuccess }: AddFundsDialogProps) {
+  const { connection } = useConnection()
+  const { publicKey } = useWallet()
+  const { program } = useProgram()
+
+  const [open, setOpen] = useState(false)
+  const [amount, setAmount] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [step, setStep] = useState<"input" | "signing" | "confirming">("input")
+  const [txSignature, setTxSignature] = useState<string | null>(null)
+
+  const normalizedMaxPayouts = maxSubmissions && maxSubmissions > 0 ? maxSubmissions : 1
+  const minimumDepositSOL = Math.max(rewardAmount * normalizedMaxPayouts, rewardAmount)
+  const currentBalanceSOL = currentEscrowBalance / 1_000_000_000
+  const walletConnected = Boolean(publicKey)
+  const amountValue = amount.trim().length ? Number.parseFloat(amount) : Number.NaN
+  const hasAmount = Number.isFinite(amountValue) && amountValue > 0
+  const projectedBalance = hasAmount ? currentBalanceSOL + amountValue : currentBalanceSOL
+  const meetsMinimumRequirement = hasAmount && projectedBalance >= minimumDepositSOL
+  const disableDeposit =
+    loading || !program || !walletConnected || !hasAmount || !meetsMinimumRequirement
+
+  const handleAddFunds = async () => {
+    if (!program) {
+      toast.error("Program unavailable", {
+        description: "Unable to access the Vulnera escrow program. Please refresh and try again.",
+      })
+      return
+    }
+
+    if (!walletConnected) {
+      toast.error("Wallet not connected", {
+        description: "Connect the company wallet before adding funds",
+      })
+      return
+    }
+
+    if (!amount.trim()) {
+      toast.error("Amount missing", {
+        description: "Enter the amount of SOL you want to deposit",
+      })
+      return
+    }
+
+    const amountNum = Number.parseFloat(amount)
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      toast.error("Invalid amount", {
+        description: "Please enter a valid amount greater than 0",
+      })
+      return
+    }
+
+    // Check if total balance after deposit meets minimum requirement
+    const totalAfterDeposit = currentBalanceSOL + amountNum
+    if (totalAfterDeposit < minimumDepositSOL) {
+      toast.error("Insufficient deposit", {
+        description: `Total escrow balance must be at least ${minimumDepositSOL} SOL (${rewardAmount} SOL × ${normalizedMaxPayouts} payout${normalizedMaxPayouts !== 1 ? 's' : ''}). Current: ${currentBalanceSOL.toFixed(4)} SOL. You need to deposit at least ${(minimumDepositSOL - currentBalanceSOL).toFixed(4)} SOL.`,
+      })
+      return
+    }
+
+    const ownerPublicKey = publicKey
+    if (!ownerPublicKey) {
+      toast.error("Wallet not connected", {
+        description: "Connect the company wallet before adding funds",
+      })
+      return
+    }
+
+    setLoading(true)
+    setStep("signing")
+
+    try {
+      // Step 1: Prepare deposit parameters
+      const prepareRes = await fetch("/api/blockchain/prepare-deposit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bountyId,
+          amount: amountNum,
+        }),
+        credentials: "include",
+      })
+
+      if (!prepareRes.ok) {
+        const error = await prepareRes.json()
+        throw new Error(error.error || "Failed to prepare deposit")
+      }
+
+      const { depositParams } = await prepareRes.json()
+
+      // Step 2: Derive the vault PDA
+      const [vaultPda] = await PublicKey.findProgramAddress(
+        [Buffer.from("bounty-escrow"), ownerPublicKey.toBuffer()],
+        PROGRAM_ID
+      )
+
+      console.log("Derived Vault PDA:", vaultPda.toBase58())
+
+      // Verify the program is deployed
+      const programInfo = await connection.getAccountInfo(PROGRAM_ID)
+      if (!programInfo) {
+        throw new Error(`Program not found at address ${PROGRAM_ID.toBase58()}. Make sure the program is deployed to devnet.`)
+      }
+
+      // Convert SOL to lamports
+      const lamportsAmount = Math.round(amountNum * 1_000_000_000)
+
+      // Step 3: Use Anchor program to deposit funds
+      const signature = await program.methods
+        .deposit(new BN(lamportsAmount))
+        .accounts({
+          vault: vaultPda,
+          owner: ownerPublicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc({
+          skipPreflight: false,
+          commitment: "confirmed",
+        })
+
+      console.log("Deposit transaction successful with signature:", signature)
+      setTxSignature(signature)
+      setStep("confirming")
+
+      // Step 4: Notify backend
+      const depositRes = await fetch("/api/blockchain/deposit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bountyId,
+          txSignature: signature,
+          amount: lamportsAmount,
+        }),
+        credentials: "include",
+      })
+
+      if (!depositRes.ok) {
+        const error = await depositRes.json()
+        throw new Error(error.error || "Failed to record deposit")
+      }
+
+      toast.success("Funds added successfully!", {
+        description: `${amountNum} SOL has been added to the bounty escrow.`,
+      })
+
+      setOpen(false)
+      setAmount("")
+      setStep("input")
+      setTxSignature(null)
+      onSuccess?.()
+    } catch (error: any) {
+      console.error("Add funds error:", error)
+      toast.error("Failed to add funds", {
+        description: error.message || "An error occurred while adding funds",
+      })
+      setStep("input")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="w-full btn-primary mt-4 gap-2">
+          <Coins className="w-4 h-4" />
+          Add Funds to Escrow
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Funds to Bounty</DialogTitle>
+          <DialogDescription>
+            Add more SOL to the escrow account for "{bountyTitle}"
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {/* Current Balance */}
+          <div className="p-4 bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 border border-yellow-400/30 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Current Escrow Balance</span>
+              <div className="flex items-center gap-2">
+                <Coins className="w-5 h-5 text-yellow-400" />
+                <span className="text-xl font-bold text-yellow-400">{currentBalanceSOL.toFixed(4)} SOL</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Available for bounty payouts</p>
+          </div>
+
+          {step === "input" && (
+            <>
+              {/* Amount Input */}
+              <div className="space-y-2">
+                <Label htmlFor="amount" className="text-sm font-semibold">Deposit Amount (SOL)</Label>
+                <div className="relative">
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="Enter amount (e.g., 1.5)"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    disabled={loading}
+                    className="text-lg font-semibold pl-4 pr-16"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                    SOL
+                  </div>
+                </div>
+                {hasAmount && (
+                  <div className="space-y-1">
+                    <p className="text-sm text-green-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-4 h-4" />
+                      New balance: {projectedBalance.toFixed(4)} SOL
+                    </p>
+                    {!meetsMinimumRequirement && (
+                      <p className="text-sm text-red-400 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        Below minimum: {minimumDepositSOL} SOL required ({rewardAmount} SOL × {normalizedMaxPayouts} payout{normalizedMaxPayouts !== 1 ? 's' : ''})
+                      </p>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  💡 Minimum deposit: {(Math.max(0, minimumDepositSOL - currentBalanceSOL)).toFixed(4)} SOL to meet bounty requirements
+                </p>
+              </div>
+
+              {/* Warning */}
+              {/* <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  <strong>⚠️ Smart Contract Update Required:</strong><br/>
+                  The deposit function needs to be deployed. Please run:<br/>
+                  <code className="text-xs bg-muted px-1 py-0.5 rounded">cd anchor && anchor build && anchor deploy</code>
+                  <br/><br/>
+                  Make sure your wallet is connected and has sufficient balance to cover the deposit amount plus transaction fees.
+                </AlertDescription>
+              </Alert> */}
+            </>
+          )}
+
+          {walletConnected ? null : (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Connect your company wallet to enable funding.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {step === "signing" && (
+            <Alert>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <AlertDescription>
+                Please sign the transaction in your wallet...
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {step === "confirming" && (
+            <Alert>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <AlertDescription>
+                Confirming transaction on blockchain...
+                {txSignature && (
+                  <p className="text-xs mt-2 font-mono break-all">
+                    Signature: {txSignature.substring(0, 20)}...
+                  </p>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => setOpen(false)}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="flex-1 btn-primary"
+            onClick={handleAddFunds}
+            disabled={disableDeposit}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {step === "signing" ? "Sign Transaction..." : "Confirming..."}
+              </>
+            ) : (
+              <>
+                <Coins className="w-4 h-4 mr-2" />
+                Deposit {amount || "0"} SOL
+              </>
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

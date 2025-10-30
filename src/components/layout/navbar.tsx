@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Menu, X, Shield, LogOut, User, LayoutDashboard } from 'lucide-react'
+import { Menu, X, Shield, LogOut, User, LayoutDashboard, Bookmark } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -25,9 +25,9 @@ const WalletMultiButton = dynamic(
   { ssr: false },
 )
 
-const ClusterDropdown = dynamic(() => import('@/components/cluster-dropdown').then((mod) => mod.ClusterDropdown), {
-  ssr: false,
-})
+// const ClusterDropdown = dynamic(() => import('@/components/cluster-dropdown').then((mod) => mod.ClusterDropdown), {
+//   ssr: false,
+// })
 
 interface NavbarProps {
   showUtilityControls?: boolean
@@ -130,7 +130,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
                   {user.avatarUrl ? (
                     <AvatarImage src={user.avatarUrl} alt={user.fullName ?? user.username ?? 'User'} />
                   ) : null}
-                  <AvatarFallback className="bg-yellow-500/20 text-yellow-200 font-medium">
+                  <AvatarFallback className="bg-yellow-500/20 text-yellow-900 dark:text-yellow-200 font-medium">
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
@@ -145,6 +145,11 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
               <DropdownMenuItem asChild>
                 <Link href={dashboardHref} className="flex items-center gap-2">
                   <LayoutDashboard className="h-4 w-4" /> {dashboardLabel}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/bookmarks" className="flex items-center gap-2">
+                  <Bookmark className="h-4 w-4" /> Bookmarks
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -208,7 +213,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
             {showUtilityControls ? (
               <>
                 <ThemeToggle />
-                <ClusterDropdown />
+                {/* <ClusterDropdown /> */}
                 <WalletMultiButton />
               </>
             ) : null}
@@ -256,7 +261,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
               {showUtilityControls ? (
                 <div className="flex flex-wrap gap-3">
                   <ThemeToggle />
-                  <ClusterDropdown />
+                  {/* <ClusterDropdown /> */}
                   <WalletMultiButton />
                 </div>
               ) : null}
@@ -270,7 +275,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
                       {user.avatarUrl ? (
                         <AvatarImage src={user.avatarUrl} alt={user.fullName ?? user.username ?? 'User'} />
                       ) : null}
-                      <AvatarFallback className="bg-yellow-500/20 text-yellow-200 font-medium">
+                      <AvatarFallback className="bg-yellow-500/20 text-yellow-900 dark:text-yellow-200 font-medium">
                         {userInitials}
                       </AvatarFallback>
                     </Avatar>

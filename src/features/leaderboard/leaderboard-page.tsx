@@ -104,7 +104,7 @@ export function LeaderboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card/40 backdrop-blur-sm">
+      <div className=" border-b border-border bg-card/40 bg-neutral-100 dark:bg-card/40 backdrop-blur-sm">
         <div className="container-custom py-12 space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -214,7 +214,7 @@ export function LeaderboardPage() {
                         <Award className="w-3 h-3 mr-1" /> Elite Hunter
                       </Badge>
                       <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/profile/${entry.id}`} className="flex items-center gap-1 text-xs">
+                        <Link href={`/users/${entry.id}`} className="flex items-center gap-1 text-xs">
                           View profile <ChevronRight className="w-3 h-3" />
                         </Link>
                       </Button>
@@ -264,7 +264,7 @@ export function LeaderboardPage() {
                       <span>{entry.reputation}</span>
                       <div className="flex justify-end">
                         <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/profile/${entry.id}`} className="text-xs flex items-center gap-1">
+                          <Link href={`/users/${entry.id}`} className="text-xs flex items-center gap-1">
                             View <ChevronRight className="w-3 h-3" />
                           </Link>
                         </Button>

@@ -58,8 +58,8 @@ export const updateUserProfileSchema = z.object({
 
 export const updateWalletSchema = z.object({
   walletAddress: z.string(),
-  signature: z.string(),
-  message: z.string(),
+  signature: z.string().optional(),
+  message: z.string().optional(),
 });
 
 // ==================== COMPANY SCHEMAS ====================
@@ -101,7 +101,7 @@ export const getCompaniesQuerySchema = z.object({
 });
 
 export const getCompanyBountiesQuerySchema = z.object({
-  status: z.enum(['ACTIVE', 'CLOSED', 'EXPIRED']).optional(),
+  status: z.enum(['ACTIVE', 'CLOSED', 'EXPIRED', 'DRAFT']).optional(),
   type: z.enum(['UI', 'FUNCTIONALITY', 'PERFORMANCE', 'SECURITY']).optional(),
   limit: z.string().regex(/^\d+$/).transform(Number).optional(),
   offset: z.string().regex(/^\d+$/).transform(Number).optional(),
@@ -414,6 +414,46 @@ export const deleteFileSchema = z.object({
   fileId: z.string(),
 });
 
+// ==================== PROJECT SCHEMAS ====================
+
+export const createProjectSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().max(1000).optional(),
+  website: z.string().url().optional(),
+});
+
+export const updateProjectSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().max(1000).optional(),
+  website: z.string().url().optional(),
+});
+
+export const getProjectsQuerySchema = z.object({
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'name']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
+// ==================== BOOKMARK SCHEMAS ====================
+
+export const addBookmarkSchema = z.object({
+  bountyId: z.string().min(1),
+});
+
+export const removeBookmarkSchema = z.object({
+  bountyId: z.string().min(1),
+});
+
+export const checkBookmarkSchema = z.object({
+  bountyId: z.string().min(1),
+});
+
+export const getBookmarksQuerySchema = z.object({
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  offset: z.string().regex(/^\d+$/).transform(Number).optional(),
+});
+
 // ==================== WEBHOOK SCHEMAS ====================
 
 export const solanaWebhookSchema = z.object({
@@ -429,6 +469,8 @@ export const paymentConfirmedWebhookSchema = z.object({
   confirmations: z.number().int().min(0).optional(),
   blockTime: z.number().optional(),
 });
+
+
 
 // ==================== TYPE DEFINITIONS ====================
 
@@ -484,8 +526,15 @@ export type SearchCompaniesQuery = z.infer<typeof searchCompaniesQuerySchema>;
 export type UploadImageInput = z.infer<typeof uploadImageSchema>;
 export type UploadAttachmentInput = z.infer<typeof uploadAttachmentSchema>;
 export type DeleteFileInput = z.infer<typeof deleteFileSchema>;
+export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
+export type GetProjectsQuery = z.infer<typeof getProjectsQuerySchema>;
 export type SolanaWebhookInput = z.infer<typeof solanaWebhookSchema>;
 export type PaymentConfirmedWebhookInput = z.infer<typeof paymentConfirmedWebhookSchema>;
+export type AddBookmarkInput = z.infer<typeof addBookmarkSchema>;
+export type RemoveBookmarkInput = z.infer<typeof removeBookmarkSchema>;
+export type CheckBookmarkInput = z.infer<typeof checkBookmarkSchema>;
+export type GetBookmarksQuery = z.infer<typeof getBookmarksQuerySchema>;
 
 export interface DbUser {
   id: string;
@@ -539,4 +588,38 @@ export interface ExtendedUser {
   twitterUrl?: string | null;
   linkedinUrl?: string | null;
   portfolioUrl?: string | null;
+  projectsCount?: number;
+  bookmarksCount?: number;
+}
+
+export interface BountyBookmark {
+  id: string;
+  userId: string;
+  bountyId: string;
+  createdAt: Date;
+}
+
+export interface BookmarkedBounty {
+  id: string;
+  title: string;
+  description: string;
+  bountyTypes: string[];
+  rewardAmount: number;
+  status: string;
+  endsAt: string | null;
+  escrowAddress: string | null;
+  escrowBalanceLamports: number | null;
+  txSignature: string | null;
+  company: {
+    id: string;
+    name: string;
+    slug: string;
+    logoUrl: string | null;
+    isVerified: boolean;
+  };
+  _count: {
+    submissions: number;
+  };
+  bookmarkedAt: string;
+  bookmarkId: string;
 }

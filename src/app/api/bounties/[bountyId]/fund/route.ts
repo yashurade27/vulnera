@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { fundBountySchema, type FundBountyInput } from '@/lib/types';
 import { solanaService } from '@/lib/solana';
@@ -98,11 +98,28 @@ export async function POST(
       );
     }
 
-    if (escrowData.owner !== existingBounty.company.walletAddress) {
-      return NextResponse.json(
-        { error: 'Escrow owner does not match company wallet' },
-        { status: 400 }
-      );
+    // Validate escrow owner - should match either company wallet or be a valid member wallet
+    const companyWallet = existingBounty.company.walletAddress;
+    
+    // If company wallet is not set or doesn't match, update it with the escrow owner
+    if (!companyWallet) {
+      await prisma.company.update({
+        where: { id: existingBounty.companyId },
+        data: { walletAddress: escrowData.owner }
+      });
+    } else if (escrowData.owner !== companyWallet) {
+      // Allow if the user creating the escrow is a company member with payment permissions
+      if (!companyMember) {
+        return NextResponse.json(
+          { error: 'Escrow owner does not match company wallet' },
+          { status: 400 }
+        );
+      }
+      // Update company wallet to the current escrow owner (the connected wallet)
+      await prisma.company.update({
+        where: { id: existingBounty.companyId },
+        data: { walletAddress: escrowData.owner }
+      });
     }
 
     // Verify escrow amount matches bounty reward pool

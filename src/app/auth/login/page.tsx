@@ -108,7 +108,7 @@ function LoginForm() {
   )
 
   return (
-    <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+    <div className="flex items-center gap-20">
       <section className="space-y-6">
         <span className="badge-dark inline-flex w-fit items-center gap-2 rounded-full border border-yellow-400/20 px-3 py-1 text-xs uppercase tracking-widest text-muted-foreground">
           Platform Access

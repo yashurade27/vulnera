@@ -37,6 +37,10 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import { useWallet, useConnection } from "@solana/wallet-adapter-react"
+import { PublicKey, Transaction } from "@solana/web3.js"
+import { buildProcessPaymentInstruction } from "@/lib/blockchain/process-payment"
+import { EnhancedAIInsights } from "@/components/enhanced-ai-insights"
 
 interface SubmissionReviewPageProps {
   submissionId: string
@@ -62,6 +66,7 @@ interface SubmissionReporter {
 interface SubmissionCompany {
   id: string
   name: string
+  walletAddress?: string | null
 }
 
 interface SubmissionBounty {
@@ -71,6 +76,8 @@ interface SubmissionBounty {
   rewardAmount: string | number
   status?: string
   responseDeadline?: number
+  maxSubmissions?: number | null
+  escrowAddress?: string | null
   company?: SubmissionCompany
 }
 
@@ -99,6 +106,7 @@ interface SubmissionPayment {
 
 interface SubmissionRecord {
   id: string
+  bountyId: string
   title: string
   description: string
   bountyType: string
@@ -232,6 +240,8 @@ function resolveSeverityLabel(score: number): string {
 
 export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps) {
   const router = useRouter()
+  const { publicKey, signTransaction, sendTransaction } = useWallet()
+  const { connection } = useConnection()
   const [submission, setSubmission] = useState<SubmissionRecord | null>(null)
   const [comments, setComments] = useState<SubmissionComment[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -243,7 +253,6 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
   const [manualSeverity, setManualSeverity] = useState("")
   const [decisionNotes, setDecisionNotes] = useState("")
 
-  const [rewardAmount, setRewardAmount] = useState("")
   const [rejectionReason, setRejectionReason] = useState("")
   const [infoRequestMessage, setInfoRequestMessage] = useState("")
 
@@ -284,14 +293,6 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
         }
         setSubmission(record)
         setComments(record.comments ?? [])
-
-        const bountyReward = record.rewardAmount ?? record.bounty?.rewardAmount
-        if (bountyReward !== undefined && bountyReward !== null) {
-          const numeric = typeof bountyReward === "string" ? parseFloat(bountyReward) : bountyReward
-          if (!Number.isNaN(numeric)) {
-            setRewardAmount(numeric.toString())
-          }
-        }
 
         setDecisionNotes(record.reviewNotes ?? "")
         setRejectionReason(record.rejectionReason ?? "")
@@ -357,9 +358,24 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
     if (!submission) return
 
     if (status === "APPROVED") {
-      const numericReward = parseFloat(rewardAmount)
-      if (!rewardAmount || Number.isNaN(numericReward) || numericReward <= 0) {
-        toast.error("Enter a valid reward amount before approving")
+      // Use the fixed reward amount from the bounty
+      const bountyReward = submission.rewardAmount ?? submission.bounty?.rewardAmount
+      const numericReward = typeof bountyReward === "string" ? parseFloat(bountyReward) : bountyReward
+      
+      if (!numericReward || Number.isNaN(numericReward) || numericReward <= 0) {
+        toast.error("Invalid reward amount for this bounty")
+        return
+      }
+
+      // Check if wallet is connected
+      if (!publicKey) {
+        toast.error("Please connect your wallet to process the payment")
+        return
+      }
+
+      // Check if hunter has wallet address
+      if (!submission.user.walletAddress) {
+        toast.error("Hunter has not set up their wallet address yet")
         return
       }
     }
@@ -376,42 +392,143 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
 
     try {
       setIsSubmittingDecision(true)
-      const payload: Record<string, unknown> = {
-        status,
-        reviewNotes: compileReviewNotes(),
+      
+      // For non-approval actions, submit review immediately
+      if (status !== "APPROVED") {
+        const payload: Record<string, unknown> = {
+          status,
+          reviewNotes: compileReviewNotes(),
+        }
+        if (status === "REJECTED") {
+          payload.rejectionReason = rejectionReason.trim()
+        }
+        if (status === "NEEDS_MORE_INFO") {
+          payload.reviewNotes = infoRequestMessage.trim()
+        }
+
+        const response = await fetch(`/api/submissions/${submissionId}/review`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        })
+
+        const body = await response.json()
+        if (!response.ok) {
+          throw new Error(body?.error ?? "Review action failed")
+        }
+
+        toast.success(`Submission ${status.replaceAll("_", " ").toLowerCase()}`)
+        
+        if (status === "REJECTED") {
+          setRejectionReason("")
+        }
+        if (status === "NEEDS_MORE_INFO") {
+          setInfoRequestMessage("")
+        }
+        await fetchSubmission(true)
+        return
       }
+
+      // For APPROVED status: Process payment FIRST, then approve submission
       if (status === "APPROVED") {
-        payload.rewardAmount = parseFloat(rewardAmount).toString()
-      }
-      if (status === "REJECTED") {
-        payload.rejectionReason = rejectionReason.trim()
-      }
-      if (status === "NEEDS_MORE_INFO") {
-        payload.reviewNotes = infoRequestMessage.trim()
-      }
+        toast.info("Preparing blockchain transaction...")
+        
+        try {
+          // Get payment parameters directly from submission data (no API call needed)
+          if (!submission.bounty.escrowAddress) {
+            throw new Error("Bounty escrow not initialized")
+          }
 
-      const response = await fetch(`/api/submissions/${submissionId}/review`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      })
+          if (!submission.bounty.company?.walletAddress) {
+            throw new Error("Company wallet address not set")
+          }
 
-      const body = await response.json()
-      if (!response.ok) {
-        throw new Error(body?.error ?? "Review action failed")
-      }
+          const platformWallet = process.env.NEXT_PUBLIC_PLATFORM_WALLET || 'GbLLTkUjCznwRrkLM6tewimmW6ZCC4AP8eF9yAD8e5qT'
+          
+          // Get current paid submissions count
+          const paidSubmissionsResponse = await fetch(`/api/bounties/${submission.bountyId}/stats`)
+          const statsData = await paidSubmissionsResponse.json()
+          const currentPaidSubmissions = statsData?.paidSubmissions || 0
 
-      toast.success(`Submission ${status.replaceAll("_", " ").toLowerCase()}`)
-      setReleaseInfo(null)
-      setTxSignature("")
-      if (status === "REJECTED") {
-        setRejectionReason("")
+          // Build the smart contract instruction
+          const instruction = buildProcessPaymentInstruction({
+            owner: new PublicKey(submission.bounty.company.walletAddress),
+            hunterWallet: new PublicKey(submission.user.walletAddress!),
+            platformWallet: new PublicKey(platformWallet),
+            bountyId: submission.bountyId,
+            submissionId: submission.id,
+            customAmount: null,
+            rewardPerSubmission: Number(submission.bounty.rewardAmount) * 1_000_000_000,
+            maxSubmissions: submission.bounty.maxSubmissions || 999999,
+            currentPaidSubmissions,
+          })
+
+          // Create transaction
+          const transaction = new Transaction().add(instruction)
+          
+          // Get recent blockhash
+          const { blockhash } = await connection.getLatestBlockhash()
+          
+          transaction.recentBlockhash = blockhash
+          transaction.feePayer = publicKey!
+
+          // Send transaction using wallet adapter
+          const signature = await sendTransaction(transaction, connection)
+          toast.success("Transaction sent! Waiting for confirmation...")
+
+          // Now approve the submission with the transaction signature
+          const bountyReward = submission.rewardAmount ?? submission.bounty?.rewardAmount
+          const numericReward = typeof bountyReward === "string" ? parseFloat(bountyReward) : bountyReward
+          
+          const approvePayload = {
+            status: "APPROVED",
+            reviewNotes: compileReviewNotes(),
+            rewardAmount: numericReward?.toString(),
+          }
+
+          const approveResponse = await fetch(`/api/submissions/${submissionId}/review`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(approvePayload),
+          })
+
+          const approveBody = await approveResponse.json()
+          if (!approveResponse.ok) {
+            throw new Error(approveBody?.error ?? "Failed to approve submission after payment")
+          }
+
+          // Confirm the payment in backend (it will verify on-chain)
+          const confirmResponse = await fetch("/api/payments/confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ 
+              submissionId,
+              txSignature: signature,
+            }),
+          })
+
+          if (!confirmResponse.ok) {
+            console.error("Payment confirmed on-chain but failed to update database")
+            // Still show success since blockchain tx succeeded and submission was approved
+          }
+
+          toast.success("Payment processed and submission approved!")
+          await fetchSubmission(true)
+          
+        } catch (paymentError) {
+          console.error("Payment error:", paymentError)
+          if (paymentError instanceof Error && paymentError.message.includes('User rejected')) {
+            toast.error("Transaction cancelled by user. Submission remains pending.")
+          } else {
+            toast.error("Payment failed. Submission remains pending. Please try again.")
+          }
+          // Don't approve the submission if payment failed
+          throw paymentError
+        }
       }
-      if (status === "NEEDS_MORE_INFO") {
-        setInfoRequestMessage("")
-      }
-      await fetchSubmission(true)
     } catch (error) {
       console.error("Review action failed", error)
       toast.error(error instanceof Error ? error.message : "Unable to process review")
@@ -726,14 +843,80 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
               </CardContent>
             </Card>
 
-            <Card className="card-glass">
+            {/* <Card className="card-glass">
               <CardHeader className="border-b border-border/60">
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-yellow-300" /> AI Insights
-                </CardTitle>
-                <CardDescription>
-                  Automated heuristics to help triage, not a substitute for manual validation.
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-yellow-300" /> AI Insights
+                    </CardTitle>
+                    <CardDescription>
+                      Automated heuristics to help triage, not a substitute for manual validation.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        setIsRefreshing(true)
+                        const response = await fetch("/api/ai/analyze-submission", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          credentials: "include",
+                          body: JSON.stringify({ submissionId }),
+                        })
+
+                        const data = await response.json()
+                        if (!response.ok) {
+                          throw new Error(data.error || "Analysis failed")
+                        }
+
+                        setSubmission((prev) => {
+                          if (!prev) return prev
+                          return {
+                            ...prev,
+                            aiAnalysisResult: data.analysis as any,
+                            aiSpamScore: data.analysis.spamProbability / 100,
+                            aiDuplicateScore: data.analysis.duplicateLikelihood / 100,
+                          }
+                        })
+
+                        // Auto-populate severity and risk from AI
+                        const severityScore = data.analysis.overallScore
+                        setSeverityValue([severityScore])
+
+                        const riskMap: Record<string, RiskCategory> = {
+                          LOW: "LOW",
+                          MEDIUM: "MEDIUM",
+                          HIGH: "HIGH",
+                          CRITICAL: "CRITICAL",
+                        }
+                        setSelectedRisk(riskMap[data.analysis.severityLevel])
+
+                        toast.success("AI analysis completed successfully")
+                      } catch (error) {
+                        console.error("Analysis error:", error)
+                        toast.error(error instanceof Error ? error.message : "Failed to analyze submission")
+                      } finally {
+                        setIsRefreshing(false)
+                      }
+                    }}
+                    disabled={isRefreshing}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {isRefreshing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyzing…
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Run AI Analysis
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-5">
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -748,16 +931,37 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
                     accent="from-sky-400 to-sky-500"
                   />
                 </div>
-                <div className="rounded-lg border border-border/60 bg-card/40 p-4 text-xs text-muted-foreground space-y-2">
-                  <p className="font-semibold text-foreground text-sm">AI Context</p>
-                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap">
-                    {submission.aiAnalysisResult
-                      ? JSON.stringify(submission.aiAnalysisResult, null, 2)
-                      : "No additional AI analysis recorded."}
-                  </pre>
-                </div>
               </CardContent>
-            </Card>
+            </Card> */}
+
+            <EnhancedAIInsights
+              submissionId={submissionId}
+              existingAnalysis={submission.aiAnalysisResult as any}
+              onAnalysisComplete={(analysis) => {
+                // Update local state with new analysis
+                setSubmission((prev) => {
+                  if (!prev) return prev
+                  return {
+                    ...prev,
+                    aiAnalysisResult: analysis as any,
+                    aiSpamScore: analysis.spamProbability / 100,
+                    aiDuplicateScore: analysis.duplicateLikelihood / 100,
+                  }
+                })
+
+                // Auto-populate severity and risk from AI
+                const severityScore = analysis.overallScore
+                setSeverityValue([severityScore])
+
+                const riskMap: Record<string, RiskCategory> = {
+                  LOW: "LOW",
+                  MEDIUM: "MEDIUM",
+                  HIGH: "HIGH",
+                  CRITICAL: "CRITICAL",
+                }
+                setSelectedRisk(riskMap[analysis.severityLevel])
+              }}
+            />
 
             <Card className="card-glass">
               <CardHeader className="border-b border-border/60">
@@ -868,12 +1072,12 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
                         <p className="text-sm font-semibold">Payment confirmed</p>
                         <p className="text-xs text-muted-foreground">{formatDate(submission.payment.completedAt)}</p>
                         <Link
-                          href={`https://solscan.io/tx/${submission.payment.txSignature}`}
+                          href={`https://explorer.solana.com/tx/${submission.payment.txSignature}?cluster=${process.env.NEXT_PUBLIC_CLUSTER}`}
                           target="_blank"
                           rel="noopener"
                           className="mt-1 inline-flex items-center gap-1 text-xs text-emerald-300"
                         >
-                          View on Solscan
+                          View on Explorer
                           <ExternalLink className="w-3 h-3" />
                         </Link>
                       </div>
@@ -979,24 +1183,22 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
                     <TabsTrigger value="needs-info">Request Info</TabsTrigger>
                   </TabsList>
                   <TabsContent value="approve" className="space-y-4">
-                    <div>
-                      <Label htmlFor="rewardAmount">Reward Amount (SOL)</Label>
-                      <Input
-                        id="rewardAmount"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={rewardAmount}
-                        onChange={(event) => setRewardAmount(event.target.value)}
-                        className="mt-2"
-                      />
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Defaulted to bounty reward. Adjust only if program guidelines allow custom payouts.
-                      </p>
+                    <div className="rounded-lg border border-border/60 bg-card/40 p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">Reward Amount</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Fixed reward per submission for this bounty
+                          </p>
+                        </div>
+                        <p className="text-xl font-bold text-yellow-400">
+                          {formatSol(submission.rewardAmount ?? submission.bounty?.rewardAmount)}
+                        </p>
+                      </div>
                     </div>
                     <Button
                       onClick={() => handleSubmitReview("APPROVED")}
-                      disabled={isSubmittingDecision || submission.status === "APPROVED"}
+                      disabled={isSubmittingDecision || submission.status === "APPROVED" || submission.status === "REJECTED"}
                       className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
                     >
                       {isSubmittingDecision ? (
@@ -1025,7 +1227,7 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
                     <Button
                       variant="outline"
                       onClick={() => handleSubmitReview("REJECTED")}
-                      disabled={isSubmittingDecision || submission.status === "REJECTED"}
+                      disabled={isSubmittingDecision || submission.status === "REJECTED" || submission.status === "APPROVED"}
                       className="w-full border-red-500/50 text-red-200 hover:bg-red-500/10"
                     >
                       {isSubmittingDecision ? (
@@ -1049,12 +1251,13 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
                         onChange={(event) => setInfoRequestMessage(event.target.value)}
                         placeholder="Clarify missing repro steps, environment details, or logs to continue review."
                         className="mt-2 min-h-32"
+                        disabled={submission.status === "APPROVED"}
                       />
                     </div>
                     <Button
                       variant="secondary"
                       onClick={() => handleSubmitReview("NEEDS_MORE_INFO")}
-                      disabled={isSubmittingDecision || submission.status === "NEEDS_MORE_INFO"}
+                      disabled={isSubmittingDecision || submission.status === "NEEDS_MORE_INFO" || submission.status === "APPROVED"}
                       className="w-full"
                     >
                       {isSubmittingDecision ? (
@@ -1070,109 +1273,6 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
                     </Button>
                   </TabsContent>
                 </Tabs>
-              </CardContent>
-            </Card>
-
-            <Card className="card-glass">
-              <CardHeader className="border-b border-border/60">
-                <CardTitle className="flex items-center gap-2">
-                  <Wallet className="w-4 h-4" />
-                  Payment Processing
-                </CardTitle>
-                <CardDescription>
-                  Prepare on-chain release and confirm payout once the transaction is signed.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {submission.payment ? (
-                  <div className="rounded-lg border border-border/60 bg-card/40 p-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">Payment Status</p>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "border",
-                          submission.payment.status === "COMPLETED"
-                            ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/40"
-                            : "bg-yellow-500/10 text-yellow-300 border-yellow-500/40"
-                        )}
-                      >
-                        {submission.payment.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm">Reward: {formatSol(submission.payment.amount)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Net to hunter: {formatSol(submission.payment.netAmount)} • Platform fee: {formatSol(submission.payment.platformFee)}
-                    </p>
-                    {submission.payment.txSignature ? (
-                      <Link
-                        href={`https://solscan.io/tx/${submission.payment.txSignature}`}
-                        target="_blank"
-                        rel="noopener"
-                        className="inline-flex items-center gap-1 text-xs text-sky-200"
-                      >
-                        View transaction
-                        <ExternalLink className="w-3 h-3" />
-                      </Link>
-                    ) : null}
-                  </div>
-                ) : (
-                  <>
-                    <div className="rounded-lg border border-border/60 bg-card/40 p-4 space-y-2 text-sm text-muted-foreground">
-                      <p>
-                        Payment requires an approved submission. Initiate the smart contract release to fetch signer parameters, then confirm using the transaction signature once it finalizes on Solana.
-                      </p>
-                    </div>
-                    <Button
-                      onClick={handlePreparePayment}
-                      disabled={isPreparingPayment || submission.status !== "APPROVED"}
-                      className="w-full"
-                    >
-                      {isPreparingPayment ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Preparing…
-                        </>
-                      ) : (
-                        "Generate Payment Parameters"
-                      )}
-                    </Button>
-                    {releaseInfo ? (
-                      <div className="rounded-lg border border-border/60 bg-card/40 p-4 space-y-3">
-                        <p className="text-sm font-semibold text-foreground">Transfer Summary</p>
-                        <ul className="text-xs text-muted-foreground space-y-1">
-                          <li>Total: {formatLamports(releaseInfo.amounts.totalAmount)}</li>
-                          <li>To hunter: {formatLamports(releaseInfo.amounts.hunterAmount)}</li>
-                          <li>Platform fee: {formatLamports(releaseInfo.amounts.platformFee)}</li>
-                        </ul>
-                        <Textarea
-                          readOnly
-                          value={JSON.stringify(releaseInfo.paymentParams, null, 2)}
-                          className="text-xs font-mono bg-black/40 border-border/60"
-                        />
-                        <div className="space-y-2">
-                          <Label htmlFor="txSignature">Transaction Signature</Label>
-                          <Input
-                            id="txSignature"
-                            placeholder="Paste signature after signing in your wallet"
-                            value={txSignature}
-                            onChange={(event) => setTxSignature(event.target.value)}
-                          />
-                          <Button onClick={handleConfirmPayment} disabled={isConfirmingPayment} className="w-full">
-                            {isConfirmingPayment ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Confirming…
-                              </>
-                            ) : (
-                              "Confirm Payment"
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </>
-                )}
               </CardContent>
             </Card>
 
