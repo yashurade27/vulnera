@@ -40,7 +40,7 @@ import { cn } from "@/lib/utils"
 import { useWallet, useConnection } from "@solana/wallet-adapter-react"
 import { PublicKey, Transaction } from "@solana/web3.js"
 import { buildProcessPaymentInstruction } from "@/lib/blockchain/process-payment"
-import { cleanRegex } from "node_modules/zod/v4/core/util.cjs"
+import { EnhancedAIInsights } from "@/components/enhanced-ai-insights"
 
 interface SubmissionReviewPageProps {
   submissionId: string
@@ -843,14 +843,80 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
               </CardContent>
             </Card>
 
-            <Card className="card-glass">
+            {/* <Card className="card-glass">
               <CardHeader className="border-b border-border/60">
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-yellow-300" /> AI Insights
-                </CardTitle>
-                <CardDescription>
-                  Automated heuristics to help triage, not a substitute for manual validation.
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-yellow-300" /> AI Insights
+                    </CardTitle>
+                    <CardDescription>
+                      Automated heuristics to help triage, not a substitute for manual validation.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        setIsRefreshing(true)
+                        const response = await fetch("/api/ai/analyze-submission", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          credentials: "include",
+                          body: JSON.stringify({ submissionId }),
+                        })
+
+                        const data = await response.json()
+                        if (!response.ok) {
+                          throw new Error(data.error || "Analysis failed")
+                        }
+
+                        setSubmission((prev) => {
+                          if (!prev) return prev
+                          return {
+                            ...prev,
+                            aiAnalysisResult: data.analysis as any,
+                            aiSpamScore: data.analysis.spamProbability / 100,
+                            aiDuplicateScore: data.analysis.duplicateLikelihood / 100,
+                          }
+                        })
+
+                        // Auto-populate severity and risk from AI
+                        const severityScore = data.analysis.overallScore
+                        setSeverityValue([severityScore])
+
+                        const riskMap: Record<string, RiskCategory> = {
+                          LOW: "LOW",
+                          MEDIUM: "MEDIUM",
+                          HIGH: "HIGH",
+                          CRITICAL: "CRITICAL",
+                        }
+                        setSelectedRisk(riskMap[data.analysis.severityLevel])
+
+                        toast.success("AI analysis completed successfully")
+                      } catch (error) {
+                        console.error("Analysis error:", error)
+                        toast.error(error instanceof Error ? error.message : "Failed to analyze submission")
+                      } finally {
+                        setIsRefreshing(false)
+                      }
+                    }}
+                    disabled={isRefreshing}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {isRefreshing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyzing…
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Run AI Analysis
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-5">
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -865,16 +931,37 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
                     accent="from-sky-400 to-sky-500"
                   />
                 </div>
-                <div className="rounded-lg border border-border/60 bg-card/40 p-4 text-xs text-muted-foreground space-y-2">
-                  <p className="font-semibold text-foreground text-sm">AI Context</p>
-                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap">
-                    {submission.aiAnalysisResult
-                      ? JSON.stringify(submission.aiAnalysisResult, null, 2)
-                      : "No additional AI analysis recorded."}
-                  </pre>
-                </div>
               </CardContent>
-            </Card>
+            </Card> */}
+
+            <EnhancedAIInsights
+              submissionId={submissionId}
+              existingAnalysis={submission.aiAnalysisResult as any}
+              onAnalysisComplete={(analysis) => {
+                // Update local state with new analysis
+                setSubmission((prev) => {
+                  if (!prev) return prev
+                  return {
+                    ...prev,
+                    aiAnalysisResult: analysis as any,
+                    aiSpamScore: analysis.spamProbability / 100,
+                    aiDuplicateScore: analysis.duplicateLikelihood / 100,
+                  }
+                })
+
+                // Auto-populate severity and risk from AI
+                const severityScore = analysis.overallScore
+                setSeverityValue([severityScore])
+
+                const riskMap: Record<string, RiskCategory> = {
+                  LOW: "LOW",
+                  MEDIUM: "MEDIUM",
+                  HIGH: "HIGH",
+                  CRITICAL: "CRITICAL",
+                }
+                setSelectedRisk(riskMap[analysis.severityLevel])
+              }}
+            />
 
             <Card className="card-glass">
               <CardHeader className="border-b border-border/60">
