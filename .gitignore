@@ -56,5 +56,5 @@ test-ledger
 /wallet-keypair.json
 # scripts
 scripts/
-target
+# target
 ~*
