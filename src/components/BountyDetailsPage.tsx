@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { toast } from 'sonner'
 import {
   ArrowLeft,
   Building2,
@@ -23,15 +25,27 @@ import Image from 'next/image'
 import { useEscrowBalance } from '@/hooks/use-escrow-balance'
 import { AddFundsDialog } from '@/components/add-funds-dialog'
 import { BookmarkButton } from '@/components/bookmark-button'
+import { cleanRegex } from 'node_modules/zod/v4/core/util.cjs'
 
 export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: string }> }) {
   const { bountyId } = React.use(params)
   const router = useRouter()
+  const { data: session } = useSession()
   const { currentBounty, setCurrentBounty, submissions, setSubmissions, loading, setLoading, clearSubmissions } =
     useBountiesStore()
   const [isCompanyMember, setIsCompanyMember] = useState(false)
   const { balance: escrowSol, isLoading: isLoadingEscrow } = useEscrowBalance(currentBounty?.escrowAddress ?? null)
   const [ownerId, setOwnerId] = useState<string | null>(null)
+
+  const handleSubmitBugReport = () => {
+    // Check if user has wallet address
+    if (!session?.user?.walletAddress) {
+      toast.error('Please add your wallet address in settings before submitting a bug report')
+      router.push('/settings')
+      return
+    }
+    router.push(`/bounties/${bountyId}/submit`)
+  }
 
   const fetchBountyDetails = useCallback(async () => {
     setLoading(true)
@@ -283,7 +297,7 @@ export function BountyDetailsPage({ params }: { params: Promise<{ bountyId: stri
                   onSuccess={fetchBountyDetails}
                 />
               ) : (
-                <Button className="w-full btn-primary mt-3" onClick={() => router.push(`/bounties/${bountyId}/submit`)}>
+                <Button className="w-full btn-primary mt-3" onClick={handleSubmitBugReport}>
                   Submit Bug Report
                 </Button>
               )}

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { ChangeEvent, FormEvent } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { ArrowLeft, Upload, X, FileText, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -101,12 +102,21 @@ const mapSubmissionSummary = (submission: any) => ({
 function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }> }) {
   const { bountyId } = React.use(params)
   const router = useRouter()
+  const { data: session } = useSession()
   const { currentBounty, setCurrentBounty, addSubmission } = useBountiesStore()
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedBountyType, setSelectedBountyType] = useState<string | null>(null)
+
+  // Check if user has wallet address, redirect if not
+  useEffect(() => {
+    if (session && !session.user?.walletAddress) {
+      toast.error('Please add your wallet address in settings before submitting a bug report')
+      router.push('/settings')
+    }
+  }, [session, router])
 
   // Form state
   const [title, setTitle] = useState("")
@@ -156,6 +166,25 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
       setLoading(false)
     }
   }, [bountyId, setCurrentBounty])
+
+  // Check if user has wallet address before allowing submission
+  useEffect(() => {
+    const checkWalletAddress = async () => {
+      try {
+        const response = await fetch('/api/auth/session')
+        if (response.ok) {
+          const session = await response.json()
+          if (session?.user && !session.user.walletAddress) {
+            toast.error('Please add your wallet address in settings before submitting a bug report')
+            router.push('/settings')
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check wallet address:', error)
+      }
+    }
+    checkWalletAddress()
+  }, [router])
 
   useEffect(() => {
     fetchBountyInfo()
@@ -362,7 +391,7 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
                 )
               })}
             </div>
-            <span className="text-sm text-muted-foreground">Reward: ${currentBounty.rewardAmount.toLocaleString()}</span>
+            <span className="text-sm text-muted-foreground">Reward: {currentBounty.rewardAmount.toLocaleString()} SOL</span>
           </div>
         </div>
       </div>

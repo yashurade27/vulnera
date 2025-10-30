@@ -253,7 +253,6 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
   const [manualSeverity, setManualSeverity] = useState("")
   const [decisionNotes, setDecisionNotes] = useState("")
 
-  const [rewardAmount, setRewardAmount] = useState("")
   const [rejectionReason, setRejectionReason] = useState("")
   const [infoRequestMessage, setInfoRequestMessage] = useState("")
 
@@ -294,14 +293,6 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
         }
         setSubmission(record)
         setComments(record.comments ?? [])
-
-        const bountyReward = record.rewardAmount ?? record.bounty?.rewardAmount
-        if (bountyReward !== undefined && bountyReward !== null) {
-          const numeric = typeof bountyReward === "string" ? parseFloat(bountyReward) : bountyReward
-          if (!Number.isNaN(numeric)) {
-            setRewardAmount(numeric.toString())
-          }
-        }
 
         setDecisionNotes(record.reviewNotes ?? "")
         setRejectionReason(record.rejectionReason ?? "")
@@ -367,9 +358,12 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
     if (!submission) return
 
     if (status === "APPROVED") {
-      const numericReward = parseFloat(rewardAmount)
-      if (!rewardAmount || Number.isNaN(numericReward) || numericReward <= 0) {
-        toast.error("Enter a valid reward amount before approving")
+      // Use the fixed reward amount from the bounty
+      const bountyReward = submission.rewardAmount ?? submission.bounty?.rewardAmount
+      const numericReward = typeof bountyReward === "string" ? parseFloat(bountyReward) : bountyReward
+      
+      if (!numericReward || Number.isNaN(numericReward) || numericReward <= 0) {
+        toast.error("Invalid reward amount for this bounty")
         return
       }
 
@@ -484,10 +478,13 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
           toast.success("Transaction sent! Waiting for confirmation...")
 
           // Now approve the submission with the transaction signature
+          const bountyReward = submission.rewardAmount ?? submission.bounty?.rewardAmount
+          const numericReward = typeof bountyReward === "string" ? parseFloat(bountyReward) : bountyReward
+          
           const approvePayload = {
             status: "APPROVED",
             reviewNotes: compileReviewNotes(),
-            rewardAmount: parseFloat(rewardAmount).toString(),
+            rewardAmount: numericReward?.toString(),
           }
 
           const approveResponse = await fetch(`/api/submissions/${submissionId}/review`, {
@@ -1099,20 +1096,18 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
                     <TabsTrigger value="needs-info">Request Info</TabsTrigger>
                   </TabsList>
                   <TabsContent value="approve" className="space-y-4">
-                    <div>
-                      <Label htmlFor="rewardAmount">Reward Amount (SOL)</Label>
-                      <Input
-                        id="rewardAmount"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={rewardAmount}
-                        onChange={(event) => setRewardAmount(event.target.value)}
-                        className="mt-2"
-                      />
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Defaulted to bounty reward. Adjust only if program guidelines allow custom payouts.
-                      </p>
+                    <div className="rounded-lg border border-border/60 bg-card/40 p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">Reward Amount</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Fixed reward per submission for this bounty
+                          </p>
+                        </div>
+                        <p className="text-xl font-bold text-yellow-400">
+                          {formatSol(submission.rewardAmount ?? submission.bounty?.rewardAmount)}
+                        </p>
+                      </div>
                     </div>
                     <Button
                       onClick={() => handleSubmitReview("APPROVED")}

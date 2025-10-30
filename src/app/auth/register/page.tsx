@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
+import { PublicKey } from "@solana/web3.js"
 import { registerSchema, type RegisterInput } from "@/lib/types"
 import { useAuthFlowStore } from "@/stores/auth-flow-store"
 import {
@@ -107,6 +108,16 @@ export default function RegisterPage() {
   const handleSubmit = useCallback(
     async (values: RegisterInput) => {
       try {
+        // Validate wallet address if provided
+        if (values.walletAddress && values.walletAddress.trim()) {
+          try {
+            new PublicKey(values.walletAddress.trim())
+          } catch (error) {
+            toast.error("Invalid Solana wallet address. Please check and try again.")
+            return
+          }
+        }
+
         setIsSubmitting(true)
         const response = await fetch("/api/auth/register", {
           method: "POST",
