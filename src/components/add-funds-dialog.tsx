@@ -40,21 +40,41 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, re
   const [step, setStep] = useState<"input" | "signing" | "confirming">("input")
   const [txSignature, setTxSignature] = useState<string | null>(null)
 
-  const minimumDepositSOL = maxSubmissions ? rewardAmount * maxSubmissions : rewardAmount
+  const normalizedMaxPayouts = maxSubmissions && maxSubmissions > 0 ? maxSubmissions : 1
+  const minimumDepositSOL = Math.max(rewardAmount * normalizedMaxPayouts, rewardAmount)
   const currentBalanceSOL = currentEscrowBalance / 1_000_000_000
+  const walletConnected = Boolean(publicKey)
+  const amountValue = amount.trim().length ? Number.parseFloat(amount) : Number.NaN
+  const hasAmount = Number.isFinite(amountValue) && amountValue > 0
+  const projectedBalance = hasAmount ? currentBalanceSOL + amountValue : currentBalanceSOL
+  const meetsMinimumRequirement = hasAmount && projectedBalance >= minimumDepositSOL
+  const disableDeposit =
+    loading || !program || !walletConnected || !hasAmount || !meetsMinimumRequirement
 
   const handleAddFunds = async () => {
-    if (!publicKey || !amount || !program) {
-      if (!program) {
-        toast.error("Wallet not connected", {
-          description: "Please connect your wallet to add funds",
-        })
-      }
+    if (!program) {
+      toast.error("Program unavailable", {
+        description: "Unable to access the Vulnera escrow program. Please refresh and try again.",
+      })
       return
     }
 
-    const amountNum = parseFloat(amount)
-    if (isNaN(amountNum) || amountNum <= 0) {
+    if (!walletConnected) {
+      toast.error("Wallet not connected", {
+        description: "Connect the company wallet before adding funds",
+      })
+      return
+    }
+
+    if (!amount.trim()) {
+      toast.error("Amount missing", {
+        description: "Enter the amount of SOL you want to deposit",
+      })
+      return
+    }
+
+    const amountNum = Number.parseFloat(amount)
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
       toast.error("Invalid amount", {
         description: "Please enter a valid amount greater than 0",
       })
@@ -65,7 +85,15 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, re
     const totalAfterDeposit = currentBalanceSOL + amountNum
     if (totalAfterDeposit < minimumDepositSOL) {
       toast.error("Insufficient deposit", {
-        description: `Total escrow balance must be at least ${minimumDepositSOL} SOL (${rewardAmount} SOL × ${maxSubmissions || 1} payout${maxSubmissions !== 1 ? 's' : ''}). Current: ${currentBalanceSOL.toFixed(4)} SOL. You need to deposit at least ${(minimumDepositSOL - currentBalanceSOL).toFixed(4)} SOL.`,
+        description: `Total escrow balance must be at least ${minimumDepositSOL} SOL (${rewardAmount} SOL × ${normalizedMaxPayouts} payout${normalizedMaxPayouts !== 1 ? 's' : ''}). Current: ${currentBalanceSOL.toFixed(4)} SOL. You need to deposit at least ${(minimumDepositSOL - currentBalanceSOL).toFixed(4)} SOL.`,
+      })
+      return
+    }
+
+    const ownerPublicKey = publicKey
+    if (!ownerPublicKey) {
+      toast.error("Wallet not connected", {
+        description: "Connect the company wallet before adding funds",
       })
       return
     }
@@ -94,7 +122,7 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, re
 
       // Step 2: Derive the vault PDA
       const [vaultPda] = await PublicKey.findProgramAddress(
-        [Buffer.from("bounty-escrow"), publicKey.toBuffer()],
+        [Buffer.from("bounty-escrow"), ownerPublicKey.toBuffer()],
         PROGRAM_ID
       )
 
@@ -114,7 +142,7 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, re
         .deposit(new BN(lamportsAmount))
         .accounts({
           vault: vaultPda,
-          owner: publicKey,
+          owner: ownerPublicKey,
           systemProgram: SystemProgram.programId,
         })
         .rpc({
@@ -213,16 +241,16 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, re
                     SOL
                   </div>
                 </div>
-                {amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0 && (
+                {hasAmount && (
                   <div className="space-y-1">
                     <p className="text-sm text-green-400 flex items-center gap-1">
                       <CheckCircle2 className="w-4 h-4" />
-                      New balance: {(currentBalanceSOL + parseFloat(amount)).toFixed(4)} SOL
+                      New balance: {projectedBalance.toFixed(4)} SOL
                     </p>
-                    {(currentBalanceSOL + parseFloat(amount)) < minimumDepositSOL && (
+                    {!meetsMinimumRequirement && (
                       <p className="text-sm text-red-400 flex items-center gap-1">
                         <AlertCircle className="w-4 h-4" />
-                        Below minimum: {minimumDepositSOL} SOL required ({rewardAmount} SOL × {maxSubmissions || 1} payout{maxSubmissions !== 1 ? 's' : ''})
+                        Below minimum: {minimumDepositSOL} SOL required ({rewardAmount} SOL × {normalizedMaxPayouts} payout{normalizedMaxPayouts !== 1 ? 's' : ''})
                       </p>
                     )}
                   </div>
@@ -244,6 +272,15 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, re
                 </AlertDescription>
               </Alert> */}
             </>
+          )}
+
+          {walletConnected ? null : (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Connect your company wallet to enable funding.
+              </AlertDescription>
+            </Alert>
           )}
 
           {step === "signing" && (
@@ -282,7 +319,7 @@ export function AddFundsDialog({ bountyId, bountyTitle, currentEscrowBalance, re
           <Button
             className="flex-1 btn-primary"
             onClick={handleAddFunds}
-            disabled={loading || !publicKey || !program || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0}
+            disabled={disableDeposit}
           >
             {loading ? (
               <>

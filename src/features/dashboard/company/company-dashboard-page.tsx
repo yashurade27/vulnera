@@ -99,7 +99,8 @@ export function CompanyDashboardPage() {
   const router = useRouter()
   const [company, setCompany] = useState<CompanySummary | null>(null)
   const [stats, setStats] = useState<CompanyStatsData | null>(null)
-  const [bounties, setBounties] = useState<BountyItem[]>([])
+  const [activeBounties, setActiveBounties] = useState<BountyItem[]>([])
+  const [draftBounties, setDraftBounties] = useState<BountyItem[]>([])
   const [submissions, setSubmissions] = useState<SubmissionItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -186,8 +187,15 @@ export function CompanyDashboardPage() {
             }))
           : []
 
+        if (active) {
+          setActiveBounties(mappedBounties)
+        }
+
         if (!rawDraftBounties.ok) {
           console.warn("Unable to load draft bounties")
+          if (active) {
+            setDraftBounties([])
+          }
         } else {
           const draftBountiesJson = await rawDraftBounties.json()
           const mappedDraftBounties: BountyItem[] = Array.isArray(draftBountiesJson?.bounties)
@@ -208,7 +216,7 @@ export function CompanyDashboardPage() {
               }))
             : []
           if (active) {
-            setBounties([...mappedDraftBounties, ...mappedBounties])
+            setDraftBounties(mappedDraftBounties)
           }
         }
 
@@ -217,7 +225,7 @@ export function CompanyDashboardPage() {
         }
 
         if (active && !rawDraftBounties.ok) {
-          setBounties(mappedBounties)
+          setActiveBounties(mappedBounties)
         }
 
         if (!rawSubmissions.ok) {
@@ -472,10 +480,10 @@ export function CompanyDashboardPage() {
                     </p>
                     <Button variant="outline" onClick={() => router.push("/onboarding/company")}>Review company details</Button>
                   </div>
-                ) : bounties.length === 0 ? (
+                ) : draftBounties.length === 0 && activeBounties.length === 0 ? (
                   <div className="text-center py-12">
                     <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground mb-4">No active bounties yet</p>
+                    <p className="text-muted-foreground mb-4">No bounties yet</p>
                     <Button className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900" asChild>
                       <Link href="/dashboard/company/bounties/create">
                         <Plus className="w-4 h-4 mr-2" />
@@ -484,25 +492,92 @@ export function CompanyDashboardPage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {bounties.map((bounty) => (
-                      <div key={bounty.id} className="p-4 rounded-lg border border-border hover:border-yellow-400/50 transition-all">
+                  <div className="space-y-6">
+                    {draftBounties.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Draft Bounties</h3>
+                          <Badge variant="outline" className="bg-orange-500/10 text-orange-400 border-orange-500/30">
+                            {draftBounties.length}
+                          </Badge>
+                        </div>
+                        <div className="space-y-4">
+                          {draftBounties.map((bounty) => (
+                            <div key={bounty.id} className="p-4 rounded-lg border border-dashed border-orange-400/40 bg-orange-500/5">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <h3 className="font-semibold text-lg line-clamp-2">{bounty.title}</h3>
+                                    <Badge variant="outline" className="bg-orange-500/10 text-orange-400 border-orange-500/30">
+                                      DRAFT
+                                    </Badge>
+                                    <div className="flex flex-wrap gap-2">
+                                      {bounty.bountyTypes.map((type) => (
+                                        <Badge key={type} variant="outline" className={BOUNTY_TYPE_COLORS[type] ?? ""}>
+                                          {type}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                                    <div className="flex items-center gap-1">
+                                      <DollarSign className="w-4 h-4 text-yellow-400" />
+                                      <span className="text-yellow-400 font-semibold">
+                                        {currencyFormatter.format(bounty.rewardAmount)}
+                                      </span>
+                                    </div>
+                                    {bounty.maxSubmissions ? (
+                                      <div className="flex items-center gap-1">
+                                        <Users className="w-4 h-4" />
+                                        <span>Max {bounty.maxSubmissions} payouts</span>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                  {bounty.escrowAddress ? (
+                                    <div className="mt-2 text-xs text-muted-foreground font-mono">
+                                      <span className="text-yellow-400">Escrow:</span> {bounty.escrowAddress.substring(0, 8)}...{bounty.escrowAddress.substring(bounty.escrowAddress.length - 8)}
+                                      {bounty.escrowBalanceLamports !== null && bounty.escrowBalanceLamports !== undefined && (
+                                        <span className="ml-2">({(bounty.escrowBalanceLamports / 1_000_000_000).toFixed(4)} SOL)</span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <p className="mt-2 text-xs text-muted-foreground">
+                                      Fund this bounty to make it visible to hunters.
+                                    </p>
+                                  )}
+                                </div>
+                                <Button variant="outline" size="sm" asChild>
+                                  <Link href="/dashboard/company/bounties/create">Continue Setup</Link>
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {activeBounties.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Active Bounties</h3>
+                          <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/30">
+                            {activeBounties.length}
+                          </Badge>
+                        </div>
+                        <div className="space-y-4">
+                          {activeBounties.map((bounty) => (
+                            <div key={bounty.id} className="p-4 rounded-lg border border-border hover:border-yellow-400/50 transition-all">
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="font-semibold text-lg line-clamp-2">{bounty.title}</h3>
-                              <div className="flex flex-wrap gap-2">
-                                {bounty.status === "DRAFT" && (
-                                  <Badge variant="outline" className="bg-orange-500/10 text-orange-400 border-orange-500/30">
-                                    DRAFT
-                                  </Badge>
-                                )}
-                                {bounty.bountyTypes.map((type) => (
-                                  <Badge key={type} variant="outline" className={BOUNTY_TYPE_COLORS[type] ?? ""}>
-                                    {type}
-                                  </Badge>
-                                ))}
-                              </div>
+                                    <div className="flex flex-wrap gap-2">
+                                      {bounty.bountyTypes.map((type) => (
+                                        <Badge key={type} variant="outline" className={BOUNTY_TYPE_COLORS[type] ?? ""}>
+                                          {type}
+                                        </Badge>
+                                      ))}
+                                    </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">
@@ -522,21 +597,24 @@ export function CompanyDashboardPage() {
                                 </div>
                               ) : null}
                             </div>
-                            {bounty.escrowAddress && (
-                              <div className="mt-2 text-xs text-muted-foreground font-mono">
-                                <span className="text-yellow-400">Escrow:</span> {bounty.escrowAddress.substring(0, 8)}...{bounty.escrowAddress.substring(bounty.escrowAddress.length - 8)}
-                                {bounty.escrowBalanceLamports !== null && bounty.escrowBalanceLamports !== undefined && (
-                                  <span className="ml-2">({(bounty.escrowBalanceLamports / 1_000_000_000).toFixed(4)} SOL)</span>
-                                )}
-                              </div>
-                            )}
+                                  {bounty.escrowAddress && (
+                                    <div className="mt-2 text-xs text-muted-foreground font-mono">
+                                      <span className="text-yellow-400">Escrow:</span> {bounty.escrowAddress.substring(0, 8)}...{bounty.escrowAddress.substring(bounty.escrowAddress.length - 8)}
+                                      {bounty.escrowBalanceLamports !== null && bounty.escrowBalanceLamports !== undefined && (
+                                        <span className="ml-2">({(bounty.escrowBalanceLamports / 1_000_000_000).toFixed(4)} SOL)</span>
+                                      )}
+                                    </div>
+                                  )}
                           </div>
                           <Button variant="outline" size="sm" asChild>
                             <Link href={`/bounties/${bounty.id}`}>View</Link>
                           </Button>
                         </div>
                       </div>
-                    ))}
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </CardContent>
