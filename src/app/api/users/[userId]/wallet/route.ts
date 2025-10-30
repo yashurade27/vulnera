@@ -44,26 +44,38 @@ export async function PATCH(
 
     const { walletAddress, signature, message } = parsed.data;
 
-    // Verify signature against wallet address
+    // Validate Solana wallet address format
     try {
-      const publicKey = new PublicKey(walletAddress);
-      const signatureBytes = bs58.decode(signature);
-      const messageBytes = new TextEncoder().encode(message);
+      new PublicKey(walletAddress);
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid Solana wallet address. Please enter a valid address.' },
+        { status: 400 }
+      );
+    }
 
-      const isValid = nacl.sign.detached.verify(messageBytes, signatureBytes, publicKey.toBytes());
+    // Verify signature against wallet address if provided
+    if (signature && message) {
+      try {
+        const publicKey = new PublicKey(walletAddress);
+        const signatureBytes = bs58.decode(signature);
+        const messageBytes = new TextEncoder().encode(message);
 
-      if (!isValid) {
+        const isValid = nacl.sign.detached.verify(messageBytes, signatureBytes, publicKey.toBytes());
+
+        if (!isValid) {
+          return NextResponse.json(
+            { error: 'Invalid signature. Please sign the exact message shown.' },
+            { status: 400 }
+          );
+        }
+      } catch (error) {
+        console.error('Signature verification error:', error);
         return NextResponse.json(
-          { error: 'Invalid signature. Please sign the exact message shown.' },
+          { error: 'Failed to verify signature. Please ensure you signed the correct message.' },
           { status: 400 }
         );
       }
-    } catch (error) {
-      console.error('Signature verification error:', error);
-      return NextResponse.json(
-        { error: 'Failed to verify signature. Please ensure you signed the correct message.' },
-        { status: 400 }
-      );
     }
 
     // Check if wallet is already taken by another user
@@ -83,7 +95,21 @@ export async function PATCH(
       data: { walletAddress },
       select: {
         id: true,
+        email: true,
+        username: true,
+        role: true,
         walletAddress: true,
+        fullName: true,
+        bio: true,
+        avatarUrl: true,
+        country: true,
+        githubUrl: true,
+        twitterUrl: true,
+        linkedinUrl: true,
+        portfolioUrl: true,
+        totalEarnings: true,
+        totalBounties: true,
+        reputation: true,
         updatedAt: true,
       },
     });

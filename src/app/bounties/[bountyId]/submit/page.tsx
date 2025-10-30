@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { ChangeEvent, FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Upload, X, FileText, AlertCircle } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -282,7 +283,8 @@ function SubmitBugReportPage({ params }: { params: Promise<{ bountyId: string }>
         addSubmission(mapSubmissionSummary(submissionPayload.submission))
       }
 
-      router.push(`/bounties/${bountyId}?submitted=true`)
+      toast.success("Bug report submitted successfully!")
+      router.push("/dashboard/hunter")
     } catch (error) {
       console.error("Failed to submit bug report:", error)
       setFormError(

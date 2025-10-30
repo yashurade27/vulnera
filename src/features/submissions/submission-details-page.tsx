@@ -258,7 +258,7 @@ export function SubmissionDetailsPage({ params }: { params: Promise<{ submission
             {submission.rewardAmount && (
               <div className="text-right">
                 <p className="text-3xl font-bold text-yellow-400">
-                  {currencyFormatter.format(submission.rewardAmount)}
+                  {submission.rewardAmount} SOL
                 </p>
                 <p className="text-xs text-muted-foreground">Reward Amount</p>
               </div>

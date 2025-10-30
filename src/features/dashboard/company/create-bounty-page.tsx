@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useConnection, useWallet } from "@solana/wallet-adapter-react"
 import { LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js"
+import { toast } from "sonner"
 import {
   ArrowLeft,
   ArrowRight,
@@ -464,6 +465,8 @@ export function CreateBountyPage() {
       if (!fundRes.ok) {
         throw new Error(fundJson?.error ?? "Funding verification failed")
       }
+
+      toast.success("Bounty funded successfully!")
 
       // Redirect on success
       router.push(`/bounties/${targetBountyId}`)

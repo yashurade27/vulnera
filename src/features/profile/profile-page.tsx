@@ -720,9 +720,15 @@ export function ProfilePage({ userId }: ProfilePageProps) {
                 </Button>
               ))}
               {isOwnProfile ? (
-                <Button asChild variant="outline">
-                  <Link href="/dashboard/company/settings">Manage Profile</Link>
-                </Button>
+                user.role === 'BOUNTY_HUNTER' ? (
+                  <Button asChild variant="outline">
+                    <Link href="/settings">Manage Profile</Link>
+                  </Button>
+                ) : (
+                  <Button asChild variant="outline">
+                    <Link href="/dashboard/company/settings">Manage Profile</Link>
+                  </Button>
+                )
               ) : null}
               {user.role === 'BOUNTY_HUNTER' && (
                 <Button asChild>

@@ -65,8 +65,8 @@ export function HeroSection() {
                 size="lg"
                 className="group bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
               >
-                <Link href="/vulnera" className="inline-flex items-center gap-2">
-                  Launch Platform
+                <Link href="/auth/register" className="inline-flex items-center gap-2">
+                  Get Started
                   <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>

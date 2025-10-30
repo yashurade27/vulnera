@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -19,7 +19,6 @@ import {
   Linkedin,
   Globe,
 } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,13 +28,7 @@ import { updateUserProfileSchema } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
 
-const walletSchema = z.object({
-  walletAddress: z.string().min(1, "Wallet address is required"),
-  signature: z.string().min(1, "Signature required"),
-})
-
 type ProfileFormValues = z.infer<typeof updateUserProfileSchema>
-type WalletFormValues = z.infer<typeof walletSchema>
 
 interface UserData {
   id: string
@@ -62,17 +55,11 @@ export function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userData, setUserData] = useState<UserData | null>(null)
-  const [messageToSign, setMessageToSign] = useState<string>("")
-  const [activeTab, setActiveTab] = useState("profile")
   const [avatarUploading, setAvatarUploading] = useState(false)
+  const [editingWallet, setEditingWallet] = useState(false)
+  const [newWalletAddress, setNewWalletAddress] = useState("")
+  const [updatingWallet, setUpdatingWallet] = useState(false)
   const userId = session?.user?.id
-
-  const generateMessageToSign = useCallback((walletAddress: string) => {
-    const timestamp = Date.now()
-    const message = `Verify wallet ownership for Vulnera platform\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\nUser ID: ${userId ?? "unknown"}`
-    setMessageToSign(message)
-    return message
-  }, [userId])
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(updateUserProfileSchema),
@@ -85,14 +72,6 @@ export function SettingsPage() {
       twitterUrl: "",
       linkedinUrl: "",
       portfolioUrl: "",
-    },
-  })
-
-  const walletForm = useForm<WalletFormValues>({
-    resolver: zodResolver(walletSchema),
-    defaultValues: {
-      walletAddress: "",
-      signature: "",
     },
   })
 
@@ -127,17 +106,6 @@ export function SettingsPage() {
             linkedinUrl: user.linkedinUrl || "",
             portfolioUrl: user.portfolioUrl || "",
           })
-
-          // Reset wallet form with user data
-          walletForm.reset({
-            walletAddress: user.walletAddress || "",
-            signature: "",
-          })
-
-          // Generate message if wallet address exists
-          if (user.walletAddress) {
-            generateMessageToSign(user.walletAddress)
-          }
         }
       } catch (err) {
         console.error(err)
@@ -204,18 +172,19 @@ export function SettingsPage() {
     }
   }
 
-  const submitWallet = async (values: WalletFormValues) => {
+  const handleUpdateWallet = async () => {
     if (!userId) {
       toast.error("You need to be signed in")
       return
     }
 
-    if (!messageToSign) {
-      toast.error("Please enter a wallet address first to generate the message to sign")
+    if (!newWalletAddress.trim()) {
+      toast.error("Please enter a wallet address")
       return
     }
 
     try {
+      setUpdatingWallet(true)
       const response = await fetch(`/api/users/${userId}/wallet`, {
         method: "PATCH",
         headers: {
@@ -223,19 +192,26 @@ export function SettingsPage() {
         },
         credentials: "include",
         body: JSON.stringify({
-          ...values,
-          message: messageToSign,
+          walletAddress: newWalletAddress.trim(),
         }),
       })
+
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => null)
         throw new Error(errorPayload?.error ?? "Failed to update wallet")
       }
-      toast.success("Wallet updated")
+
+      const payload = await response.json()
+      setUserData(payload.user)
+      setEditingWallet(false)
+      setNewWalletAddress("")
+      toast.success("Wallet address updated successfully")
       router.refresh()
     } catch (error) {
       console.error(error)
       toast.error(error instanceof Error ? error.message : "Unable to update wallet")
+    } finally {
+      setUpdatingWallet(false)
     }
   }
 
@@ -314,127 +290,89 @@ export function SettingsPage() {
           </Card>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-xl grid-cols-2">
-            <TabsTrigger value="profile" className="gap-2">
-              <UserCircle className="w-4 h-4" /> Profile
-            </TabsTrigger>
-            <TabsTrigger value="wallet" className="gap-2">
-              <Wallet className="w-4 h-4" /> Wallet
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="profile">
-            <Card className="card-glass">
-              <CardHeader>
-                <CardTitle>Profile information</CardTitle>
-                <CardDescription>Keep your public profile up to date for companies and hunters.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="space-y-4">
-                    <div className="h-24 rounded-lg bg-card animate-pulse" />
-                    <div className="h-24 rounded-lg bg-card animate-pulse" />
-                  </div>
-                ) : (
-                  <Form {...profileForm}>
-                    <form onSubmit={profileForm.handleSubmit(submitProfile)} className="space-y-6">
-                      <div>
-                        <FormLabel>Avatar</FormLabel>
-                        <div className="flex items-center gap-4 mt-2">
-                          {profileForm.watch("avatarUrl") ? (
-                            <Image
-                              width={80}
-                              height={80}
-                              src={profileForm.watch("avatarUrl") || ""}
-                              alt="Avatar"
-                              className="h-20 w-20 rounded-full border-2 border-border object-cover"
-                            />
-                          ) : (
-                            <div className="h-20 w-20 rounded-full border-2 border-dashed border-border flex items-center justify-center text-sm text-muted-foreground">
-                              <UserCircle className="w-10 h-10" />
-                            </div>
-                          )}
-                          <div className="flex flex-col gap-3">
-                            <label className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg cursor-pointer hover:bg-accent transition">
-                              {avatarUploading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <UploadCloud className="w-4 h-4" />
-                              )}
-                              <span>{avatarUploading ? "Uploading..." : "Upload new avatar"}</span>
-                              <input
-                                type="file"
-                                accept="image/png,image/jpeg,image/jpg,image/webp"
-                                className="hidden"
-                                disabled={avatarUploading}
-                                onChange={(event) => {
-                                  const file = event.target.files?.[0]
-                                  if (file) {
-                                    void handleAvatarUpload(file)
-                                  }
-                                }}
-                              />
-                            </label>
-                            {profileForm.watch("avatarUrl") && !avatarUploading ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => profileForm.setValue("avatarUrl", "", { shouldValidate: true })}
-                              >
-                                Remove avatar
-                              </Button>
-                            ) : null}
-                          </div>
+        <Card className="card-glass">
+          <CardHeader>
+            <CardTitle>Profile & Account Information</CardTitle>
+            <CardDescription>Update your profile details, socials, and wallet address for bounty payouts.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-4">
+                <div className="h-24 rounded-lg bg-card animate-pulse" />
+                <div className="h-24 rounded-lg bg-card animate-pulse" />
+              </div>
+            ) : (
+              <Form {...profileForm}>
+                <form onSubmit={profileForm.handleSubmit(submitProfile)} className="space-y-8">
+                  {/* Avatar Section */}
+                  <div className="pb-6 border-b border-border">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <UserCircle className="w-5 h-5" /> Profile Picture
+                    </h3>
+                    <div className="flex items-center gap-6">
+                      {profileForm.watch("avatarUrl") ? (
+                        <Image
+                          width={96}
+                          height={96}
+                          src={profileForm.watch("avatarUrl") || ""}
+                          alt="Avatar"
+                          className="h-24 w-24 rounded-full border-2 border-border object-cover"
+                        />
+                      ) : (
+                        <div className="h-24 w-24 rounded-full border-2 border-dashed border-border flex items-center justify-center">
+                          <UserCircle className="w-12 h-12 text-muted-foreground" />
                         </div>
-                      </div>
-
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <FormField
-                          control={profileForm.control}
-                          name="fullName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Full name</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Jane Doe"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
+                      )}
+                      <div className="flex flex-col gap-3">
+                        <label className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg cursor-pointer hover:bg-accent transition">
+                          {avatarUploading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <UploadCloud className="w-4 h-4" />
                           )}
-                        />
-                        <FormField
-                          control={profileForm.control}
-                          name="country"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Location</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Remote"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                          <span className="text-sm">{avatarUploading ? "Uploading..." : "Upload new avatar"}</span>
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
+                            className="hidden"
+                            disabled={avatarUploading}
+                            onChange={(event) => {
+                              const file = event.target.files?.[0]
+                              if (file) {
+                                void handleAvatarUpload(file)
+                              }
+                            }}
+                          />
+                        </label>
+                        {profileForm.watch("avatarUrl") && !avatarUploading && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => profileForm.setValue("avatarUrl", "", { shouldValidate: true })}
+                          >
+                            Remove avatar
+                          </Button>
+                        )}
                       </div>
+                    </div>
+                  </div>
 
+                  {/* Basic Info Section */}
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <Settings2 className="w-5 h-5" /> Basic Information
+                    </h3>
+                    <div className="grid md:grid-cols-2 gap-4">
                       <FormField
                         control={profileForm.control}
-                        name="bio"
+                        name="fullName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Bio</FormLabel>
+                            <FormLabel>Full name</FormLabel>
                             <FormControl>
-                              <Textarea
-                                rows={4}
-                                placeholder="Share your expertise and focus areas"
+                              <Input
+                                placeholder="Jane Doe"
                                 {...field}
                               />
                             </FormControl>
@@ -442,211 +380,242 @@ export function SettingsPage() {
                           </FormItem>
                         )}
                       />
+                      <FormField
+                        control={profileForm.control}
+                        name="country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Location</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Remote"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <FormField
-                          control={profileForm.control}
-                          name="githubUrl"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>GitHub</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="https://github.com/username"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription className="flex items-center gap-2 text-xs">
-                                <Github className="w-3 h-3" /> Showcase your repositories.
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={profileForm.control}
-                          name="twitterUrl"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Twitter / X</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="https://twitter.com/username"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription className="flex items-center gap-2 text-xs">
-                                <Twitter className="w-3 h-3" /> Connect with the community.
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <FormField
-                          control={profileForm.control}
-                          name="linkedinUrl"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>LinkedIn</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="https://linkedin.com/in/username"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription className="flex items-center gap-2 text-xs">
-                                <Linkedin className="w-3 h-3" /> Optional professional profile.
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={profileForm.control}
-                          name="portfolioUrl"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Portfolio</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="https://your-portfolio.com"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription className="flex items-center gap-2 text-xs">
-                                <Globe className="w-3 h-3" /> Personal site or case studies.
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="flex justify-end">
-                        <Button type="submit" disabled={profileForm.formState.isSubmitting}>
-                          {profileForm.formState.isSubmitting ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : null}
-                          Save profile
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="wallet">
-            <Card className="card-glass">
-              <CardHeader>
-                <CardTitle>Wallet settings</CardTitle>
-                <CardDescription>
-                  Update the wallet address associated with your bounty payouts. Signature verification is required to prove ownership.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {userData?.walletAddress && (
-                  <div className="mb-6 p-4 rounded-lg bg-muted border">
-                    <p className="text-sm font-medium mb-2">Current Wallet Address</p>
-                    <p className="font-mono text-sm break-all">{userData.walletAddress}</p>
-                  </div>
-                )}
-                
-                <Form {...walletForm}>
-                  <form onSubmit={walletForm.handleSubmit(submitWallet)} className="space-y-6">
                     <FormField
-                      control={walletForm.control}
-                      name="walletAddress"
+                      control={profileForm.control}
+                      name="bio"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>New Wallet Address</FormLabel>
+                          <FormLabel>Bio</FormLabel>
                           <FormControl>
-                            <Input
-                              placeholder="Enter your Solana wallet address"
+                            <Textarea
+                              rows={4}
+                              placeholder="Share your expertise and focus areas"
                               {...field}
-                              onChange={(event) => {
-                                const value = event.target.value.trim()
-                                field.onChange(value)
-                                if (value) {
-                                  generateMessageToSign(value)
-                                  walletForm.setValue("signature", "") // Reset signature when address changes
-                                } else {
-                                  setMessageToSign("")
-                                }
-                              }}
                             />
                           </FormControl>
-                          <FormDescription>
-                            Enter a new Solana wallet address to update your payout destination
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    {messageToSign && (
-                      <div className="p-4 rounded-lg bg-muted border space-y-3">
-                        <div>
-                          <FormLabel className="text-sm font-medium">Message to sign</FormLabel>
-                          <div className="mt-2 p-3 bg-background rounded border font-mono text-xs whitespace-pre-wrap">
-                            {messageToSign}
+                  </div>
+
+                  {/* Wallet Section */}
+                  <div className="pb-6 border-y border-border py-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Wallet className="w-5 h-5 text-yellow-400" /> Wallet Address
+                    </h3>
+                    {!editingWallet ? (
+                      <div>
+                        {userData?.walletAddress ? (
+                          <div className="space-y-3">
+                            <div className="p-4 rounded-lg bg-yellow-400/10 border border-yellow-400/40">
+                              <p className="text-sm font-medium mb-2 text-yellow-400">Connected Wallet</p>
+                              <p className="font-mono text-sm break-all">{userData.walletAddress}</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingWallet(true)
+                                setNewWalletAddress(userData.walletAddress || "")
+                              }}
+                            >
+                              Change Wallet Address
+                            </Button>
                           </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="p-4 rounded-lg bg-muted border border-dashed">
+                              <p className="text-sm text-muted-foreground">No wallet connected yet.</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingWallet(true)}
+                            >
+                              Add Wallet Address
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">
+                            Solana Wallet Address
+                          </label>
+                          <Input
+                            placeholder="Enter your Solana wallet address"
+                            value={newWalletAddress}
+                            onChange={(e) => setNewWalletAddress(e.target.value)}
+                            className="font-mono text-sm"
+                          />
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Enter the wallet address where you want to receive bounty payouts
+                          </p>
                         </div>
-                        <div className="text-sm text-muted-foreground space-y-2">
-                          <p className="font-medium">How to sign:</p>
-                          <ol className="list-decimal list-inside space-y-1 pl-2">
-                            <li>Copy the message above</li>
-                            <li>Open your Solana wallet (Phantom, Backpack, etc.)</li>
-                            <li>Use the &quot;Sign Message&quot; feature</li>
-                            <li>Paste the signed message (base58 format) below</li>
-                          </ol>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            onClick={handleUpdateWallet}
+                            disabled={updatingWallet}
+                            size="sm"
+                            className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
+                          >
+                            {updatingWallet ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : null}
+                            {userData?.walletAddress ? "Update" : "Add"} Wallet
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingWallet(false)
+                              setNewWalletAddress("")
+                            }}
+                            disabled={updatingWallet}
+                          >
+                            Cancel
+                          </Button>
                         </div>
                       </div>
                     )}
-                    <FormField
-                      control={walletForm.control}
-                      name="signature"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Signature</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              rows={3}
-                              placeholder="Paste the base58 signature from your wallet"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            The signature proves you own the wallet address
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  </div>
 
-                    <div className="flex justify-end gap-3">
-                      <Button 
-                        type="submit" 
-                        disabled={walletForm.formState.isSubmitting || !messageToSign}
-                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
-                      >
-                        {walletForm.formState.isSubmitting ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Wallet className="w-4 h-4 mr-2" />
+                  {/* Social Links Section */}
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold">Social Links</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField
+                        control={profileForm.control}
+                        name="githubUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <Github className="w-4 h-4" /> GitHub
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="https://github.com/username"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              Showcase your repositories
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
                         )}
-                        Update wallet
-                      </Button>
+                      />
+                      <FormField
+                        control={profileForm.control}
+                        name="twitterUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <Twitter className="w-4 h-4" /> Twitter / X
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="https://twitter.com/username"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              Connect with the community
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField
+                        control={profileForm.control}
+                        name="linkedinUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <Linkedin className="w-4 h-4" /> LinkedIn
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="https://linkedin.com/in/username"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              Optional professional profile
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={profileForm.control}
+                        name="portfolioUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <Globe className="w-4 h-4" /> Portfolio
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="https://your-portfolio.com"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              Personal site or case studies
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    <Button 
+                      type="submit" 
+                      disabled={profileForm.formState.isSubmitting}
+                      size="lg"
+                      className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
+                    >
+                      {profileForm.formState.isSubmitting ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : null}
+                      Save Changes
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

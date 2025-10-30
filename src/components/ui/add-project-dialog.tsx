@@ -164,7 +164,7 @@ export function AddProjectDialog({ onProjectAdded, trigger }: AddProjectDialogPr
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
+              className="w-full group bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 hover:from-yellow-300 hover:to-yellow-400"
             >
               {isSubmitting ? 'Adding Project...' : 'Add Project'}
             </Button>
