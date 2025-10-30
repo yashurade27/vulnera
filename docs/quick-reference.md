@@ -98,7 +98,7 @@ Authorization: Bearer <token>
     "escrowAddress": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
     "ownerWallet": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
     "hunterWallet": "FWQvw7FpFZvxGZYpKGmZdZz3wUn9fJhpFzxhQQP6iY5P",
-    "platformWallet": "11111111111111111111111111111112",
+    "platformWallet": "GbLLTkUjCznwRrkLM6tewimmW6ZCC4AP8eF9yAD8e5qT",
     "customAmount": null,
     "rewardPerSubmission": 500000000,
     "maxSubmissions": 10,

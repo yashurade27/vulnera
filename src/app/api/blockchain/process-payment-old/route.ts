@@ -4,10 +4,13 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { solanaService, PROGRAM_ID } from '@/lib/solana'
+import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js'
+import * as anchor from '@coral-xyz/anchor'
+import bs58 from 'bs58'
 
-const releasePaymentSchema = z.object({
+const processPaymentSchema = z.object({
   submissionId: z.string().min(1),
-  customAmount: z.number().positive().optional() // optional custom amount in lamports
+  customAmount: z.number().positive().optional()
 })
 
 export async function POST(request: NextRequest) {
@@ -22,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { submissionId, customAmount } = releasePaymentSchema.parse(body)
+    const { submissionId, customAmount } = processPaymentSchema.parse(body)
 
     // Fetch submission with related data
     const submission = await prisma.submission.findUnique({
@@ -89,6 +92,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!submission.bounty.company.walletAddress) {
+      return NextResponse.json(
+        { error: 'Company wallet address not set' },
+        { status: 400 }
+      )
+    }
+
     // Get current paid submissions count
     const paidSubmissionsCount = await prisma.submission.count({
       where: {
@@ -123,10 +133,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Return payment parameters for the smart contract call
+    // Create payment record
+    const payment = await prisma.payment.create({
+      data: {
+        amount: (rewardAmount / 1_000_000_000).toString(),
+        netAmount: (hunterAmount / 1_000_000_000).toString(),
+        platformFee: (platformFee / 1_000_000_000).toString(),
+        status: 'PROCESSING',
+        txSignature: 'pending', // Temporary value until transaction is signed
+        fromWallet: submission.bounty.company.walletAddress,
+        toWallet: submission.user.walletAddress,
+        submissionId: submission.id,
+        userId: submission.userId,
+        companyId: submission.companyId
+      }
+    })
+
+    // Link payment to submission
+    await prisma.submission.update({
+      where: { id: submissionId },
+      data: { paymentId: payment.id }
+    })
+
+    // Return transaction parameters for frontend to sign
     return NextResponse.json({
       success: true,
-      paymentParams: {
+      payment: {
+        id: payment.id,
+        status: payment.status
+      },
+      transactionParams: {
         programId: PROGRAM_ID.toString(),
         bountyId: submission.bountyId,
         submissionId: submission.id,
@@ -137,17 +173,15 @@ export async function POST(request: NextRequest) {
         customAmount: customAmount || null,
         rewardPerSubmission: Number(submission.bounty.rewardAmount) * 1_000_000_000,
         maxSubmissions: submission.bounty.maxSubmissions || 999999,
-        currentPaidSubmissions: paidSubmissionsCount
-      },
-      amounts: {
+        currentPaidSubmissions: paidSubmissionsCount,
         totalAmount: rewardAmount,
         hunterAmount,
         platformFee
       },
-      message: 'Payment parameters prepared. Please sign and send the process_payment transaction from your wallet.'
+      message: 'Payment record created. Transaction parameters ready for signing.'
     })
   } catch (error) {
-    console.error('Release payment error:', error)
+    console.error('Process payment error:', error)
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

@@ -32,10 +32,13 @@ export async function GET(
             rewardAmount: true,
             status: true,
             responseDeadline: true,
+            maxSubmissions: true,
+            escrowAddress: true,
             company: {
               select: {
                 id: true,
                 name: true,
+                walletAddress: true,
               },
             },
           },
@@ -47,6 +50,7 @@ export async function GET(
             fullName: true,
             reputation: true,
             totalEarnings: true,
+            walletAddress: true,
           },
         },
         company: {
