@@ -25,9 +25,9 @@ const WalletMultiButton = dynamic(
   { ssr: false },
 )
 
-const ClusterDropdown = dynamic(() => import('@/components/cluster-dropdown').then((mod) => mod.ClusterDropdown), {
-  ssr: false,
-})
+// const ClusterDropdown = dynamic(() => import('@/components/cluster-dropdown').then((mod) => mod.ClusterDropdown), {
+//   ssr: false,
+// })
 
 interface NavbarProps {
   showUtilityControls?: boolean
@@ -213,7 +213,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
             {showUtilityControls ? (
               <>
                 <ThemeToggle />
-                <ClusterDropdown />
+                {/* <ClusterDropdown /> */}
                 <WalletMultiButton />
               </>
             ) : null}
@@ -261,7 +261,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
               {showUtilityControls ? (
                 <div className="flex flex-wrap gap-3">
                   <ThemeToggle />
-                  <ClusterDropdown />
+                  {/* <ClusterDropdown /> */}
                   <WalletMultiButton />
                 </div>
               ) : null}

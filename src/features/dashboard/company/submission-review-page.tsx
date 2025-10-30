@@ -985,12 +985,12 @@ export function SubmissionReviewPage({ submissionId }: SubmissionReviewPageProps
                         <p className="text-sm font-semibold">Payment confirmed</p>
                         <p className="text-xs text-muted-foreground">{formatDate(submission.payment.completedAt)}</p>
                         <Link
-                          href={`https://solscan.io/tx/${submission.payment.txSignature}`}
+                          href={`https://explorer.solana.com/tx/${submission.payment.txSignature}?cluster=${process.env.NEXT_PUBLIC_CLUSTER}`}
                           target="_blank"
                           rel="noopener"
                           className="mt-1 inline-flex items-center gap-1 text-xs text-emerald-300"
                         >
-                          View on Solscan
+                          View on Explorer
                           <ExternalLink className="w-3 h-3" />
                         </Link>
                       </div>
