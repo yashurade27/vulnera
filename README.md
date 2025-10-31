@@ -1,4 +1,30 @@
-# vulnera
+# Vulnera - Decentralized Bug Bounty Platform on Solana
+
+Vulnera is a next-generation bug bounty platform built on the Solana blockchain, enabling companies to reward security researchers instantly through smart contracts. The platform features AI-powered vulnerability analysis, on-chain payment processing, and transparent escrow management.
+
+## 🧪 Test Credentials
+
+### Bounty Hunter Account
+```
+Email: pmtbmt@gmail.com
+Password: password123
+```
+
+### Company Account
+```
+Email: taydeprajyot@gmail.com
+Password: password123
+```
+
+### Admin Account
+```
+Email: admin@test.com
+Password: password123
+```
+
+### System Architecture
+
+![Vulnera Architecture](./public/architecture.png)
 
 This is a Next.js app containing:
 
