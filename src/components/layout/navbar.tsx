@@ -79,6 +79,7 @@ export function Navbar({ showUtilityControls = false }: NavbarProps) {
       { id: "home", href: "/", label: "Home" },
       { id: "bounties", href: "/bounties", label: "Bounties" },
       { id: "leaderboard", href: "/leaderboard", label: "Leaderboard" },
+      { id: "waitlist", href: "/waitlist", label: "Waitlist" },
     ]
 
     if (!user) return baseLinks
