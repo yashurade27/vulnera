@@ -29,9 +29,7 @@ import {
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  role: z.enum(['company', 'researcher', 'developer', 'other'], {
-    required_error: 'Please select a role',
-  }),
+  role: z.enum(['company', 'researcher', 'developer', 'other']),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -61,15 +59,17 @@ export default function WaitlistPage() {
         body: JSON.stringify(data),
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        throw new Error('Failed to join waitlist')
+        throw new Error(result.message || 'Failed to join waitlist')
       }
 
       setIsSuccess(true)
       toast.success('Successfully joined the waitlist!')
       reset()
-    } catch (error) {
-      toast.error('Something went wrong. Please try again.')
+    } catch (error: any) {
+      toast.error(error.message || 'Something went wrong. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -104,13 +104,6 @@ export default function WaitlistPage() {
                 <p className="text-muted-foreground">
                   Thank you for your interest. We'll notify you as soon as we're ready.
                 </p>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsSuccess(false)}
-                  className="mt-4"
-                >
-                  Register another email
-                </Button>
               </motion.div>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
