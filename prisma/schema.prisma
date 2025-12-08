@@ -526,3 +526,11 @@ model PlatformStats {
   @@index([date])
 }
 
+model Waitlist {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  role      String
+  createdAt DateTime @default(now())
+}
+
