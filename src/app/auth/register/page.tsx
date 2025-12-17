@@ -306,6 +306,21 @@ export default function RegisterPage() {
               Sign in instead
             </Link>
           </p>
+          <div className="w-full rounded-lg border border-yellow-400/20 bg-yellow-50/5 p-4">
+            <div className="flex items-start gap-2">
+              <span className="text-lg">🧪</span>
+              <div className="flex-1 space-y-1">
+                <h3 className="text-sm font-semibold text-foreground">Want to test the platform?</h3>
+                <p className="text-xs text-muted-foreground">
+                  Test credentials for Bounty Hunter, Company, and Admin accounts are available on the{' '}
+                  <Link className="text-primary underline-offset-4 hover:underline font-medium" href="/auth/login">
+                    login page
+                  </Link>
+                  . No need to register!
+                </p>
+              </div>
+            </div>
+          </div>
           <p className="text-center text-xs text-muted-foreground">
             We will send a one-time verification code to confirm your email before activating your profile.
           </p>
