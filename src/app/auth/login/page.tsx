@@ -189,6 +189,29 @@ function LoginForm() {
           </Form>
         </CardContent>
         <CardFooter className="flex flex-col items-center gap-3">
+          <div className="w-full rounded-lg border border-yellow-400/20 bg-yellow-50/5 p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-lg">🧪</span>
+              <h3 className="text-sm font-semibold text-foreground">Test Credentials</h3>
+            </div>
+            <div className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <p className="font-medium text-primary">Bounty Hunter Account</p>
+                <p className="text-muted-foreground">Email: pmtbmt@gmail.com</p>
+                <p className="text-muted-foreground">Password: password123</p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium text-primary">Company Account</p>
+                <p className="text-muted-foreground">Email: taydeprajyot@gmail.com</p>
+                <p className="text-muted-foreground">Password: password123</p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium text-primary">Admin Account</p>
+                <p className="text-muted-foreground">Email: admin@test.com</p>
+                <p className="text-muted-foreground">Password: password123</p>
+              </div>
+            </div>
+          </div>
           <p className="text-center text-xs text-muted-foreground">
             Use the wallet controls in the header to connect your Solana wallet for seamless payouts.
           </p>
