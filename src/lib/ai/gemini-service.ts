@@ -42,29 +42,45 @@ export class GeminiService {
       throw new Error("GEMINI_API_KEY is not configured")
     }
     this.genAI = new GoogleGenerativeAI(apiKey)
-    this.model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
+    this.model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
   }
 
   async analyzeSubmission(submission: SubmissionData): Promise<VulnerabilityAnalysis> {
     const prompt = this.buildAnalysisPrompt(submission)
 
-    try {
-      const result = await this.model.generateContent(prompt)
-      const response = await result.response
-      const text = response.text()
+    let lastError: any
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const result = await this.model.generateContent(prompt)
+        const response = await result.response
+        const text = response.text()
 
-      // Parse the JSON response
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) {
-        throw new Error("Failed to parse AI response")
+        // Parse the JSON response
+        const jsonMatch = text.match(/\{[\s\S]*\}/)
+        if (!jsonMatch) {
+          throw new Error("Failed to parse AI response")
+        }
+
+        const analysis = JSON.parse(jsonMatch[0]) as VulnerabilityAnalysis
+        return this.normalizeAnalysis(analysis)
+      } catch (error: any) {
+        lastError = error
+        console.error(`Gemini API error (attempt ${attempt}):`, error)
+
+        // Check if it's a rate limit error (429)
+        if (error.message?.includes("429") || error.status === 429) {
+          if (attempt < 3) {
+            // Wait for 2^attempt seconds before retrying
+            const delay = Math.pow(2, attempt) * 1000
+            await new Promise((resolve) => setTimeout(resolve, delay))
+            continue
+          }
+        }
+        break
       }
-
-      const analysis = JSON.parse(jsonMatch[0]) as VulnerabilityAnalysis
-      return this.normalizeAnalysis(analysis)
-    } catch (error) {
-      console.error("Gemini API error:", error)
-      throw new Error("Failed to analyze submission with AI")
     }
+
+    throw new Error(`Failed to analyze submission with AI: ${lastError?.message || "Unknown error"}`)
   }
 
   private buildAnalysisPrompt(submission: SubmissionData): string {
