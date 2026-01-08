@@ -19,17 +19,27 @@ export async function POST(request: NextRequest) {
 
     const { email, username, password, role, walletAddress } = parsed.data;
 
+    // Check if wallet address is an empty string and set to null if it is
+    const normalizedWalletAddress = walletAddress && walletAddress.trim() !== '' ? walletAddress.trim() : null;
+
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
           { email },
-          { username }
+          { username },
+          ...(normalizedWalletAddress ? [{ walletAddress: normalizedWalletAddress }] : [])
         ]
       }
     });
+
     if (existingUser) {
+      let errorMsg = 'User already exists';
+      if (existingUser.email === email) errorMsg = 'User with this email already exists';
+      else if (existingUser.username === username) errorMsg = 'Username already taken';
+      else if (normalizedWalletAddress && existingUser.walletAddress === normalizedWalletAddress) errorMsg = 'Wallet address already in use';
+
       return NextResponse.json(
-        { error: existingUser.email === email ? 'User with this email already exists' : 'Username already taken' },
+        { error: errorMsg },
         { status: 409 }
       );
     }
@@ -57,7 +67,7 @@ export async function POST(request: NextRequest) {
         username,
         passwordHash: hashedPassword,
         role,
-        walletAddress,
+        walletAddress: normalizedWalletAddress,
         emailVerified: false,
         otp,
         otpExpiry
